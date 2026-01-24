@@ -13,7 +13,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Rutas
 app.get('/', (req, res) => {
-    res.send('Sistema Cherry - Servidor funcionando correctamente');
+    res.send('Sistema Cherry - Servidor funcionando correctamenteeeeee');
 });
 
 // Importar rutas aquí
