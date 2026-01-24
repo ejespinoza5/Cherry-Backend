@@ -1,5 +1,7 @@
 const express = require('express');
+require('dotenv').config();
 const path = require('path');
+const { testConnection } = require('./src/config/database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,8 +39,13 @@ app.use((err, req, res, next) => {
 });
 
 // Iniciar servidor
-app.listen(PORT, () => {
-    console.log(`🍒 Servidor Cherry iniciado en http://localhost:${PORT}`);
-});
+const startServer = async () => {
+    app.listen(PORT, async () => {
+        console.log(`🍒 Servidor Cherry iniciado en http://localhost:${PORT}`);
+        await testConnection();
+    });
+};
+
+startServer();
 
 module.exports = app;
