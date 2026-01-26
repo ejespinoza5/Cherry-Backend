@@ -1,0 +1,130 @@
+{
+  "1_LOGIN_ADMIN": {
+    "method": "POST",
+    "url": "http://localhost:3000/api/auth/login",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "correo": "admin@cherry.com",
+      "contraseña": "admin123"
+    }
+  },
+
+  "2_OBTENER_MI_PERFIL": {
+    "method": "GET",
+    "url": "http://localhost:3000/api/auth/me",
+    "headers": {
+      "Authorization": "Bearer TU_TOKEN_AQUI"
+    }
+  },
+
+  "3_CREAR_USUARIO_ADMINISTRADOR": {
+    "method": "POST",
+    "url": "http://localhost:3000/api/usuarios",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer TU_TOKEN_AQUI"
+    },
+    "body": {
+      "correo": "admin2@cherry.com",
+      "contraseña": "admin456",
+      "id_rol": 1
+    }
+  },
+
+  "4_CREAR_USUARIO_CLIENTE": {
+    "method": "POST",
+    "url": "http://localhost:3000/api/usuarios",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer TU_TOKEN_AQUI"
+    },
+    "body": {
+      "correo": "cliente1@gmail.com",
+      "contraseña": "cliente123",
+      "id_rol": 2,
+      "nombre": "Juan",
+      "apellido": "Pérez",
+      "direccion": "Calle 123, Ciudad de México"
+    }
+  },
+
+  "5_CREAR_CLIENTE_2": {
+    "method": "POST",
+    "url": "http://localhost:3000/api/usuarios",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer TU_TOKEN_AQUI"
+    },
+    "body": {
+      "correo": "maria@gmail.com",
+      "contraseña": "maria123",
+      "id_rol": 2,
+      "nombre": "María",
+      "apellido": "García",
+      "direccion": "Av. Principal 456"
+    }
+  },
+
+  "6_LISTAR_TODOS_LOS_USUARIOS": {
+    "method": "GET",
+    "url": "http://localhost:3000/api/usuarios",
+    "headers": {
+      "Authorization": "Bearer TU_TOKEN_AQUI"
+    }
+  },
+
+  "7_OBTENER_USUARIO_POR_ID": {
+    "method": "GET",
+    "url": "http://localhost:3000/api/usuarios/1",
+    "headers": {
+      "Authorization": "Bearer TU_TOKEN_AQUI"
+    }
+  },
+
+  "8_ACTUALIZAR_USUARIO": {
+    "method": "PUT",
+    "url": "http://localhost:3000/api/usuarios/2",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer TU_TOKEN_AQUI"
+    },
+    "body": {
+      "correo": "juan.perez@gmail.com",
+      "estado": "activo"
+    }
+  },
+
+  "9_ACTUALIZAR_CONTRASEÑA_USUARIO": {
+    "method": "PUT",
+    "url": "http://localhost:3000/api/usuarios/2",
+    "headers": {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer TU_TOKEN_AQUI"
+    },
+    "body": {
+      "contraseña": "nuevacontraseña456"
+    }
+  },
+
+  "10_ELIMINAR_USUARIO": {
+    "method": "DELETE",
+    "url": "http://localhost:3000/api/usuarios/3",
+    "headers": {
+      "Authorization": "Bearer TU_TOKEN_AQUI"
+    }
+  },
+
+  "11_LOGIN_CLIENTE": {
+    "method": "POST",
+    "url": "http://localhost:3000/api/auth/login",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "correo": "cliente1@gmail.com",
+      "contraseña": "cliente123"
+    }
+  }
+}

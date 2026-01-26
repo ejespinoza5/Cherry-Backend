@@ -16,9 +16,13 @@ app.get('/', (req, res) => {
     res.send('Sistema Cherry - Servidor funcionando correctamente');
 });
 
-// Importar rutas aquí
-// const userRoutes = require('./src/routes/userRoutes');
-// app.use('/api/users', userRoutes);
+// Importar rutas
+const authRoutes = require('./src/routes/authRoutes');
+const usuariosRoutes = require('./src/routes/usuariosRoutes');
+
+// Usar rutas
+app.use('/api/auth', authRoutes);
+app.use('/api/usuarios', usuariosRoutes);
 
 // Manejo de errores 404
 app.use((req, res) => {
