@@ -156,7 +156,8 @@ Crear nuevo usuario (Administrador o Cliente).
   "id_rol": 2,
   "nombre": "Juan",
   "apellido": "Pérez",
-  "direccion": "Calle 123, Ciudad"
+  "direccion": "Calle 123, Ciudad",
+  "codigo":"sol 12"
 }
 ```
 

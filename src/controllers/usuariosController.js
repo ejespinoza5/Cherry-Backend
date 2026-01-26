@@ -58,7 +58,7 @@ const getUsuarioById = async (req, res) => {
  */
 const createUsuario = async (req, res) => {
     try {
-        const { correo, contraseña, id_rol, nombre, apellido, direccion } = req.body;
+        const { correo, contraseña, id_rol, nombre, apellido, codigo, direccion } = req.body;
 
         // Validar campos requeridos
         if (!correo || !contraseña || !id_rol) {
@@ -70,7 +70,7 @@ const createUsuario = async (req, res) => {
 
         // Crear usuario a través del servicio
         const nuevoUsuario = await UsuarioService.createUsuario(
-            { correo, contraseña, id_rol, nombre, apellido, direccion },
+            { correo, contraseña, id_rol, nombre, apellido, codigo, direccion },
             req.user.id
         );
 
@@ -109,6 +109,20 @@ const createUsuario = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'El nombre es requerido para usuarios tipo cliente'
+            });
+        }
+
+        if (error.message === 'CODIGO_REQUIRED_FOR_CLIENT') {
+            return res.status(400).json({
+                success: false,
+                message: 'El código es requerido para usuarios tipo cliente'
+            });
+        }
+
+        if (error.message === 'CODIGO_ALREADY_EXISTS') {
+            return res.status(400).json({
+                success: false,
+                message: 'El código de cliente ya está en uso'
             });
         }
 

@@ -58,7 +58,7 @@ class UsuarioService {
      * Crear nuevo usuario
      */
     static async createUsuario(data, createdBy) {
-        const { correo, contraseña, id_rol, nombre, apellido, direccion } = data;
+        const { correo, contraseña, id_rol, nombre, apellido, codigo, direccion } = data;
 
         // Validar formato de correo
         if (!isValidEmail(correo)) {
@@ -75,15 +75,28 @@ class UsuarioService {
             throw new Error('INVALID_ROLE');
         }
 
-        // Si es cliente, el nombre es obligatorio
-        if (parseInt(id_rol) === 2 && !nombre) {
-            throw new Error('NAME_REQUIRED_FOR_CLIENT');
+        // Si es cliente, el nombre y código son obligatorios
+        if (parseInt(id_rol) === 2) {
+            if (!nombre) {
+                throw new Error('NAME_REQUIRED_FOR_CLIENT');
+            }
+            if (!codigo) {
+                throw new Error('CODIGO_REQUIRED_FOR_CLIENT');
+            }
         }
 
         // Verificar si el correo ya existe
         const emailExists = await Usuario.emailExists(correo);
         if (emailExists) {
             throw new Error('EMAIL_ALREADY_EXISTS');
+        }
+
+        // Si es cliente, verificar que el código no exista
+        if (parseInt(id_rol) === 2 && codigo) {
+            const codigoExists = await Cliente.codigoExists(codigo);
+            if (codigoExists) {
+                throw new Error('CODIGO_ALREADY_EXISTS');
+            }
         }
 
         // Hashear contraseña
@@ -95,7 +108,6 @@ class UsuarioService {
 
         // Si el rol es cliente (2), crear registro en la tabla clientes
         if (parseInt(id_rol) === 2) {
-            const codigo = `CLI-${String(usuarioId).padStart(6, '0')}`;
             await Cliente.create({
                 id_usuario: usuarioId,
                 nombre,
