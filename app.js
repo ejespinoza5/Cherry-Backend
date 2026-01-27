@@ -17,7 +17,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/amor', (req, res) => {
-    res.send('Te amo mucho Nicol Guadamud Mi amoooor 💖');
+    res.send('Te amo mucho Nicole Guadamud Mi amoooor 💖');
 });
 
 // Importar rutas
