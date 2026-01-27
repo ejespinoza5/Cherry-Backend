@@ -231,6 +231,206 @@ Eliminar usuario (cambiar estado a inactivo).
 
 ---
 
+### 📦 Gestión de Órdenes
+
+**Todas las rutas requieren:**
+- Header: `Authorization: Bearer {token}`
+
+#### GET /api/ordenes
+Obtener todas las órdenes.
+
+**Query Parameters (opcionales):**
+- `estado` - Filtrar por estado (activo/inactivo)
+- `fecha_inicio` - Filtrar desde fecha (YYYY-MM-DD)
+- `fecha_fin` - Filtrar hasta fecha (YYYY-MM-DD)
+
+**Ejemplo:**
+```
+GET /api/ordenes?estado=activo
+GET /api/ordenes?fecha_inicio=2026-01-01&fecha_fin=2026-12-31
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "nombre_orden": "Live Enero 2026",
+      "fecha_inicio": "2026-01-15T00:00:00.000Z",
+      "fecha_fin": "2026-01-20T23:59:59.000Z",
+      "impuesto": 0.08,
+      "comision": 50.00,
+      "estado": "activo",
+      "created_at": "2026-01-14T10:30:00.000Z",
+      "updated_at": "2026-01-14T10:30:00.000Z",
+      "creado_por": "admin@cherry.com",
+      "actualizado_por": null
+    }
+  ],
+  "count": 1
+}
+```
+
+#### GET /api/ordenes/:id
+Obtener orden por ID.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "nombre_orden": "Live Enero 2026",
+    "fecha_inicio": "2026-01-15T00:00:00.000Z",
+    "fecha_fin": "2026-01-20T23:59:59.000Z",
+    "impuesto": 0.08,
+    "comision": 50.00,
+    "estado": "activo",
+    "created_at": "2026-01-14T10:30:00.000Z",
+    "updated_at": "2026-01-14T10:30:00.000Z",
+    "creado_por": "admin@cherry.com",
+    "actualizado_por": null
+  }
+}
+```
+
+#### GET /api/ordenes/:id/estadisticas
+Obtener estadísticas de una orden (clientes, productos, totales).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "orden": {
+      "id": 1,
+      "nombre_orden": "Live Enero 2026",
+      "fecha_inicio": "2026-01-15T00:00:00.000Z",
+      "fecha_fin": "2026-01-20T23:59:59.000Z",
+      "impuesto": 0.08,
+      "comision": 50.00,
+      "estado": "activo",
+      "created_at": "2026-01-14T10:30:00.000Z",
+      "updated_at": "2026-01-14T10:30:00.000Z",
+      "creado_por": "admin@cherry.com",
+      "actualizado_por": null
+    },
+    "estadisticas": {
+      "total_clientes": 5,
+      "total_productos": 12,
+      "total_articulos": 35,
+      "subtotal": "1250.00",
+      "impuestos": "100.00",
+      "comisiones": "50.00",
+      "total": "1400.00"
+    }
+  }
+}
+```
+
+#### POST /api/ordenes
+Crear nueva orden.
+
+**Request Body:**
+```json
+{
+  "nombre_orden": "Live Febrero 2026",
+  "fecha_inicio": "2026-02-01T00:00:00.000Z",
+  "fecha_fin": "2026-02-05T23:59:59.000Z",
+  "impuesto": 0.08,
+  "comision": 75.00,
+  "estado": "activo"
+}
+```
+
+**Notas:**
+- `nombre_orden` (requerido): Debe ser único
+- `fecha_inicio` (requerido): Fecha de inicio de la orden
+- `fecha_fin` (opcional): Debe ser posterior a fecha_inicio
+- `impuesto` (opcional): Valor entre 0 y 1 (0% a 100%). Por defecto: 0.08
+- `comision` (opcional): Valor mayor o igual a 0. Por defecto: 0
+- `estado` (opcional): 'activo' o 'inactivo'. Por defecto: 'activo'
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Orden creada exitosamente",
+  "data": {
+    "id": 2,
+    "nombre_orden": "Live Febrero 2026",
+    "fecha_inicio": "2026-02-01T00:00:00.000Z",
+    "fecha_fin": "2026-02-05T23:59:59.000Z",
+    "impuesto": 0.08,
+    "comision": 75.00,
+    "estado": "activo",
+    "created_at": "2026-01-26T14:30:00.000Z",
+    "updated_at": "2026-01-26T14:30:00.000Z",
+    "creado_por": "admin@cherry.com",
+    "actualizado_por": null
+  }
+}
+```
+
+#### PUT /api/ordenes/:id
+Actualizar orden.
+
+**Request Body:**
+```json
+{
+  "nombre_orden": "Live Febrero 2026 - Actualizado",
+  "fecha_inicio": "2026-02-01T00:00:00.000Z",
+  "fecha_fin": "2026-02-07T23:59:59.000Z",
+  "impuesto": 0.10,
+  "comision": 100.00,
+  "estado": "activo"
+}
+```
+
+**Notas:**
+- Todos los campos son opcionales, solo se actualizan los campos enviados
+- Si se actualiza el nombre, debe ser único
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Orden actualizada exitosamente",
+  "data": {
+    "id": 2,
+    "nombre_orden": "Live Febrero 2026 - Actualizado",
+    "fecha_inicio": "2026-02-01T00:00:00.000Z",
+    "fecha_fin": "2026-02-07T23:59:59.000Z",
+    "impuesto": 0.10,
+    "comision": 100.00,
+    "estado": "activo",
+    "created_at": "2026-01-26T14:30:00.000Z",
+    "updated_at": "2026-01-26T15:00:00.000Z",
+    "creado_por": "admin@cherry.com",
+    "actualizado_por": "admin@cherry.com"
+  }
+}
+```
+
+#### DELETE /api/ordenes/:id
+Eliminar orden (cambiar estado a inactivo).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Orden eliminada correctamente"
+}
+```
+
+**Errores Comunes:**
+- **400** - Orden ya está inactiva
+- **404** - Orden no encontrada
+
+---
+
 ## Códigos de Estado HTTP
 
 - **200** - OK: Solicitud exitosa
@@ -288,5 +488,48 @@ curl -X POST http://localhost:3000/api/usuarios \
 ### Obtener Usuarios
 ```bash
 curl -X GET http://localhost:3000/api/usuarios \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Crear Orden
+```bash
+curl -X POST http://localhost:3000/api/ordenes \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "nombre_orden":"Live Enero 2026",
+    "fecha_inicio":"2026-01-15T00:00:00.000Z",
+    "fecha_fin":"2026-01-20T23:59:59.000Z",
+    "impuesto":0.08,
+    "comision":50.00
+  }'
+```
+
+### Obtener Órdenes
+```bash
+curl -X GET http://localhost:3000/api/ordenes \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Obtener Estadísticas de Orden
+```bash
+curl -X GET http://localhost:3000/api/ordenes/1/estadisticas \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Actualizar Orden
+```bash
+curl -X PUT http://localhost:3000/api/ordenes/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "nombre_orden":"Live Enero 2026 - Actualizado",
+    "comision":75.00
+  }'
+```
+
+### Eliminar Orden
+```bash
+curl -X DELETE http://localhost:3000/api/ordenes/1 \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
