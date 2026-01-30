@@ -6,12 +6,12 @@ class Orden {
      */
     static async create(data) {
         try {
-            const { nombre_orden, fecha_inicio, fecha_fin, impuesto, comision, estado, created_by } = data;
+            const { nombre_orden, fecha_inicio, fecha_fin, impuesto, estado, created_by } = data;
             
             const [result] = await pool.query(
-                `INSERT INTO ordenes (nombre_orden, fecha_inicio, fecha_fin, impuesto, comision, estado, created_by) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [nombre_orden, fecha_inicio, fecha_fin || null, impuesto || 0.08, comision || 0, estado || 'activo', created_by]
+                `INSERT INTO ordenes (nombre_orden, fecha_inicio, fecha_fin, impuesto, estado, created_by) 
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [nombre_orden, fecha_inicio, fecha_fin || null, impuesto || 0.08, estado || 'activo', created_by]
             );
             
             return result.insertId;
@@ -86,13 +86,13 @@ class Orden {
      */
     static async update(id, data, updated_by) {
         try {
-            const { nombre_orden, fecha_inicio, fecha_fin, impuesto, comision, estado } = data;
+            const { nombre_orden, fecha_inicio, fecha_fin, impuesto, estado } = data;
             
             const [result] = await pool.query(
                 `UPDATE ordenes 
-                 SET nombre_orden = ?, fecha_inicio = ?, fecha_fin = ?, impuesto = ?, comision = ?, estado = ?, updated_by = ? 
+                 SET nombre_orden = ?, fecha_inicio = ?, fecha_fin = ?, impuesto = ?, estado = ?, updated_by = ? 
                  WHERE id = ?`,
-                [nombre_orden, fecha_inicio, fecha_fin || null, impuesto, comision, estado, updated_by, id]
+                [nombre_orden, fecha_inicio, fecha_fin || null, impuesto, estado, updated_by, id]
             );
             
             return result.affectedRows > 0;
@@ -149,7 +149,8 @@ class Orden {
                     COUNT(DISTINCT p.id_cliente) as total_clientes,
                     COUNT(p.id) as total_productos,
                     SUM(p.cantidad_articulos) as total_articulos,
-                    SUM(p.valor_etiqueta * p.cantidad_articulos) as subtotal
+                    SUM(p.valor_etiqueta * p.cantidad_articulos) as subtotal,
+                    SUM(p.comision) as total_comisiones
                  FROM productos p
                  WHERE p.id_orden = ? AND p.estado = 'activo'`,
                 [id]

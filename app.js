@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 require('dotenv').config();
 const path = require('path');
 const { testConnection } = require('./src/config/database');
@@ -6,29 +7,38 @@ const { testConnection } = require('./src/config/database');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Configuración de CORS
+app.use(cors({
+    origin: process.env.FRONTEND_URL || '*', // Permitir todas las origenes o especificar en .env
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 // Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Rutas
 app.get('/', (req, res) => {
     res.send('Sistema Cherry - Servidor funcionando correctamente');
 });
 
-app.get('/amor', (req, res) => {
-    res.send('Te amo mucho Nicole Guadamud Mi amoooor 💖');
-});
+
 
 // Importar rutas
 const authRoutes = require('./src/routes/authRoutes');
 const usuariosRoutes = require('./src/routes/usuariosRoutes');
 const ordenesRoutes = require('./src/routes/ordenesRoutes');
+const productosRoutes = require('./src/routes/productosRoutes');
 
 // Usar rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/ordenes', ordenesRoutes);
+app.use('/api/productos', productosRoutes);
 
 // Manejo de errores 404
 app.use((req, res) => {

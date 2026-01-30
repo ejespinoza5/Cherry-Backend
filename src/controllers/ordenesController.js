@@ -66,11 +66,11 @@ const getOrdenById = async (req, res) => {
  */
 const createOrden = async (req, res) => {
     try {
-        const { nombre_orden, fecha_inicio, fecha_fin, impuesto, comision, estado } = req.body;
+        const { nombre_orden, fecha_inicio, fecha_fin, impuesto, estado } = req.body;
         const createdBy = req.user.id;
 
         const orden = await OrdenService.createOrden(
-            { nombre_orden, fecha_inicio, fecha_fin, impuesto, comision, estado },
+            { nombre_orden, fecha_inicio, fecha_fin, impuesto, estado },
             createdBy
         );
 
@@ -139,12 +139,12 @@ const createOrden = async (req, res) => {
 const updateOrden = async (req, res) => {
     try {
         const { id } = req.params;
-        const { nombre_orden, fecha_inicio, fecha_fin, impuesto, comision, estado } = req.body;
+        const { nombre_orden, fecha_inicio, fecha_fin, impuesto, estado } = req.body;
         const updatedBy = req.user.id;
 
         const orden = await OrdenService.updateOrden(
             id,
-            { nombre_orden, fecha_inicio, fecha_fin, impuesto, comision, estado },
+            { nombre_orden, fecha_inicio, fecha_fin, impuesto, estado },
             updatedBy
         );
 
@@ -196,13 +196,6 @@ const updateOrden = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'El impuesto debe ser un valor entre 0 y 1 (0% a 100%)'
-            });
-        }
-
-        if (error.message === 'INVALID_COMMISSION_VALUE') {
-            return res.status(400).json({
-                success: false,
-                message: 'La comisión no puede ser negativa'
             });
         }
 

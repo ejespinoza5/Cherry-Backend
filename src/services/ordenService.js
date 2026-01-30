@@ -11,7 +11,6 @@ class OrdenService {
             fecha_inicio: orden.fecha_inicio,
             fecha_fin: orden.fecha_fin,
             impuesto: parseFloat(orden.impuesto),
-            comision: parseFloat(orden.comision),
             estado: orden.estado,
             created_at: orden.created_at,
             updated_at: orden.updated_at,
@@ -45,7 +44,7 @@ class OrdenService {
      * Crear nueva orden
      */
     static async createOrden(data, createdBy) {
-        const { nombre_orden, fecha_inicio, fecha_fin, impuesto, comision, estado } = data;
+        const { nombre_orden, fecha_inicio, fecha_fin, impuesto, estado } = data;
 
         // Validar nombre de orden
         if (!nombre_orden || nombre_orden.trim() === '') {
@@ -73,18 +72,12 @@ class OrdenService {
             throw new Error('INVALID_TAX_VALUE');
         }
 
-        // Validar comisión
-        if (comision !== undefined && comision < 0) {
-            throw new Error('INVALID_COMMISSION_VALUE');
-        }
-
         // Crear la orden
         const ordenId = await Orden.create({
             nombre_orden,
             fecha_inicio,
             fecha_fin,
             impuesto,
-            comision,
             estado,
             created_by: createdBy
         });
@@ -98,7 +91,7 @@ class OrdenService {
      * Actualizar orden
      */
     static async updateOrden(id, data, updatedBy) {
-        const { nombre_orden, fecha_inicio, fecha_fin, impuesto, comision, estado } = data;
+        const { nombre_orden, fecha_inicio, fecha_fin, impuesto, estado } = data;
 
         // Verificar que la orden existe
         const orden = await Orden.findById(id);
@@ -137,18 +130,12 @@ class OrdenService {
             throw new Error('INVALID_TAX_VALUE');
         }
 
-        // Validar comisión
-        if (comision !== undefined && comision < 0) {
-            throw new Error('INVALID_COMMISSION_VALUE');
-        }
-
         // Preparar datos para actualizar (solo los campos proporcionados)
         const updateData = {
             nombre_orden: nombre_orden !== undefined ? nombre_orden : orden.nombre_orden,
             fecha_inicio: fecha_inicio !== undefined ? fecha_inicio : orden.fecha_inicio,
             fecha_fin: fecha_fin !== undefined ? fecha_fin : orden.fecha_fin,
             impuesto: impuesto !== undefined ? impuesto : orden.impuesto,
-            comision: comision !== undefined ? comision : orden.comision,
             estado: estado !== undefined ? estado : orden.estado
         };
 
@@ -193,7 +180,7 @@ class OrdenService {
         // Calcular totales
         const subtotal = parseFloat(estadisticas.subtotal || 0);
         const impuestos = subtotal * parseFloat(orden.impuesto);
-        const comisiones = parseFloat(orden.comision);
+        const comisiones = parseFloat(estadisticas.total_comisiones || 0);
         const total = subtotal + impuestos + comisiones;
 
         return {

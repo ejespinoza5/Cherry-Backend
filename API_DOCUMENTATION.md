@@ -533,3 +533,550 @@ curl -X PUT http://localhost:3000/api/ordenes/1 \
 curl -X DELETE http://localhost:3000/api/ordenes/1 \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
+---
+
+## 📦 Gestión de Productos (Compras)
+
+**Todas las rutas requieren:**
+- Header: `Authorization: Bearer {token}`
+- Usuario autenticado
+
+### GET /api/productos
+Obtener todos los productos con filtros opcionales.
+
+**Query Parameters:**
+- `id_orden` (opcional): Filtrar por orden
+- `id_cliente` (opcional): Filtrar por cliente
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "id_cliente": 5,
+      "cliente_nombre": "Juan",
+      "cliente_apellido": "Pérez",
+      "cliente_codigo": "CLI-001",
+      "id_orden": 2,
+      "nombre_orden": "Live Enero 2026",
+      "cantidad_articulos": 3,
+      "detalles": "Zapatos deportivos Nike Air Max",
+      "valor_etiqueta": 120.00,
+      "comision": 3.00,
+      "imagen_producto": "https://example.com/imagen.jpg",
+      "observacion": "Talla 42",
+      "estado": "activo",
+      "created_at": "2026-01-29T10:30:00.000Z",
+      "updated_at": "2026-01-29T10:30:00.000Z",
+      "creado_por": "admin@cherry.com",
+      "actualizado_por": null
+    }
+  ],
+  "count": 1
+}
+```
+
+### GET /api/productos/:id
+Obtener producto por ID.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "id_cliente": 5,
+    "cliente_nombre": "Juan",
+    "cliente_apellido": "Pérez",
+    "cliente_codigo": "CLI-001",
+    "id_orden": 2,
+    "nombre_orden": "Live Enero 2026",
+    "cantidad_articulos": 3,
+    "detalles": "Zapatos deportivos Nike Air Max",
+    "valor_etiqueta": 120.00,
+    "comision": 3.00,
+    "imagen_producto": "https://example.com/imagen.jpg",
+    "observacion": "Talla 42",
+    "estado": "activo",
+    "created_at": "2026-01-29T10:30:00.000Z",
+    "updated_at": "2026-01-29T10:30:00.000Z",
+    "creado_por": "admin@cherry.com",
+    "actualizado_por": null
+  }
+}
+```
+
+**Response (404):**
+```json
+{
+  "success": false,
+  "message": "Producto no encontrado"
+}
+```
+
+### POST /api/productos
+Crear nuevo producto.
+
+**Content-Type:** 
+- `multipart/form-data` (cuando se envía imagen)
+- `application/json` (cuando NO se envía imagen)
+
+**Request Body (con imagen):**
+```
+POST /api/productos
+Content-Type: multipart/form-data
+
+Form Data:
+- id_cliente: 5
+- id_orden: 2
+- cantidad_articulos: 3
+- detalles: "Zapatos deportivos Nike Air Max"
+- valor_etiqueta: 120.00
+- comision: 3.00
+- imagen: [archivo de imagen]
+- observacion: "Talla 42"
+```
+
+**Request Body (sin imagen - JSON):**
+```json
+{
+  "id_cliente": 5,
+  "id_orden": 2,
+  "cantidad_articulos": 3,
+  "detalles": "Zapatos deportivos Nike Air Max",
+  "valor_etiqueta": 120.00,
+  "comision": 3.00,
+  "imagen_producto": "https://example.com/imagen.jpg",
+  "observacion": "Talla 42"
+}
+```
+
+**Campos:**
+- `id_cliente` (requerido): ID del cliente
+- `id_orden` (requerido): ID de la orden
+- `cantidad_articulos` (requerido): Cantidad de artículos (mínimo 1)
+- `detalles` (requerido): Descripción del producto
+- `valor_etiqueta` (requerido): Precio del producto
+- `comision` (opcional): Comisión por el producto (default: 3.00)
+- `imagen` (opcional): Archivo de imagen (campo form-data)
+- `imagen_producto` (opcional): URL de imagen externa (alternativa al archivo)
+- `observacion` (opcional): Observaciones adicionales
+- `estado` (opcional): Estado del producto (default: 'activo')
+
+**Notas sobre imágenes:**
+- Formatos aceptados: JPEG, JPG, PNG, WEBP
+- Tamaño máximo: 5MB
+- La imagen se redimensiona automáticamente a máximo 800x800px
+- Se convierte a formato WebP con calidad 80% para optimizar espacio
+- Se almacena en `/uploads/images/`
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Producto creado exitosamente",
+  "data": {
+    "id": 1,
+    "id_cliente": 5,
+    "cliente_nombre": "Juan",
+    "cliente_apellido": "Pérez",
+    "cliente_codigo": "CLI-001",
+    "id_orden": 2,
+    "nombre_orden": "Live Enero 2026",
+    "cantidad_articulos": 3,
+    "detalles": "Zapatos deportivos Nike Air Max",
+    "valor_etiqueta": 120.00,
+    "comision": 3.00,
+    "imagen_producto": "https://example.com/imagen.jpg",
+    "observacion": "Talla 42",
+    "estado": "activo",
+    "created_at": "2026-01-29T10:30:00.000Z",
+    "updated_at": "2026-01-29T10:30:00.000Z",
+    "creado_por": "admin@cherry.com",
+    "actualizado_por": null
+  }
+}
+```
+
+**Response (400):**
+```json
+{
+  "success": false,
+  "message": "La cantidad de artículos debe ser al menos 1"
+}
+```
+
+**Response (404):**
+```json
+{
+  "success": false,
+  "message": "La orden especificada no existe o está inactiva"
+}
+```
+
+### PUT /api/productos/:id
+Actualizar producto existente.
+
+**Request Body (todos los campos son opcionales):**
+```json
+{
+  "cantidad_articulos": 5,
+  "detalles": "Zapatos deportivos Nike Air Max - Color Negro",
+  "valor_etiqueta": 125.00,
+  "comision": 4.00,
+  "observacion": "Talla 42 - Stock disponible"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Producto actualizado exitosamente",
+  "data": {
+    "id": 1,
+    "id_cliente": 5,
+    "cliente_nombre": "Juan",
+    "cliente_apellido": "Pérez",
+    "cliente_codigo": "CLI-001",
+    "id_orden": 2,
+    "nombre_orden": "Live Enero 2026",
+    "cantidad_articulos": 5,
+    "detalles": "Zapatos deportivos Nike Air Max - Color Negro",
+    "valor_etiqueta": 125.00,
+    "comision": 4.00,
+    "imagen_producto": "https://example.com/imagen.jpg",
+    "observacion": "Talla 42 - Stock disponible",
+    "estado": "activo",
+    "created_at": "2026-01-29T10:30:00.000Z",
+    "updated_at": "2026-01-29T11:45:00.000Z",
+    "creado_por": "admin@cherry.com",
+    "actualizado_por": "admin@cherry.com"
+  }
+}
+```
+
+**Response (404):**
+```json
+{
+  "success": false,
+  "message": "Producto no encontrado"
+}
+```
+
+### DELETE /api/productos/:id
+Eliminar producto (soft delete - cambia estado a inactivo).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Producto eliminado correctamente"
+}
+```
+
+**Response (404):**
+```json
+{
+  "success": false,
+  "message": "Producto no encontrado"
+}
+```
+
+### GET /api/productos/resumen/:id_orden/:id_cliente
+Obtener resumen de productos por cliente en una orden específica.
+
+**Parámetros:**
+- `id_orden`: ID de la orden
+- `id_cliente`: ID del cliente
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "id_orden": 2,
+    "id_cliente": 5,
+    "total_productos": 4,
+    "total_articulos": 12,
+    "subtotal": "480.00",
+    "total_comisiones": "12.00"
+  }
+}
+```
+
+**Response (404):**
+```json
+{
+  "success": false,
+  "message": "Orden no encontrada"
+}
+```
+
+### GET /api/productos/cliente/:id_cliente/:id_orden
+Obtener todos los productos de un cliente específico en una orden específica. Este endpoint retorna la información del cliente y la orden con todos los productos asociados.
+
+**Parámetros:**
+- `id_cliente`: ID del cliente
+- `id_orden`: ID de la orden
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "cliente": {
+      "id": 5,
+      "nombre": "Juan",
+      "apellido": "Pérez",
+      "codigo": "CLI-001",
+      "direccion": "Calle 123",
+      "saldo": "150.00"
+    },
+    "total_ordenes": 1,
+    "total_productos": 3,
+    "total_articulos": 8,
+    "subtotal_general": "360.00",
+    "total_comisiones_general": "9.00",
+    "total_general": "369.00",
+    "ordenes": [
+      {
+        "id": 2,
+        "nombre_orden": "Live Enero 2026",
+        "total_productos": 3,
+        "total_articulos": 8,
+        "subtotal": "360.00",
+        "total_comisiones": "9.00",
+        "total": "369.00",
+        "productos": [
+          {
+            "id": 1,
+            "cantidad_articulos": 3,
+            "detalles": "Zapatos Nike Air Max",
+            "valor_etiqueta": 120.00,
+            "comision": 3.00,
+            "imagen_producto": "/uploads/images/producto-1738168273456-123456789.webp",
+            "observacion": "Talla 42",
+            "created_at": "2026-01-29T10:30:00.000Z"
+          },
+          {
+            "id": 2,
+            "cantidad_articulos": 2,
+            "detalles": "Camiseta Adidas",
+            "valor_etiqueta": 45.00,
+            "comision": 3.00,
+            "imagen_producto": null,
+            "observacion": "Talla M",
+            "created_at": "2026-01-29T11:15:00.000Z"
+          },
+          {
+            "id": 5,
+            "cantidad_articulos": 3,
+            "detalles": "Pantalón deportivo",
+            "valor_etiqueta": 35.00,
+            "comision": 3.00,
+            "imagen_producto": null,
+            "observacion": null,
+            "created_at": "2026-01-29T12:00:00.000Z"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Response (404):**
+```json
+{
+  "success": false,
+  "message": "No se encontraron productos para este cliente en esta orden"
+}
+```
+
+### GET /api/productos/agrupados/:id_orden
+Obtener productos agrupados por cliente en una orden. Este endpoint retorna los datos de cada cliente una sola vez con todos sus productos en un array, evitando la repetición de información del cliente.
+
+**Parámetros:**
+- `id_orden`: ID de la orden
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "id_orden": 2,
+    "total_clientes": 2,
+    "clientes": [
+      {
+        "id": 5,
+        "nombre": "Juan",
+        "apellido": "Pérez",
+        "codigo": "CLI-001",
+        "direccion": "Calle 123",
+        "saldo": "150.00",
+        "total_productos": 3,
+        "total_articulos": 8,
+        "subtotal": "360.00",
+        "total_comisiones": "9.00",
+        "total": "369.00",
+        "productos": [
+          {
+            "id": 1,
+            "cantidad_articulos": 3,
+            "detalles": "Zapatos Nike Air Max",
+            "valor_etiqueta": 120.00,
+            "comision": 3.00,
+            "imagen_producto": "/uploads/images/producto-1738168273456-123456789.webp",
+            "observacion": "Talla 42",
+            "created_at": "2026-01-29T10:30:00.000Z"
+          },
+          {
+            "id": 2,
+            "cantidad_articulos": 2,
+            "detalles": "Camiseta Adidas",
+            "valor_etiqueta": 45.00,
+            "comision": 3.00,
+            "imagen_producto": null,
+            "observacion": "Talla M",
+            "created_at": "2026-01-29T11:15:00.000Z"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "nombre": "María",
+        "apellido": "García",
+        "codigo": "CLI-005",
+        "direccion": "Av. Principal 456",
+        "saldo": "0.00",
+        "total_productos": 1,
+        "total_articulos": 1,
+        "subtotal": "85.00",
+        "total_comisiones": "3.00",
+        "total": "88.00",
+        "productos": [
+          {
+            "id": 15,
+            "cantidad_articulos": 1,
+            "detalles": "Bolso deportivo",
+            "valor_etiqueta": 85.00,
+            "comision": 3.00,
+            "imagen_producto": "/uploads/images/producto-1738168500789-987654321.webp",
+            "observacion": null,
+            "created_at": "2026-01-29T12:00:00.000Z"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Response (404):**
+```json
+{
+  "success": false,
+  "message": "Orden no encontrada"
+}
+```
+
+---
+
+## Ejemplos de Uso - Productos
+
+### Crear Producto con Imagen
+```bash
+curl -X POST http://localhost:3000/api/productos \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "id_cliente=5" \
+  -F "id_orden=2" \
+  -F "cantidad_articulos=3" \
+  -F "detalles=Zapatos deportivos Nike Air Max" \
+  -F "valor_etiqueta=120.00" \
+  -F "comision=3.00" \
+  -F "imagen=@/ruta/a/imagen.jpg" \
+  -F "observacion=Talla 42"
+```
+
+### Crear Producto sin Imagen (JSON)
+```bash
+curl -X POST http://localhost:3000/api/productos \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "id_cliente": 5,
+    "id_orden": 2,
+    "cantidad_articulos": 3,
+    "detalles": "Zapatos deportivos Nike Air Max",
+    "valor_etiqueta": 120.00,
+    "comision": 3.00,
+    "observacion": "Talla 42"
+  }'
+```
+
+### Obtener Productos Agrupados por Cliente
+```bash
+curl -X GET http://localhost:3000/api/productos/agrupados/2 \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Obtener Productos de un Cliente en una Orden Específica
+```bash
+curl -X GET http://localhost:3000/api/productos/cliente/5/2 \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Obtener Productos de una Orden
+```bash
+curl -X GET "http://localhost:3000/api/productos?id_orden=2" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Obtener Productos de un Cliente
+```bash
+curl -X GET "http://localhost:3000/api/productos?id_cliente=5" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Obtener Productos de un Cliente en una Orden
+```bash
+curl -X GET "http://localhost:3000/api/productos?id_orden=2&id_cliente=5" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Obtener Resumen de Cliente en Orden
+```bash
+curl -X GET http://localhost:3000/api/productos/resumen/2/5 \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### Actualizar Producto con Nueva Imagen
+```bash
+curl -X PUT http://localhost:3000/api/productos/1 \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "cantidad_articulos=5" \
+  -F "valor_etiqueta=125.00" \
+  -F "imagen=@/ruta/a/nueva-imagen.jpg"
+```
+
+### Actualizar Producto sin Imagen (JSON)
+```bash
+curl -X PUT http://localhost:3000/api/productos/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "cantidad_articulos": 5,
+    "valor_etiqueta": 125.00
+  }'
+```
+
+### Eliminar Producto
+```bash
+curl -X DELETE http://localhost:3000/api/productos/1 \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
