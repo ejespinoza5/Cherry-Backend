@@ -33,12 +33,14 @@ const authRoutes = require('./src/routes/authRoutes');
 const usuariosRoutes = require('./src/routes/usuariosRoutes');
 const ordenesRoutes = require('./src/routes/ordenesRoutes');
 const productosRoutes = require('./src/routes/productosRoutes');
+const clientesRoutes = require('./src/routes/clientesRoutes');
 
 // Usar rutas
 app.use('/api/auth', authRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/ordenes', ordenesRoutes);
 app.use('/api/productos', productosRoutes);
+app.use('/api/cliente', clientesRoutes);
 
 // Manejo de errores 404
 app.use((req, res) => {
