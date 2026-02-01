@@ -480,6 +480,205 @@ Eliminar orden (cambiar estado a inactivo).
 
 ---
 
+### 💰 Gestión de Abonos
+
+**Todas las rutas requieren:**
+- Header: `Authorization: Bearer {token}`
+- Rol: Administrador (id_rol = 1) o SuperAdministrador (id_rol = 3)
+
+#### GET /api/abonos
+Obtener todos los abonos registrados.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "id_cliente": 5,
+      "cantidad": 500.00,
+      "estado": "activo",
+      "created_at": "2026-01-30T14:30:00.000Z",
+      "updated_at": "2026-01-30T14:30:00.000Z",
+      "cliente": {
+        "nombre": "Juan",
+        "apellido": "Pérez",
+        "codigo": "CLIENTE001",
+        "saldo_actual": 1500.00
+      },
+      "creado_por": "admin@cherry.com",
+      "actualizado_por": null
+    }
+  ]
+}
+```
+
+#### GET /api/abonos/cliente/:id_cliente
+Obtener todos los abonos de un cliente específico.
+
+**Parámetros:**
+- `id_cliente` (URL): ID del cliente
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "id_cliente": 5,
+      "cantidad": 500.00,
+      "estado": "activo",
+      "created_at": "2026-01-30T14:30:00.000Z",
+      "updated_at": "2026-01-30T14:30:00.000Z",
+      "cliente": {
+        "nombre": "Juan",
+        "apellido": "Pérez",
+        "codigo": "CLIENTE001",
+        "saldo_actual": 1500.00
+      },
+      "creado_por": "admin@cherry.com",
+      "actualizado_por": null
+    }
+  ]
+}
+```
+
+#### GET /api/abonos/:id
+Obtener un abono específico por ID.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "id_cliente": 5,
+    "cantidad": 500.00,
+    "estado": "activo",
+    "created_at": "2026-01-30T14:30:00.000Z",
+    "updated_at": "2026-01-30T14:30:00.000Z",
+    "cliente": {
+      "nombre": "Juan",
+      "apellido": "Pérez",
+      "codigo": "CLIENTE001",
+      "saldo_actual": 1500.00
+    }
+  }
+}
+```
+
+#### POST /api/abonos
+Crear nuevo abono (actualiza automáticamente el saldo del cliente).
+
+**Request Body:**
+```json
+{
+  "id_cliente": 5,
+  "cantidad": 500.00
+}
+```
+
+**Notas:**
+- `id_cliente` (requerido): ID del cliente a quien se le registra el abono
+- `cantidad` (requerido): Monto del abono (debe ser positivo)
+- El saldo del cliente se actualiza automáticamente sumando la cantidad
+
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Abono registrado exitosamente",
+  "data": {
+    "id": 1,
+    "id_cliente": 5,
+    "cantidad": 500.00,
+    "estado": "activo",
+    "created_at": "2026-01-30T14:30:00.000Z",
+    "updated_at": "2026-01-30T14:30:00.000Z",
+    "cliente": {
+      "nombre": "Juan",
+      "apellido": "Pérez",
+      "codigo": "CLIENTE001",
+      "saldo_actual": 1500.00
+    },
+    "creado_por": "admin@cherry.com",
+    "actualizado_por": null
+  }
+}
+```
+
+**Errores Comunes:**
+- **400** - ID de cliente inválido o cantidad no es un número positivo
+- **404** - Cliente no encontrado
+
+#### PUT /api/abonos/:id
+Actualizar abono (recalcula automáticamente el saldo del cliente).
+
+**Request Body:**
+```json
+{
+  "cantidad": 750.00
+}
+```
+
+**Notas:**
+- Solo se puede actualizar la `cantidad`
+- El sistema recalcula automáticamente el saldo del cliente:
+  - Si la nueva cantidad es mayor: suma la diferencia
+  - Si la nueva cantidad es menor: resta la diferencia
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Abono actualizado exitosamente",
+  "data": {
+    "id": 1,
+    "id_cliente": 5,
+    "cantidad": 750.00,
+    "estado": "activo",
+    "created_at": "2026-01-30T14:30:00.000Z",
+    "updated_at": "2026-01-30T15:00:00.000Z",
+    "cliente": {
+      "nombre": "Juan",
+      "apellido": "Pérez",
+      "codigo": "CLIENTE001",
+      "saldo_actual": 1750.00
+    },
+    "creado_por": "admin@cherry.com",
+    "actualizado_por": "admin@cherry.com"
+  }
+}
+```
+
+**Errores Comunes:**
+- **400** - ID de abono inválido o cantidad no es un número positivo
+- **404** - Abono no encontrado
+
+#### DELETE /api/abonos/:id
+Eliminar abono (cambia estado a inactivo y ajusta el saldo del cliente).
+
+**Notas:**
+- No se elimina físicamente el registro
+- Cambia el estado a "inactivo"
+- Resta automáticamente la cantidad del saldo del cliente
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Abono eliminado exitosamente (saldo ajustado)"
+}
+```
+
+**Errores Comunes:**
+- **400** - ID de abono inválido
+- **404** - Abono no encontrado o ya está inactivo
+
+---
+
 ## Códigos de Estado HTTP
 
 - **200** - OK: Solicitud exitosa
