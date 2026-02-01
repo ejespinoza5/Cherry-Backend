@@ -26,6 +26,7 @@ class UsuarioService {
                 apellido: usuario.cliente_apellido,
                 codigo: usuario.cliente_codigo,
                 direccion: usuario.cliente_direccion,
+                saldo: parseFloat(usuario.cliente_saldo || 0),
                 estado_actividad: usuario.cliente_estado_actividad
             };
         }

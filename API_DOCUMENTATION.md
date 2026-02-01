@@ -132,6 +132,24 @@ Obtener todos los usuarios.
       "estado": "activo",
       "created_at": "2026-01-26T10:30:00.000Z",
       "updated_at": "2026-01-26T10:30:00.000Z"
+    },
+    {
+      "id": 2,
+      "correo": "cliente@gmail.com",
+      "id_rol": 2,
+      "rol_nombre": "Cliente",
+      "estado": "activo",
+      "created_at": "2026-01-26T11:00:00.000Z",
+      "updated_at": "2026-01-26T11:00:00.000Z",
+      "cliente": {
+        "id": 1,
+        "nombre": "Juan",
+        "apellido": "Pérez",
+        "codigo": "CLIENTE001",
+        "direccion": "Calle 123, Ciudad",
+        "saldo": 1500.00,
+        "estado_actividad": "activo"
+      }
     }
   ]
 }
@@ -145,13 +163,22 @@ Obtener usuario por ID.
 {
   "success": true,
   "data": {
-    "id": 1,
-    "correo": "admin@cherry.com",
-    "id_rol": 1,
-    "rol_nombre": "Administrador",
+    "id": 2,
+    "correo": "cliente@gmail.com",
+    "id_rol": 2,
+    "rol_nombre": "Cliente",
     "estado": "activo",
     "created_at": "2026-01-26T10:30:00.000Z",
-    "updated_at": "2026-01-26T10:30:00.000Z"
+    "updated_at": "2026-01-26T10:30:00.000Z",
+    "cliente": {
+      "id": 1,
+      "nombre": "Juan",
+      "apellido": "Pérez",
+      "codigo": "CLIENTE001",
+      "direccion": "Calle 123, Ciudad",
+      "saldo": 1500.00,
+      "estado_actividad": "activo"
+    }
   }
 }
 ```
@@ -206,7 +233,16 @@ Crear nuevo usuario.
     "rol_nombre": "Cliente",
     "estado": "activo",
     "created_at": "2026-01-26T11:00:00.000Z",
-    "updated_at": "2026-01-26T11:00:00.000Z"
+    "updated_at": "2026-01-26T11:00:00.000Z",
+    "cliente": {
+      "id": 1,
+      "nombre": "Juan",
+      "apellido": "Pérez",
+      "codigo": "sol 12",
+      "direccion": "Calle 123, Ciudad",
+      "saldo": 0.00,
+      "estado_actividad": "activo"
+    }
   }
 }
 ```
