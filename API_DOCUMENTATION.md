@@ -18,15 +18,31 @@ NODE_ENV=development
 ## Configuración Inicial
 
 ### 1. Ejecutar el script de base de datos
-```sql
--- Ejecutar script-cherry.sql
-source script-cherry.sql
-
--- Luego ejecutar el script de inserción de roles y admin
-source insert-roles-admin.sql
+```bash
+# Ejecutar script-cherry.sql en MySQL
+mysql -u tu_usuario -p cherry_db < script-cherry.sql
 ```
 
-### 2. Usuario Administrador por Defecto
+### 2. Crear el SuperAdministrador
+```bash
+# Ejecutar el script de creación de superAdministrador
+node create-superadmin.js
+```
+
+### 3. (Opcional) Crear usuario Administrador usando init-database.js
+```bash
+# Este script crea un usuario administrador por defecto
+node init-database.js
+```
+
+### 4. Usuarios por Defecto
+
+#### SuperAdministrador
+- **Correo:** superadmin@cherry.com
+- **Contraseña:** Super@2026
+- ⚠️ Cambiar después del primer login
+
+#### Administrador (si se ejecutó init-database.js)
 - **Correo:** admin@cherry.com
 - **Contraseña:** admin123
 
@@ -90,11 +106,15 @@ Authorization: Bearer {token}
 
 ---
 
-### 👥 Gestión de Usuarios (Solo Administrador)
+### 👥 Gestión de Usuarios
 
 **Todas las rutas requieren:**
 - Header: `Authorization: Bearer {token}`
-- Rol: Administrador (id_rol = 1)
+- Rol: Administrador (id_rol = 1) o SuperAdministrador (id_rol = 3)
+
+**Permisos por Rol:**
+- **SuperAdministrador**: Acceso completo, puede crear cualquier tipo de usuario
+- **Administrador**: Solo puede crear usuarios con rol Cliente (id_rol = 2)
 
 #### GET /api/usuarios
 Obtener todos los usuarios.
@@ -137,9 +157,22 @@ Obtener usuario por ID.
 ```
 
 #### POST /api/usuarios
-Crear nuevo usuario (Administrador o Cliente).
+Crear nuevo usuario.
 
-**Request Body (Crear Administrador):**
+**Permisos:**
+- **SuperAdministrador**: Puede crear Administradores, SuperAdministradores y Clientes
+- **Administrador**: Solo puede crear Clientes (id_rol = 2)
+
+**Request Body (Crear SuperAdministrador - Solo SuperAdministrador):**
+```json
+{
+  "correo": "superadmin2@cherry.com",
+  "contraseña": "Super@2027",
+  "id_rol": 3
+}
+```
+
+**Request Body (Crear Administrador - Solo SuperAdministrador):**
 ```json
 {
   "correo": "admin2@cherry.com",
@@ -148,7 +181,7 @@ Crear nuevo usuario (Administrador o Cliente).
 }
 ```
 
-**Request Body (Crear Cliente):**
+**Request Body (Crear Cliente - Admin o SuperAdmin):**
 ```json
 {
   "correo": "cliente@gmail.com",
@@ -157,7 +190,7 @@ Crear nuevo usuario (Administrador o Cliente).
   "nombre": "Juan",
   "apellido": "Pérez",
   "direccion": "Calle 123, Ciudad",
-  "codigo":"sol 12"
+  "codigo": "sol 12"
 }
 ```
 
@@ -175,6 +208,22 @@ Crear nuevo usuario (Administrador o Cliente).
     "created_at": "2026-01-26T11:00:00.000Z",
     "updated_at": "2026-01-26T11:00:00.000Z"
   }
+}
+```
+
+**Error (403) - Administrador intentando crear Administrador:**
+```json
+{
+  "success": false,
+  "message": "Los administradores solo pueden crear cuentas de clientes"
+}
+```
+
+**Error (403) - No SuperAdmin intentando crear SuperAdmin:**
+```json
+{
+  "success": false,
+  "message": "Solo el superAdministrador puede crear cuentas de administradores"
 }
 ```
 
@@ -445,10 +494,30 @@ Eliminar orden (cambiar estado a inactivo).
 
 ## Roles del Sistema
 
-| ID | Nombre | Descripción |
-|----|--------|-------------|
-| 1 | Administrador | Acceso completo al sistema |
-| 2 | Cliente | Usuario estándar con permisos limitados |
+| ID | Nombre | Descripción | Permisos |
+|----|--------|-------------|----------|
+| 1 | Administrador | Acceso completo a funciones operativas | Puede crear solo usuarios clientes |
+| 2 | Cliente | Usuario estándar con permisos limitados | Sin permisos de creación |
+| 3 | SuperAdministrador | Acceso total al sistema | Puede crear administradores, superAdministradores y clientes |
+
+### Jerarquía de Permisos para Creación de Usuarios
+
+- **SuperAdministrador (id_rol = 3)**: Puede crear todos los tipos de usuarios (administradores, superAdministradores y clientes)
+- **Administrador (id_rol = 1)**: Solo puede crear usuarios con rol Cliente (id_rol = 2)
+- **Cliente (id_rol = 2)**: No puede crear usuarios
+
+### Usuarios por Defecto
+
+#### SuperAdministrador
+- **Correo:** superadmin@cherry.com
+- **Contraseña:** Super@2026
+- **Rol:** SuperAdministrador (id_rol = 3)
+- ⚠️ **IMPORTANTE:** Cambiar la contraseña después del primer login
+
+#### Administrador
+- **Correo:** admin@cherry.com
+- **Contraseña:** admin123
+- **Rol:** Administrador (id_rol = 1)
 
 ---
 
@@ -457,8 +526,12 @@ Eliminar orden (cambiar estado a inactivo).
 1. **Tokens JWT**: Los tokens expiran en 24 horas (configurable)
 2. **Contraseñas**: Se hashean con bcrypt antes de guardarse
 3. **Clientes**: Al crear un usuario con rol Cliente (id_rol=2), automáticamente se crea un registro en la tabla `clientes` con código único
-4. **Seguridad**: Solo los administradores pueden crear, actualizar y eliminar usuarios
+4. **Seguridad**: 
+   - Solo administradores y superAdministradores pueden gestionar usuarios
+   - Los administradores tienen restricciones en los tipos de usuarios que pueden crear
+   - El superAdministrador tiene acceso completo sin restricciones
 5. **Eliminación**: Los usuarios no se eliminan físicamente, solo se cambia su estado a "inactivo"
+6. **Creación de SuperAdministrador**: Ejecutar el script `create-superadmin.js` para crear el primer superAdministrador
 
 ---
 

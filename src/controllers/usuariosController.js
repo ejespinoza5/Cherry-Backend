@@ -68,10 +68,11 @@ const createUsuario = async (req, res) => {
             });
         }
 
-        // Crear usuario a través del servicio
+        // Crear usuario a través del servicio (pasando el rol del usuario que crea)
         const nuevoUsuario = await UsuarioService.createUsuario(
             { correo, contraseña, id_rol, nombre, apellido, codigo, direccion },
-            req.user.id
+            req.user.id,
+            req.user.id_rol  // Pasar el rol del usuario autenticado
         );
 
         res.status(201).json({
@@ -95,6 +96,20 @@ const createUsuario = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'La contraseña debe tener al menos 6 caracteres'
+            });
+        }
+
+        if (error.message === 'ADMIN_CAN_ONLY_CREATE_CLIENTS') {
+            return res.status(403).json({
+                success: false,
+                message: 'Los administradores solo pueden crear cuentas de clientes'
+            });
+        }
+
+        if (error.message === 'ONLY_SUPERADMIN_CAN_CREATE_ADMIN') {
+            return res.status(403).json({
+                success: false,
+                message: 'Solo el superAdministrador puede crear cuentas de administradores'
             });
         }
 

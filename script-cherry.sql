@@ -143,3 +143,4 @@ ON productos (id_cliente, id_orden);
 
 CREATE INDEX idx_historial_abono_cliente
 ON historial_abono (id_cliente);
+

@@ -38,7 +38,35 @@ const isAdmin = (req, res, next) => {
     next();
 };
 
+/**
+ * Middleware para verificar que el usuario sea superAdministrador
+ */
+const isSuperAdmin = (req, res, next) => {
+    if (!req.user || req.user.id_rol !== 3) {
+        return res.status(403).json({
+            success: false,
+            message: 'Acceso denegado. Se requieren permisos de superAdministrador'
+        });
+    }
+    next();
+};
+
+/**
+ * Middleware para verificar que el usuario sea administrador o superAdministrador
+ */
+const isAdminOrSuperAdmin = (req, res, next) => {
+    if (!req.user || (req.user.id_rol !== 1 && req.user.id_rol !== 3)) {
+        return res.status(403).json({
+            success: false,
+            message: 'Acceso denegado. Se requieren permisos de administrador'
+        });
+    }
+    next();
+};
+
 module.exports = {
     verifyToken,
-    isAdmin
+    isAdmin,
+    isSuperAdmin,
+    isAdminOrSuperAdmin
 };

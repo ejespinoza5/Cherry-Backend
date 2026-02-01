@@ -27,9 +27,17 @@ const isValidEstado = (estado) => {
     return ['activo', 'inactivo'].includes(estado);
 };
 
+/**
+ * Validar que el rol sea válido (1: admin, 2: cliente, 3: superAdmin)
+ */
+const isValidRol = (id_rol) => {
+    return [1, 2, 3].includes(parseInt(id_rol));
+};
+
 module.exports = {
     isValidEmail,
     isValidPassword,
     isPositiveInteger,
-    isValidEstado
+    isValidEstado,
+    isValidRol
 };

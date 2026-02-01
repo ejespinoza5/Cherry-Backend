@@ -57,7 +57,7 @@ class UsuarioService {
     /**
      * Crear nuevo usuario
      */
-    static async createUsuario(data, createdBy) {
+    static async createUsuario(data, createdBy, createdByRol) {
         const { correo, contraseña, id_rol, nombre, apellido, codigo, direccion } = data;
 
         // Validar formato de correo
@@ -71,8 +71,20 @@ class UsuarioService {
         }
 
         // Validar que el rol sea válido
-        if (![1, 2].includes(parseInt(id_rol))) {
+        if (![1, 2, 3].includes(parseInt(id_rol))) {
             throw new Error('INVALID_ROLE');
+        }
+
+        // Validar permisos según el rol del usuario que crea
+        // SuperAdministrador (id_rol = 3) puede crear cualquier tipo de usuario
+        // Administrador (id_rol = 1) solo puede crear clientes (id_rol = 2)
+        if (createdByRol === 1 && parseInt(id_rol) !== 2) {
+            throw new Error('ADMIN_CAN_ONLY_CREATE_CLIENTS');
+        }
+
+        // Solo superAdministrador puede crear administradores o superAdministradores
+        if ((parseInt(id_rol) === 1 || parseInt(id_rol) === 3) && createdByRol !== 3) {
+            throw new Error('ONLY_SUPERADMIN_CAN_CREATE_ADMIN');
         }
 
         // Si es cliente, el nombre y código son obligatorios

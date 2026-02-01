@@ -26,9 +26,10 @@ const initDatabase = async () => {
             await connection.query(`
                 INSERT INTO rol (id, nombre, estado) VALUES
                 (1, 'Administrador', 'activo'),
-                (2, 'Cliente', 'activo')
+                (2, 'Cliente', 'activo'),
+                (3, 'SuperAdministrador', 'activo')
             `);
-            console.log('✅ Roles insertados: Administrador (1) y Cliente (2)\n');
+            console.log('✅ Roles insertados: Administrador (1), Cliente (2) y SuperAdministrador (3)\n');
         } else {
             console.log('⚠️  Los roles ya existen, saltando...\n');
         }
@@ -56,7 +57,7 @@ const initDatabase = async () => {
             // Insertar usuario
             await connection.query(`
                 INSERT INTO usuarios (correo, contraseña, id_rol, estado) 
-                VALUES (?, ?, 1, 'activo')
+                VALUES (?, ?, 3, 'activo')
             `, [adminEmail, hashedPassword]);
             
             console.log('✅ Usuario administrador creado:');
