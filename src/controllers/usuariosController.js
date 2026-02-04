@@ -294,10 +294,76 @@ const deleteUsuario = async (req, res) => {
     }
 };
 
+/**
+ * Actualizar estado de actividad del cliente
+ */
+const updateEstadoActividad = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { estado_actividad } = req.body;
+
+        // Validar que se proporcionó el estado
+        if (!estado_actividad) {
+            return res.status(400).json({
+                success: false,
+                message: 'El estado_actividad es requerido'
+            });
+        }
+
+        // Validar que el estado sea válido
+        const estadosValidos = ['activo', 'deudor', 'bloqueado', 'inactivo'];
+        if (!estadosValidos.includes(estado_actividad)) {
+            return res.status(400).json({
+                success: false,
+                message: `Estado inválido. Valores permitidos: ${estadosValidos.join(', ')}`
+            });
+        }
+
+        const resultado = await UsuarioService.updateEstadoActividad(id, estado_actividad, req.user.id);
+
+        res.json({
+            success: true,
+            message: `Estado de actividad actualizado a '${estado_actividad}' exitosamente`,
+            data: resultado
+        });
+
+    } catch (error) {
+        console.error('Error al actualizar estado de actividad:', error);
+
+        if (error.message === 'USER_NOT_FOUND') {
+            return res.status(404).json({
+                success: false,
+                message: 'Usuario no encontrado'
+            });
+        }
+
+        if (error.message === 'USER_IS_NOT_CLIENT') {
+            return res.status(400).json({
+                success: false,
+                message: 'Solo se puede cambiar el estado de actividad de usuarios tipo cliente'
+            });
+        }
+
+        if (error.message === 'CLIENT_NOT_FOUND') {
+            return res.status(404).json({
+                success: false,
+                message: 'Cliente no encontrado'
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Error al actualizar estado de actividad',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
 module.exports = {
     getAllUsuarios,
     getUsuarioById,
     createUsuario,
     updateUsuario,
-    deleteUsuario
+    deleteUsuario,
+    updateEstadoActividad
 };

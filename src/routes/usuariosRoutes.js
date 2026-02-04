@@ -43,4 +43,11 @@ router.put('/:id', usuariosController.updateUsuario);
  */
 router.delete('/:id', usuariosController.deleteUsuario);
 
+/**
+ * @route   PATCH /api/usuarios/:id/estado-actividad
+ * @desc    Actualizar manualmente el estado de actividad de un cliente
+ * @access  Private (Admin o SuperAdmin)
+ */
+router.patch('/:id/estado-actividad', usuariosController.updateEstadoActividad);
+
 module.exports = router;

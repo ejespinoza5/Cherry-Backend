@@ -331,6 +331,7 @@ class ProductoService {
                     codigo: row.cliente_codigo,
                     direccion: row.cliente_direccion,
                     saldo: parseFloat(row.cliente_saldo || 0).toFixed(2),
+                    estado_actividad: row.cliente_estado_actividad,
                     productos: []
                 });
             }
@@ -399,7 +400,8 @@ class ProductoService {
             apellido: rows[0].cliente_apellido,
             codigo: rows[0].cliente_codigo,
             direccion: rows[0].cliente_direccion,
-            saldo: parseFloat(rows[0].cliente_saldo || 0).toFixed(2)
+            saldo: parseFloat(rows[0].cliente_saldo || 0).toFixed(2),
+            estado_actividad: rows[0].cliente_estado_actividad
         };
 
         // Agrupar productos por orden

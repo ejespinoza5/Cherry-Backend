@@ -404,6 +404,24 @@ class Cliente {
     }
 
     /**
+     * Actualizar estado_actividad manualmente (sin considerar el saldo)
+     */
+    static async updateEstadoActividadManual(id_cliente, estado_actividad, updated_by) {
+        try {
+            await pool.query(
+                `UPDATE clientes 
+                 SET estado_actividad = ?, updated_by = ?
+                 WHERE id = ?`,
+                [estado_actividad, updated_by, id_cliente]
+            );
+            
+            return true;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
      * Obtener saldo actual del cliente
      */
     static async getSaldo(id_cliente) {

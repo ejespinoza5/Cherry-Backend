@@ -255,6 +255,43 @@ class UsuarioService {
 
         return true;
     }
+
+    /**
+     * Actualizar manualmente el estado de actividad de un cliente
+     */
+    static async updateEstadoActividad(id_usuario, estado_actividad, updatedBy) {
+        // Verificar que el usuario existe
+        const usuario = await Usuario.findById(id_usuario);
+        if (!usuario) {
+            throw new Error('USER_NOT_FOUND');
+        }
+
+        // Verificar que el usuario sea un cliente (id_rol = 2)
+        if (usuario.id_rol !== 2) {
+            throw new Error('USER_IS_NOT_CLIENT');
+        }
+
+        // Obtener el cliente asociado
+        const cliente = await Cliente.findByUsuario(id_usuario);
+        if (!cliente) {
+            throw new Error('CLIENT_NOT_FOUND');
+        }
+
+        // Actualizar el estado_actividad manualmente
+        await Cliente.updateEstadoActividadManual(cliente.id, estado_actividad, updatedBy);
+
+        // Retornar información actualizada del cliente
+        const clienteActualizado = await Cliente.findById(cliente.id);
+        return {
+            id: clienteActualizado.id,
+            nombre: clienteActualizado.nombre,
+            apellido: clienteActualizado.apellido,
+            codigo: clienteActualizado.codigo,
+            saldo: parseFloat(clienteActualizado.saldo),
+            estado_actividad: clienteActualizado.estado_actividad,
+            updated_at: clienteActualizado.updated_at
+        };
+    }
 }
 
 module.exports = UsuarioService;
