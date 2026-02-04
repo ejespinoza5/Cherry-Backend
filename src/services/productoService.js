@@ -188,6 +188,14 @@ class ProductoService {
             throw new Error('INVALID_COMMISSION');
         }
 
+        // Calcular total anterior del producto
+        const ordenAnterior = await Orden.findById(producto.id_orden);
+        const impuestoAnterior = parseFloat(ordenAnterior.impuesto || 0);
+        const subtotalAnterior = parseFloat(producto.valor_etiqueta);
+        const comisionAnterior = parseFloat(producto.comision || 3.00);
+        const impuestoCalculadoAnterior = subtotalAnterior * impuestoAnterior;
+        const totalAnterior = subtotalAnterior + impuestoCalculadoAnterior + comisionAnterior;
+
         // Preparar datos para actualizar
         const updateData = {
             id_cliente: id_cliente !== undefined ? id_cliente : producto.id_cliente,
@@ -200,6 +208,30 @@ class ProductoService {
             observacion: observacion !== undefined ? observacion : producto.observacion,
             estado: estado !== undefined ? estado : producto.estado
         };
+
+        // Calcular total nuevo del producto
+        const ordenNueva = await Orden.findById(updateData.id_orden);
+        const impuestoNuevo = parseFloat(ordenNueva.impuesto || 0);
+        const subtotalNuevo = parseFloat(updateData.valor_etiqueta);
+        const comisionNueva = parseFloat(updateData.comision || 3.00);
+        const impuestoCalculadoNuevo = subtotalNuevo * impuestoNuevo;
+        const totalNuevo = subtotalNuevo + impuestoCalculadoNuevo + comisionNueva;
+
+        // Calcular la diferencia y actualizar saldo
+        // Si el cliente cambió, devolver al anterior y restar del nuevo
+        const clienteAnterior = producto.id_cliente;
+        const clienteNuevo = updateData.id_cliente;
+
+        if (clienteAnterior !== clienteNuevo) {
+            // Devolver el total al cliente anterior
+            await Cliente.actualizarSaldo(clienteAnterior, totalAnterior);
+            // Restar el total del nuevo cliente
+            await Cliente.actualizarSaldo(clienteNuevo, -totalNuevo);
+        } else {
+            // Mismo cliente: devolver el monto anterior y restar el nuevo
+            await Cliente.actualizarSaldo(clienteAnterior, totalAnterior);
+            await Cliente.actualizarSaldo(clienteNuevo, -totalNuevo);
+        }
 
         // Actualizar el producto
         await Producto.update(id, updateData, updatedBy);
