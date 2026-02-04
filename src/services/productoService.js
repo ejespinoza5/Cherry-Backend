@@ -78,6 +78,12 @@ class ProductoService {
             throw new Error('CLIENT_NOT_FOUND');
         }
 
+        // Verificar que el cliente no esté bloqueado
+        const cliente = await Cliente.findById(id_cliente);
+        if (cliente.estado_actividad === 'bloqueado') {
+            throw new Error('CLIENT_BLOCKED');
+        }
+
         // Validar cantidad de artículos
         if (!cantidad_articulos || cantidad_articulos < 1) {
             throw new Error('INVALID_QUANTITY');
@@ -123,6 +129,7 @@ class ProductoService {
         });
 
         // Restar el total del saldo del cliente (restar = sumar valor negativo)
+        // Esto automáticamente actualizará el estado_actividad
         await Cliente.actualizarSaldo(id_cliente, -totalConIva);
 
         // Obtener y devolver el producto creado

@@ -119,6 +119,13 @@ const createProducto = async (req, res) => {
             });
         }
 
+        if (error.message === 'CLIENT_BLOCKED') {
+            return res.status(403).json({
+                success: false,
+                message: 'El cliente está bloqueado por exceder el límite de deuda permitido ($300). No puede realizar nuevas compras.'
+            });
+        }
+
         if (error.message === 'INVALID_QUANTITY') {
             return res.status(400).json({
                 success: false,

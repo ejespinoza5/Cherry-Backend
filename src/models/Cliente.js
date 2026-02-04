@@ -356,7 +356,48 @@ class Cliente {
                 [monto, id_cliente]
             );
             
+            // Actualizar automáticamente el estado_actividad basado en el nuevo saldo
+            await this.actualizarEstadoActividad(id_cliente);
+            
             return result.affectedRows > 0;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Actualizar estado_actividad automáticamente basado en el saldo
+     * Límite de deuda: $300
+     */
+    static async actualizarEstadoActividad(id_cliente) {
+        try {
+            const LIMITE_DEUDA = -300.00;
+            
+            // Obtener saldo actual
+            const saldo = await this.getSaldo(id_cliente);
+            
+            let nuevoEstado;
+            
+            if (saldo >= 0) {
+                // Saldo positivo o cero: ACTIVO
+                nuevoEstado = 'activo';
+            } else if (saldo > LIMITE_DEUDA) {
+                // Saldo negativo pero no ha superado el límite: DEUDOR
+                nuevoEstado = 'deudor';
+            } else {
+                // Saldo <= -$300: BLOQUEADO
+                nuevoEstado = 'bloqueado';
+            }
+            
+            // Actualizar el estado
+            await pool.query(
+                `UPDATE clientes 
+                 SET estado_actividad = ?
+                 WHERE id = ?`,
+                [nuevoEstado, id_cliente]
+            );
+            
+            return nuevoEstado;
         } catch (error) {
             throw error;
         }

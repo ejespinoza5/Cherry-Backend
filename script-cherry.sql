@@ -35,7 +35,7 @@ CREATE TABLE clientes (
   codigo VARCHAR(50) UNIQUE,
   direccion VARCHAR(255),
   saldo DECIMAL(10,2) DEFAULT 0.00,
-  estado_actividad ENUM('activo','inactivo') DEFAULT 'activo',
+  estado_actividad ENUM('activo','deudor','bloqueado','inactivo') DEFAULT 'activo',
   estado ENUM('activo','inactivo') DEFAULT 'activo',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
