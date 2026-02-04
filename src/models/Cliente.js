@@ -343,6 +343,40 @@ class Cliente {
             throw error;
         }
     }
+
+    /**
+     * Actualizar saldo del cliente (resta o suma)
+     */
+    static async actualizarSaldo(id_cliente, monto) {
+        try {
+            const [result] = await pool.query(
+                `UPDATE clientes 
+                 SET saldo = saldo + (?)
+                 WHERE id = ?`,
+                [monto, id_cliente]
+            );
+            
+            return result.affectedRows > 0;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Obtener saldo actual del cliente
+     */
+    static async getSaldo(id_cliente) {
+        try {
+            const [rows] = await pool.query(
+                `SELECT saldo FROM clientes WHERE id = ?`,
+                [id_cliente]
+            );
+            
+            return rows[0] ? parseFloat(rows[0].saldo) : 0;
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = Cliente;

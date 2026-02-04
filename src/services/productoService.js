@@ -1,5 +1,6 @@
 const Producto = require('../models/Producto');
 const Orden = require('../models/Orden');
+const Cliente = require('../models/Cliente');
 
 class ProductoService {
     /**
@@ -97,6 +98,16 @@ class ProductoService {
             throw new Error('INVALID_COMMISSION');
         }
 
+        // Obtener la orden para calcular el impuesto
+        const orden = await Orden.findById(id_orden);
+        const impuesto = parseFloat(orden.impuesto || 0);
+        
+        // Calcular el total con IVA
+        const subtotal = parseFloat(valor_etiqueta);
+        const comisionFinal = parseFloat(comision || 3.00);
+        const impuestoCalculado = subtotal * impuesto;
+        const totalConIva = subtotal + impuestoCalculado + comisionFinal;
+
         // Crear el producto
         const productoId = await Producto.create({
             id_cliente,
@@ -110,6 +121,9 @@ class ProductoService {
             estado,
             created_by: createdBy
         });
+
+        // Restar el total del saldo del cliente (restar = sumar valor negativo)
+        await Cliente.actualizarSaldo(id_cliente, -totalConIva);
 
         // Obtener y devolver el producto creado
         const producto = await Producto.findById(productoId);
@@ -205,8 +219,23 @@ class ProductoService {
             throw new Error('PRODUCT_NOT_FOUND');
         }
 
+        // Obtener la orden para calcular el impuesto
+        const orden = await Orden.findById(producto.id_orden);
+        const impuesto = parseFloat(orden.impuesto || 0);
+        
+        // Calcular el total que se había restado del saldo
+        const subtotal = parseFloat(producto.valor_etiqueta);
+        const comisionFinal = parseFloat(producto.comision || 3.00);
+        const impuestoCalculado = subtotal * impuesto;
+        const totalConIva = subtotal + impuestoCalculado + comisionFinal;
+
+        // Eliminar el producto (soft delete)
         await Producto.delete(id, deletedBy);
-        return { message: 'Producto eliminado correctamente' };
+
+        // Devolver el monto al saldo del cliente (sumar de vuelta)
+        await Cliente.actualizarSaldo(producto.id_cliente, totalConIva);
+
+        return { message: 'Producto eliminado correctamente y saldo actualizado' };
     }
 
     /**
