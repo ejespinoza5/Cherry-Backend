@@ -76,39 +76,41 @@ class PDFService {
                 const lightGray = '#F5F5F5';
                 const borderColor = '#DDDDDD';
 
-                // HEADER - Logo y título
+                // HEADER - Logo más grande y a la derecha
                 const logoPath = path.join(__dirname, '../../public/images/logo_cherry.png');
                 if (fs.existsSync(logoPath)) {
-                    doc.image(logoPath, 50, 45, { width: 80 });
+                    doc.image(logoPath, 70, 30, { width: 120 });
                 }
 
-                doc.fontSize(24)
+                // Título centrado y más grande
+                doc.fontSize(16)
                    .fillColor(primaryColor)
                    .font('Helvetica-Bold')
-                   .text('CHERRY', 140, 55);
+                   .text('Sistema de Gestión de Productos', 160, 50, { align: 'center', width: 352 });
 
-                doc.fontSize(10)
+                // Banda decorativa con degradado
+                doc.rect(50, 85, 512, 35)
+                   .fillAndStroke(primaryColor, primaryColor);
+
+                doc.fontSize(20)
+                   .fillColor('#FFFFFF')
+                   .font('Helvetica-Bold')
+                   .text('FACTURA GENERADA', 50, 95, { align: 'center', width: 512 });
+
+                // Fecha de emisión
+                doc.fontSize(9)
                    .fillColor(textColor)
                    .font('Helvetica')
-                   .text('Sistema de Gestión de Productos', 140, 82);
+                   .text(`Fecha de emisión: ${new Date().toLocaleDateString('es-CO', { 
+                       year: 'numeric', 
+                       month: 'long', 
+                       day: 'numeric'
+                   })}`, 50, 130, { align: 'right', width: 512 });
 
-                // Línea decorativa
-                doc.moveTo(50, 110)
-                   .lineTo(562, 110)
-                   .strokeColor(primaryColor)
-                   .lineWidth(2)
-                   .stroke();
-
-                // TÍTULO DEL DOCUMENTO
-                doc.fontSize(18)
-                   .fillColor(secondaryColor)
-                   .font('Helvetica-Bold')
-                   .text('DETALLE DE PRODUCTOS', 50, 130, { align: 'center' });
-
-                // INFORMACIÓN DEL CLIENTE
-                let yPosition = 170;
+                // INFORMACIÓN DEL CLIENTE - 2 columnas
+                let yPosition = 155;
                 
-                doc.rect(50, yPosition, 512, 90)
+                doc.rect(50, yPosition, 512, 85)
                    .fillAndStroke(lightGray, borderColor);
 
                 doc.fontSize(12)
@@ -116,29 +118,38 @@ class PDFService {
                    .font('Helvetica-Bold')
                    .text('INFORMACIÓN DEL CLIENTE', 60, yPosition + 10);
 
-                yPosition += 30;
+                // Columna izquierda
+                yPosition += 35;
                 doc.fontSize(10)
                    .fillColor(textColor)
                    .font('Helvetica-Bold')
                    .text('Cliente:', 60, yPosition)
                    .font('Helvetica')
-                   .text(`${data.cliente.nombre} ${data.cliente.apellido}`, 140, yPosition);
+                   .text(`${data.cliente.nombre} ${data.cliente.apellido}`, 120, yPosition);
 
-                yPosition += 15;
+                yPosition += 18;
                 doc.font('Helvetica-Bold')
                    .text('Código:', 60, yPosition)
                    .font('Helvetica')
-                   .text(data.cliente.codigo || 'N/A', 140, yPosition);
+                   .text(data.cliente.codigo || 'N/A', 120, yPosition);
 
-                yPosition += 15;
-                doc.fillColor(textColor)
-                   .font('Helvetica-Bold')
-                   .text('Dirección:', 60, yPosition)
+                // Columna derecha
+                const rightColX = 310;
+                yPosition = 190; // Resetear a la misma altura que columna izquierda
+                
+                doc.font('Helvetica-Bold')
+                   .text('Dirección:', rightColX, yPosition)
                    .font('Helvetica')
-                   .text(data.cliente.direccion || 'N/A', 140, yPosition, { width: 400 });
+                   .text(data.cliente.direccion || 'N/A', rightColX + 70, yPosition, { width: 180 });
+
+                yPosition += 18;
+                doc.font('Helvetica-Bold')
+                   .text('Correo:', rightColX, yPosition)
+                   .font('Helvetica')
+                   .text(data.cliente.correo || 'N/A', rightColX + 70, yPosition, { width: 180 });
 
                 // TABLA DE PRODUCTOS
-                yPosition = 280;
+                yPosition = 260;
 
                 // Encabezado de tabla
                 doc.rect(50, yPosition, 512, 25)
@@ -183,7 +194,7 @@ class PDFService {
                             altRow = false;
                         }
 
-                        const rowHeight = producto.imagen_producto ? 80 : 30;
+                        const rowHeight = producto.imagen_producto ? 60 : 25;
                         
                         // Fondo alternado
                         if (altRow) {
@@ -194,7 +205,8 @@ class PDFService {
                                .stroke(borderColor);
                         }
 
-                        const textYPosition = producto.imagen_producto ? yPosition + 30 : yPosition + 10;
+                        // Centrar texto verticalmente en la fila
+                        const textYPosition = producto.imagen_producto ? yPosition + 26 : yPosition + 8;
                         const subtotal = producto.valor_etiqueta * producto.cantidad_articulos;
                         const total = subtotal + producto.comision;
 
@@ -204,39 +216,39 @@ class PDFService {
                             
                             if (imageBuffer) {
                                 try {
-                                    doc.image(imageBuffer, 55, yPosition + 5, { 
+                                    doc.image(imageBuffer, 55, yPosition + 3, { 
                                         width: 50, 
-                                        height: 70,
-                                        fit: [50, 70],
+                                        height: 54,
+                                        fit: [50, 54],
                                         align: 'center',
                                         valign: 'center'
                                     });
                                 } catch (error) {
                                     // Si falla, mostrar rectángulo con texto
-                                    doc.rect(55, yPosition + 5, 50, 70)
+                                    doc.rect(55, yPosition + 3, 50, 54)
                                        .stroke('#DDDDDD');
                                     doc.fontSize(7)
                                        .fillColor('#999999')
                                        .font('Helvetica')
-                                       .text('Sin imagen', 55, yPosition + 32, { width: 50, align: 'center' });
+                                       .text('Sin imagen', 55, yPosition + 25, { width: 50, align: 'center' });
                                 }
                             } else {
                                 // Si no se pudo convertir la imagen, mostrar rectángulo con texto
-                                doc.rect(55, yPosition + 5, 50, 70)
+                                doc.rect(55, yPosition + 3, 50, 54)
                                    .stroke('#DDDDDD');
                                 doc.fontSize(7)
                                    .fillColor('#999999')
                                    .font('Helvetica')
-                                   .text('Sin imagen', 55, yPosition + 32, { width: 50, align: 'center' });
+                                   .text('Sin imagen', 55, yPosition + 25, { width: 50, align: 'center' });
                             }
                         } else {
                             // Sin imagen en BD, mostrar rectángulo vacío
-                            doc.rect(55, yPosition + 5, 50, 70)
+                            doc.rect(55, yPosition + 3, 50, 54)
                                .stroke('#DDDDDD');
                             doc.fontSize(7)
                                .fillColor('#999999')
                                .font('Helvetica')
-                               .text('Sin imagen', 55, yPosition + 32, { width: 50, align: 'center' });
+                               .text('Sin imagen', 55, yPosition + 25, { width: 50, align: 'center' });
                         }
 
                         // Datos del producto
@@ -282,7 +294,6 @@ class PDFService {
                    .fillColor(textColor)
                    .font('Helvetica-Bold')
                    .text('Subtotal:', 360, yPosition + 6)
-                   .font('Helvetica')
                    .text(`$${parseFloat(data.subtotal_general).toLocaleString('es-CO', { minimumFractionDigits: 2 })}`, 
                        450, yPosition + 6, { width: 100, align: 'right' });
 
@@ -293,7 +304,6 @@ class PDFService {
                    .stroke(borderColor);
                 doc.font('Helvetica-Bold')
                    .text(`Impuesto (${data.impuesto}):`, 360, yPosition + 6)
-                   .font('Helvetica')
                    .text(`$${parseFloat(data.impuesto_aplicado).toLocaleString('es-CO', { minimumFractionDigits: 2 })}`, 
                        450, yPosition + 6, { width: 100, align: 'right' });
 
@@ -304,7 +314,6 @@ class PDFService {
                    .stroke(borderColor);
                 doc.font('Helvetica-Bold')
                    .text('Total con Impuestos:', 360, yPosition + 6)
-                   .font('Helvetica')
                    .text(`$${parseFloat(data.total_con_impuestos).toLocaleString('es-CO', { minimumFractionDigits: 2 })}`, 
                        450, yPosition + 6, { width: 100, align: 'right' });
 
@@ -315,7 +324,6 @@ class PDFService {
                    .stroke(borderColor);
                 doc.font('Helvetica-Bold')
                    .text('Total Comisiones:', 360, yPosition + 6)
-                   .font('Helvetica')
                    .text(`$${parseFloat(data.total_comisiones_general).toLocaleString('es-CO', { minimumFractionDigits: 2 })}`, 
                        450, yPosition + 6, { width: 100, align: 'right' });
 
@@ -342,14 +350,8 @@ class PDFService {
                 yPosition += 25;
                 doc.fontSize(8)
                    .fillColor('#999999')
-                   .font('Helvetica')
-                   .text(`Documento generado el ${new Date().toLocaleDateString('es-CO', { 
-                       year: 'numeric', 
-                       month: 'long', 
-                       day: 'numeric',
-                       hour: '2-digit',
-                       minute: '2-digit'
-                   })}`, 50, yPosition, { align: 'center', width: 512 });
+                   .font('Helvetica-Oblique')
+                   .text('Documento generado por Cherry', 50, yPosition, { align: 'center', width: 512 });
 
                 doc.end();
 

@@ -266,6 +266,7 @@ class Producto {
                     c.apellido as cliente_apellido,
                     c.codigo as cliente_codigo,
                     c.direccion as cliente_direccion,
+                    u.correo as cliente_correo,
                     c.saldo as cliente_saldo,
                     c.estado_actividad as cliente_estado_actividad,
                     o.id as orden_id,
@@ -280,6 +281,7 @@ class Producto {
                     p.observacion,
                     p.created_at as producto_created_at
                 FROM clientes c
+                INNER JOIN usuarios u ON c.id_usuario = u.id
                 INNER JOIN productos p ON c.id = p.id_cliente
                 INNER JOIN ordenes o ON p.id_orden = o.id
                 WHERE c.id = ? AND o.id = ? AND p.estado = 'activo' AND c.estado = 'activo' AND o.estado = 'activo'

@@ -400,6 +400,7 @@ class ProductoService {
             apellido: rows[0].cliente_apellido,
             codigo: rows[0].cliente_codigo,
             direccion: rows[0].cliente_direccion,
+            correo: rows[0].cliente_correo,
             saldo: parseFloat(rows[0].cliente_saldo || 0).toFixed(2),
             estado_actividad: rows[0].cliente_estado_actividad
         };
