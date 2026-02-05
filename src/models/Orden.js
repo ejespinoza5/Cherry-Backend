@@ -9,8 +9,8 @@ class Orden {
             const { nombre_orden, fecha_inicio, fecha_fin, impuesto, estado, created_by } = data;
             
             const [result] = await pool.query(
-                `INSERT INTO ordenes (nombre_orden, fecha_inicio, fecha_fin, impuesto, estado, created_by) 
-                 VALUES (?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO ordenes (nombre_orden, fecha_inicio, fecha_fin, impuesto, estado, estado_orden, created_by) 
+                 VALUES (?, ?, ?, ?, ?, 'abierta', ?)`,
                 [nombre_orden, fecha_inicio, fecha_fin || null, impuesto || 0.08, estado || 'activo', created_by]
             );
             
@@ -96,6 +96,122 @@ class Orden {
             );
             
             return result.affectedRows > 0;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Cerrar orden (manual o automáticamente)
+     */
+    static async cerrarOrden(id, closed_by, tipo_cierre = 'manual', connection = null) {
+        try {
+            const useConnection = connection || pool;
+            const [result] = await useConnection.query(
+                `UPDATE ordenes 
+                 SET estado_orden = 'cerrada', 
+                     fecha_cierre = NOW(),
+                     tipo_cierre = ?,
+                     closed_by = ?,
+                     updated_by = ?
+                 WHERE id = ? AND estado_orden = 'abierta'`,
+                [tipo_cierre, closed_by, closed_by, id]
+            );
+            
+            return result.affectedRows > 0;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Cambiar a periodo de gracia
+     */
+    static async cambiarAPeriodoGracia(id) {
+        try {
+            const [result] = await pool.query(
+                `UPDATE ordenes 
+                 SET estado_orden = 'en_periodo_gracia'
+                 WHERE id = ? AND estado_orden = 'cerrada'`,
+                [id]
+            );
+            
+            return result.affectedRows > 0;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Reabrir orden (solo administradores)
+     */
+    static async reabrirOrden(id, updated_by) {
+        try {
+            const [result] = await pool.query(
+                `UPDATE ordenes 
+                 SET estado_orden = 'abierta',
+                     fecha_cierre = NULL,
+                     tipo_cierre = NULL,
+                     closed_by = NULL,
+                     updated_by = ?
+                 WHERE id = ? AND estado_orden IN ('cerrada', 'en_periodo_gracia')`,
+                [updated_by, id]
+            );
+            
+            return result.affectedRows > 0;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Verificar si una orden está cerrada
+     */
+    static async estaCerrada(id) {
+        try {
+            const [rows] = await pool.query(
+                `SELECT estado_orden FROM ordenes WHERE id = ?`,
+                [id]
+            );
+            
+            if (rows.length === 0) return null;
+            return rows[0].estado_orden !== 'abierta';
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Obtener órdenes que deben cerrarse automáticamente
+     */
+    static async obtenerOrdenesParaCerrarAutomaticamente() {
+        try {
+            const [rows] = await pool.query(
+                `SELECT * FROM ordenes 
+                 WHERE estado_orden = 'abierta' 
+                   AND fecha_fin IS NOT NULL 
+                   AND fecha_fin <= NOW()
+                   AND estado = 'activo'`
+            );
+            return rows;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Obtener órdenes en periodo de gracia que vencieron
+     */
+    static async obtenerOrdenesConGraciaVencida() {
+        try {
+            const [rows] = await pool.query(
+                `SELECT o.* 
+                 FROM ordenes o
+                 INNER JOIN cierre_orden co ON o.id = co.id_orden
+                 WHERE o.estado_orden = 'en_periodo_gracia'
+                   AND co.fecha_limite_pago <= NOW()`
+            );
+            return rows;
         } catch (error) {
             throw error;
         }

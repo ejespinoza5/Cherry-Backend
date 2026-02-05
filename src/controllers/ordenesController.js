@@ -118,6 +118,16 @@ const createOrden = async (req, res) => {
             });
         }
 
+        // Validación de orden en periodo de gracia
+        if (error.message.startsWith('NO_PUEDE_CREAR_ORDEN|')) {
+            const mensaje = error.message.split('|')[1];
+            return res.status(409).json({
+                success: false,
+                message: mensaje,
+                error_code: 'ORDER_IN_GRACE_PERIOD'
+            });
+        }
+
         if (error.message === 'INVALID_COMMISSION_VALUE') {
             return res.status(400).json({
                 success: false,

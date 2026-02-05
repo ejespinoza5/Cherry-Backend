@@ -1,4 +1,5 @@
 const Orden = require('../models/Orden');
+const CierreOrdenService = require('./cierreOrdenService');
 
 class OrdenService {
     /**
@@ -10,7 +11,10 @@ class OrdenService {
             nombre_orden: orden.nombre_orden,
             fecha_inicio: orden.fecha_inicio,
             fecha_fin: orden.fecha_fin,
+            fecha_cierre: orden.fecha_cierre,
             impuesto: parseFloat(orden.impuesto),
+            estado_orden: orden.estado_orden,
+            tipo_cierre: orden.tipo_cierre,
             estado: orden.estado,
             created_at: orden.created_at,
             updated_at: orden.updated_at,
@@ -72,19 +76,29 @@ class OrdenService {
             throw new Error('INVALID_TAX_VALUE');
         }
 
-        // Crear la orden
-        const ordenId = await Orden.create({
-            nombre_orden,
-            fecha_inicio,
-            fecha_fin,
-            impuesto,
-            estado,
-            created_by: createdBy
-        });
+        try {
+            // Crear la orden con reinicio de saldos
+            const resultado = await CierreOrdenService.iniciarNuevaOrden({
+                nombre_orden,
+                fecha_inicio,
+                fecha_fin,
+                impuesto,
+                estado
+            }, createdBy);
 
-        // Obtener y devolver la orden creada
-        const orden = await Orden.findById(ordenId);
-        return this.formatOrdenData(orden);
+            // Obtener y devolver la orden creada
+            const orden = await Orden.findById(resultado.id_orden);
+            return {
+                ...this.formatOrdenData(orden),
+                mensaje: resultado.mensaje
+            };
+        } catch (error) {
+            // Re-lanzar errores de validación de periodo de gracia
+            if (error.message.startsWith('NO_PUEDE_CREAR_ORDEN|')) {
+                throw error;
+            }
+            throw error;
+        }
     }
 
     /**

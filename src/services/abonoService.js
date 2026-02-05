@@ -1,5 +1,6 @@
 const Abono = require('../models/Abono');
 const { isPositiveInteger } = require('../utils/validators');
+const VerificarPagoOrdenService = require('./verificarPagoOrdenService');
 
 class AbonoService {
     /**
@@ -99,6 +100,14 @@ class AbonoService {
 
         // Crear abono
         const abonoId = await Abono.create(id_cliente, cantidadNum, created_by);
+
+        // Verificar si el cliente completó su pago en órdenes en periodo de gracia
+        try {
+            await VerificarPagoOrdenService.verificarYActualizarPagoCliente(id_cliente);
+        } catch (error) {
+            console.error('Error al verificar pago de orden:', error);
+            // No detener la creación del abono si falla la verificación
+        }
 
         // Retornar el abono creado
         const abonoCreado = await Abono.findById(abonoId);

@@ -72,6 +72,12 @@ class ProductoService {
             throw new Error('ORDER_NOT_FOUND');
         }
 
+        // Validar que la orden esté abierta
+        const ordenCerrada = await Orden.estaCerrada(id_orden);
+        if (ordenCerrada) {
+            throw new Error('ORDER_CLOSED');
+        }
+
         // Validar que el cliente existe
         const clienteExists = await Producto.clienteExists(id_cliente);
         if (!clienteExists) {
@@ -159,11 +165,21 @@ class ProductoService {
             throw new Error('PRODUCT_NOT_FOUND');
         }
 
-        // Si se actualiza la orden, validar que existe
+        // Validar que la orden actual del producto esté abierta
+        const ordenCerrada = await Orden.estaCerrada(producto.id_orden);
+        if (ordenCerrada) {
+            throw new Error('ORDER_CLOSED');
+        }
+
+        // Si se actualiza la orden, validar que existe y esté abierta
         if (id_orden !== undefined) {
             const ordenExists = await Producto.ordenExists(id_orden);
             if (!ordenExists) {
                 throw new Error('ORDER_NOT_FOUND');
+            }
+            const nuevaOrdenCerrada = await Orden.estaCerrada(id_orden);
+            if (nuevaOrdenCerrada) {
+                throw new Error('ORDER_CLOSED');
             }
         }
 
@@ -256,6 +272,12 @@ class ProductoService {
 
         if (!producto) {
             throw new Error('PRODUCT_NOT_FOUND');
+        }
+
+        // Validar que la orden esté abierta
+        const ordenCerrada = await Orden.estaCerrada(producto.id_orden);
+        if (ordenCerrada) {
+            throw new Error('ORDER_CLOSED');
         }
 
         // Obtener la orden para calcular el impuesto

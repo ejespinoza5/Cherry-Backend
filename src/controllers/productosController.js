@@ -113,6 +113,13 @@ const createProducto = async (req, res) => {
             });
         }
 
+        if (error.message === 'ORDER_CLOSED') {
+            return res.status(403).json({
+                success: false,
+                message: 'No se pueden agregar productos a una orden cerrada. Solo los administradores pueden reabrirla.'
+            });
+        }
+
         if (error.message === 'CLIENT_NOT_FOUND') {
             return res.status(404).json({
                 success: false,
@@ -231,6 +238,13 @@ const updateProducto = async (req, res) => {
             });
         }
 
+        if (error.message === 'ORDER_CLOSED') {
+            return res.status(403).json({
+                success: false,
+                message: 'No se pueden modificar productos de una orden cerrada. Solo los administradores pueden reabrirla.'
+            });
+        }
+
         if (error.message === 'CLIENT_NOT_FOUND') {
             return res.status(404).json({
                 success: false,
@@ -304,6 +318,13 @@ const deleteProducto = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: 'Producto no encontrado'
+            });
+        }
+
+        if (error.message === 'ORDER_CLOSED') {
+            return res.status(403).json({
+                success: false,
+                message: 'No se pueden eliminar productos de una orden cerrada. Solo los administradores pueden reabrirla.'
             });
         }
 
