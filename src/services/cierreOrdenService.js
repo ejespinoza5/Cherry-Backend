@@ -259,6 +259,18 @@ class CierreOrdenService {
 
                 // Rematar cada producto
                 for (const producto of productos) {
+                    // Verificar si este producto ya fue rematado antes (evitar duplicados)
+                    const [yaRematado] = await connection.query(
+                        `SELECT id FROM productos_rematados 
+                         WHERE id_producto = ? AND id_orden = ? AND id_cliente = ?`,
+                        [producto.id, id_orden, clienteOrden.id_cliente]
+                    );
+
+                    if (yaRematado.length > 0) {
+                        console.log(`Producto ${producto.id} ya fue rematado anteriormente, saltando...`);
+                        continue; // Saltar si ya fue rematado
+                    }
+
                     // Convertir todo a números para evitar concatenación
                     const valorEtiqueta = parseFloat(producto.valor_etiqueta);
                     const cantidad = parseInt(producto.cantidad_articulos);
@@ -286,21 +298,29 @@ class CierreOrdenService {
                     });
                 }
 
-                // Registrar incumplimiento
-                const observacionIncump = forzar
-                    ? `Remate manual por administrador. Estado: ${clienteOrden.estado_plazo}`
-                    : `Cliente no pagó en el periodo de gracia de 48 horas`;
-                
-                await HistorialIncumplimiento.create({
-                    id_cliente: clienteOrden.id_cliente,
-                    id_orden: id_orden,
-                    tipo_incumplimiento: 'remate',
-                    monto_adeudado: deuda_pendiente,
-                    monto_perdido: abonos_perdidos,
-                    fecha_incumplimiento: new Date(),
-                    afecta_credito: true,
-                    observaciones: observacionIncump
-                });
+                // Registrar incumplimiento (solo si no existe)
+                const [incumpAnterior] = await connection.query(
+                    `SELECT id FROM historial_incumplimientos 
+                     WHERE id_cliente = ? AND id_orden = ? AND tipo_incumplimiento = 'remate'`,
+                    [clienteOrden.id_cliente, id_orden]
+                );
+
+                if (incumpAnterior.length === 0) {
+                    const observacionIncump = forzar
+                        ? `Remate manual por administrador. Estado: ${clienteOrden.estado_plazo}`
+                        : `Cliente no pagó en el periodo de gracia de 48 horas`;
+                    
+                    await HistorialIncumplimiento.create({
+                        id_cliente: clienteOrden.id_cliente,
+                        id_orden: id_orden,
+                        tipo_incumplimiento: 'remate',
+                        monto_adeudado: deuda_pendiente,
+                        monto_perdido: abonos_perdidos,
+                        fecha_incumplimiento: new Date(),
+                        afecta_credito: true,
+                        observaciones: observacionIncump
+                    });
+                }
 
                 // Marcar cliente_orden como rematado
                 await ClienteOrden.marcarComoRematado(
@@ -310,10 +330,11 @@ class CierreOrdenService {
                     connection
                 );
 
-                // Actualizar estado del cliente a bloqueado
+                // Actualizar estado del cliente a bloqueado y poner saldo en 0
                 await connection.query(
                     `UPDATE clientes 
-                     SET estado_actividad = 'bloqueado'
+                     SET estado_actividad = 'bloqueado',
+                         saldo = 0.00
                      WHERE id = ?`,
                     [clienteOrden.id_cliente]
                 );
@@ -409,7 +430,11 @@ class CierreOrdenService {
      * Reabrir orden (solo administradores)
      */
     static async reabrirOrden(id_orden, usuario_id) {
+        const connection = await pool.getConnection();
+        
         try {
+            await connection.beginTransaction();
+
             const orden = await Orden.findById(id_orden);
             
             if (!orden) {
@@ -446,18 +471,74 @@ class CierreOrdenService {
                 );
             }
 
+            // LIMPIAR TODOS LOS DATOS DEL CIERRE ANTERIOR
+            
+            // 1. Obtener IDs de clientes que fueron rematados en esta orden
+            const [clientesRematados] = await connection.query(
+                `SELECT DISTINCT id_cliente FROM productos_rematados WHERE id_orden = ?`,
+                [id_orden]
+            );
+
+            // 2. Eliminar productos rematados de esta orden
+            await connection.query(
+                `DELETE FROM productos_rematados WHERE id_orden = ?`,
+                [id_orden]
+            );
+
+            // 3. Eliminar registros de cliente_orden
+            await connection.query(
+                `DELETE FROM cliente_orden WHERE id_orden = ?`,
+                [id_orden]
+            );
+
+            // 4. Eliminar historial de incumplimientos de esta orden
+            await connection.query(
+                `DELETE FROM historial_incumplimientos WHERE id_orden = ?`,
+                [id_orden]
+            );
+
+            // 5. Eliminar registro de cierre_orden
+            await connection.query(
+                `DELETE FROM cierre_orden WHERE id_orden = ?`,
+                [id_orden]
+            );
+
+            // 6. Restaurar estado de clientes que fueron rematados a "activo"
+            if (clientesRematados.length > 0) {
+                const idsClientes = clientesRematados.map(c => c.id_cliente);
+                await connection.query(
+                    `UPDATE clientes 
+                     SET estado_actividad = 'activo'
+                     WHERE id IN (?) AND estado_actividad = 'bloqueado'`,
+                    [idsClientes]
+                );
+            }
+
+            // 7. Reabrir la orden
             const resultado = await Orden.reabrirOrden(id_orden, usuario_id);
 
             if (!resultado) {
                 throw new Error('No se pudo reabrir la orden');
             }
 
+            await connection.commit();
+
             return {
                 success: true,
-                mensaje: 'Orden reabierta exitosamente'
+                mensaje: 'Orden reabierta exitosamente. Se eliminaron todos los registros del cierre anterior.',
+                registros_eliminados: {
+                    productos_rematados: true,
+                    cliente_orden: true,
+                    historial_incumplimientos: true,
+                    cierre_orden: true,
+                    clientes_restaurados: clientesRematados.length
+                }
             };
         } catch (error) {
+            await connection.rollback();
             throw error;
+        } finally {
+            connection.release();
         }
     }
 
@@ -534,12 +615,15 @@ class CierreOrdenService {
 
             // Solo resetear saldos negativos (deudas) a 0
             // Los saldos positivos se mantienen
+            // Los clientes bloqueados también se resetean a 0
             const [resetResult] = await connection.query(
                 `UPDATE clientes 
                  SET saldo = 0.00
                  WHERE estado = 'activo' 
-                   AND estado_actividad IN ('activo', 'deudor')
-                   AND saldo < 0`
+                   AND (
+                       (estado_actividad IN ('activo', 'deudor') AND saldo < 0)
+                       OR estado_actividad = 'bloqueado'
+                   )`
             );
 
             // Obtener clientes con saldo positivo
