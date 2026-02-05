@@ -174,13 +174,25 @@ class CierreOrdenService {
             const comisiones = parseFloat(totalesOrden[0].comisiones) || 0;
             const total_final = subtotal + impuestos + comisiones;
 
-            // Crear registro de cierre
+            // Crear o actualizar registro de cierre
             await useConnection.query(
                 `INSERT INTO cierre_orden 
                     (id_orden, subtotal, impuestos, comisiones, total_final, 
                      fecha_cierre, fecha_limite_pago, tipo_cierre,
                      total_clientes, clientes_pagados, clientes_pendientes, created_by)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                    subtotal = VALUES(subtotal),
+                    impuestos = VALUES(impuestos),
+                    comisiones = VALUES(comisiones),
+                    total_final = VALUES(total_final),
+                    fecha_cierre = VALUES(fecha_cierre),
+                    fecha_limite_pago = VALUES(fecha_limite_pago),
+                    tipo_cierre = VALUES(tipo_cierre),
+                    total_clientes = VALUES(total_clientes),
+                    clientes_pagados = VALUES(clientes_pagados),
+                    clientes_pendientes = VALUES(clientes_pendientes),
+                    updated_at = CURRENT_TIMESTAMP`,
                 [id_orden, subtotal, impuestos, comisiones, total_final,
                  fecha_cierre, fecha_limite_pago, orden.tipo_cierre || 'manual',
                  stats.total_clientes, stats.clientes_pagados, stats.clientes_pendientes,
