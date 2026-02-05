@@ -430,9 +430,8 @@ class CierreOrdenService {
                 const horasRestantes = Math.ceil((fechaLimite - ahora) / (1000 * 60 * 60));
 
                 throw new Error(
-                    `No se puede reabrir esta orden porque existe otra orden "${ordenGracia.nombre_orden}" ` +
-                    `en periodo de gracia con clientes pendientes de pago. ` +
-                    `Espera ${horasRestantes}h para que expire automáticamente o remata a los morosos.`
+                    `No se puede reabrir porque la orden "${ordenGracia.nombre_orden}" está en periodo de gracia. ` +
+                    `Opciones: espera ${horasRestantes}h o remata a los clientes morosos.`
                 );
             }
 
@@ -511,11 +510,8 @@ class CierreOrdenService {
                 const horasRestantes = Math.ceil((fechaLimite - ahora) / (1000 * 60 * 60));
 
                 throw new Error(
-                    `NO_PUEDE_CREAR_ORDEN|No se puede crear una nueva orden mientras la orden "${orden.nombre_orden}" ` +
-                    `está en periodo de gracia.\n\n` +
-                    `Opciones:\n` +
-                    `  1) Espera ${horasRestantes}h para que expire automáticamente\n` +
-                    `  2) Remata manualmente a los clientes morosos`
+                    `NO_PUEDE_CREAR_ORDEN|No se puede crear una nueva orden mientras "${orden.nombre_orden}" está en periodo de gracia. ` +
+                    `Opciones: espera ${horasRestantes}h para que expire automáticamente, o remata manualmente a los clientes morosos.`
                 );
             }
 
