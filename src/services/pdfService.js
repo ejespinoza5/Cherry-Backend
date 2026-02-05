@@ -77,7 +77,7 @@ class PDFService {
                 const borderColor = '#DDDDDD';
 
                 // HEADER - Logo y título
-                const logoPath = path.join(__dirname, '../../public/images/logo_cherry.jpeg');
+                const logoPath = path.join(__dirname, '../../public/images/logo_cherry.png');
                 if (fs.existsSync(logoPath)) {
                     doc.image(logoPath, 50, 45, { width: 80 });
                 }
@@ -129,12 +129,6 @@ class PDFService {
                    .text('Código:', 60, yPosition)
                    .font('Helvetica')
                    .text(data.cliente.codigo || 'N/A', 140, yPosition);
-
-                doc.font('Helvetica-Bold')
-                   .text('Saldo Actual:', 320, yPosition)
-                   .font('Helvetica')
-                   .fillColor(parseFloat(data.cliente.saldo) < 0 ? '#F44336' : '#4CAF50')
-                   .text(`$${parseFloat(data.cliente.saldo).toLocaleString('es-CO', { minimumFractionDigits: 2 })}`, 410, yPosition);
 
                 yPosition += 15;
                 doc.fillColor(textColor)
@@ -275,8 +269,8 @@ class PDFService {
                 // TOTALES
                 yPosition += 10;
 
-                // Verificar si hay espacio para totales
-                if (yPosition > 640) {
+                // Verificar si hay espacio para totales (necesitamos ~160px)
+                if (yPosition > 600) {
                     doc.addPage();
                     yPosition = 50;
                 }
@@ -327,26 +321,25 @@ class PDFService {
 
                 yPosition += 20;
 
-                // TOTAL FINAL
+                // TOTAL FINAL - Centrado vertical perfecto
                 doc.rect(350, yPosition, 212, 30)
                    .fillAndStroke(secondaryColor, secondaryColor);
                 doc.fontSize(12)
                    .fillColor('#FFFFFF')
                    .font('Helvetica-Bold')
-                   .text('TOTAL:', 360, yPosition + 8)
+                   .text('TOTAL:', 360, yPosition + 10)
                    .text(`$${parseFloat(data.total_general).toLocaleString('es-CO', { minimumFractionDigits: 2 })}`, 
-                       450, yPosition + 8, { width: 100, align: 'right' });
+                       450, yPosition + 10, { width: 100, align: 'right' });
 
                 // RESUMEN
-                yPosition += 50;
+                yPosition += 45;
                 doc.fontSize(9)
                    .fillColor(textColor)
                    .font('Helvetica')
-                   .text(`Total de productos: ${data.total_productos}`, 50, yPosition)
-                   .text(`Total de artículos: ${data.total_articulos}`, 50, yPosition + 15);
+                   .text(`Total de productos: ${data.total_productos}`, 50, yPosition);
 
-                // FOOTER
-                const footerY = 750;
+                // FOOTER - Dinámico
+                yPosition += 25;
                 doc.fontSize(8)
                    .fillColor('#999999')
                    .font('Helvetica')
@@ -356,7 +349,7 @@ class PDFService {
                        day: 'numeric',
                        hour: '2-digit',
                        minute: '2-digit'
-                   })}`, 50, footerY, { align: 'center', width: 512 });
+                   })}`, 50, yPosition, { align: 'center', width: 512 });
 
                 doc.end();
 
