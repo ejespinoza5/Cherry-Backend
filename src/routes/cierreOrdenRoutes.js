@@ -119,4 +119,16 @@ router.get(
     CierreOrdenController.obtenerProductosRematados
 );
 
+/**
+ * @route   GET /api/cierre-ordenes/productos-en-riesgo
+ * @desc    Obtener productos en riesgo de remate (clientes en periodo de gracia)
+ * @access  Private
+ * @query   id_orden (opcional)
+ */
+router.get(
+    '/productos-en-riesgo',
+    verifyToken,
+    CierreOrdenController.obtenerProductosEnRiesgo
+);
+
 module.exports = router;

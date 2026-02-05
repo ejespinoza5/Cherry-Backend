@@ -286,6 +286,26 @@ class CierreOrdenController {
             });
         }
     }
+
+    /**
+     * Obtener productos en riesgo de remate
+     */
+    static async obtenerProductosEnRiesgo(req, res) {
+        try {
+            const { id_orden } = req.query;
+
+            const resultado = await CierreOrdenService.obtenerProductosEnRiesgo(id_orden);
+
+            res.status(200).json(resultado);
+        } catch (error) {
+            console.error('Error al obtener productos en riesgo:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error al obtener productos en riesgo de remate',
+                error: error.message
+            });
+        }
+    }
 }
 
 module.exports = CierreOrdenController;

@@ -683,6 +683,85 @@ class CierreOrdenService {
             throw error;
         }
     }
+
+    /**
+     * Obtener productos en riesgo de remate (clientes en periodo de gracia)
+     */
+    static async obtenerProductosEnRiesgo(id_orden = null) {
+        try {
+            const productos = await Producto.obtenerProductosEnRiesgoRemate(id_orden);
+            
+            // Calcular el valor total de cada producto
+            const productosConValor = productos.map(p => {
+                const valorEtiqueta = parseFloat(p.valor_etiqueta);
+                const cantidad = parseInt(p.cantidad_articulos);
+                const comision = parseFloat(p.comision);
+                const impuesto = parseFloat(p.orden_impuesto);
+                
+                const subtotal = valorEtiqueta * cantidad;
+                const montoImpuesto = subtotal * impuesto;
+                const valor_total = subtotal + montoImpuesto + comision;
+                
+                return {
+                    ...p,
+                    valor_total: parseFloat(valor_total.toFixed(2)),
+                    subtotal: parseFloat(subtotal.toFixed(2)),
+                    monto_impuesto: parseFloat(montoImpuesto.toFixed(2))
+                };
+            });
+            
+            // Agrupar por cliente
+            const agrupadoPorCliente = productosConValor.reduce((acc, producto) => {
+                const key = producto.id_cliente;
+                if (!acc[key]) {
+                    acc[key] = {
+                        id_cliente: producto.id_cliente,
+                        nombre: `${producto.cliente_nombre} ${producto.cliente_apellido}`,
+                        codigo: producto.cliente_codigo,
+                        saldo_actual: parseFloat(producto.cliente_saldo),
+                        deuda_pendiente: parseFloat(producto.deuda_pendiente),
+                        abonos_perdidos: parseFloat(producto.total_abonos),
+                        fecha_limite_pago: producto.fecha_limite_pago,
+                        estado_plazo: producto.estado_plazo,
+                        nombre_orden: producto.nombre_orden,
+                        id_orden: producto.id_orden,
+                        productos: [],
+                        total_productos: 0,
+                        valor_total_productos: 0
+                    };
+                }
+                
+                acc[key].productos.push({
+                    id: producto.id,
+                    detalles: producto.detalles,
+                    cantidad_articulos: producto.cantidad_articulos,
+                    valor_etiqueta: parseFloat(producto.valor_etiqueta),
+                    comision: parseFloat(producto.comision),
+                    valor_total: producto.valor_total,
+                    imagen_producto: producto.imagen_producto
+                });
+                
+                acc[key].total_productos += 1;
+                acc[key].valor_total_productos += producto.valor_total;
+                
+                return acc;
+            }, {});
+            
+            const resultado = Object.values(agrupadoPorCliente).map(cliente => ({
+                ...cliente,
+                valor_total_productos: parseFloat(cliente.valor_total_productos.toFixed(2))
+            }));
+            
+            return {
+                success: true,
+                total_clientes: resultado.length,
+                total_productos: productosConValor.length,
+                data: resultado
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = CierreOrdenService;

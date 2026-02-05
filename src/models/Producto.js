@@ -293,6 +293,54 @@ class Producto {
             throw error;
         }
     }
+
+    /**
+     * Obtener productos en riesgo de remate (de clientes en periodo de gracia con deuda)
+     */
+    static async obtenerProductosEnRiesgoRemate(id_orden = null) {
+        try {
+            let query = `
+                SELECT 
+                    p.*,
+                    c.nombre as cliente_nombre,
+                    c.apellido as cliente_apellido,
+                    c.codigo as cliente_codigo,
+                    c.saldo as cliente_saldo,
+                    co.saldo_al_cierre,
+                    co.total_abonos,
+                    co.total_compras,
+                    co.abonos_post_cierre,
+                    (co.saldo_al_cierre - co.abonos_post_cierre) as deuda_pendiente,
+                    co.fecha_limite_pago,
+                    o.nombre_orden,
+                    o.impuesto as orden_impuesto,
+                    CASE 
+                        WHEN co.fecha_limite_pago < NOW() THEN 'vencido'
+                        WHEN co.fecha_limite_pago >= NOW() THEN 'vigente'
+                    END as estado_plazo
+                FROM productos p
+                INNER JOIN clientes c ON p.id_cliente = c.id
+                INNER JOIN ordenes o ON p.id_orden = o.id
+                INNER JOIN cliente_orden co ON c.id = co.id_cliente AND o.id = co.id_orden
+                WHERE o.estado_orden = 'en_periodo_gracia'
+                  AND co.estado_pago = 'en_gracia'
+                  AND p.estado = 'activo'`;
+            
+            const params = [];
+            
+            if (id_orden) {
+                query += ' AND o.id = ?';
+                params.push(id_orden);
+            }
+            
+            query += ' ORDER BY co.fecha_limite_pago ASC, c.nombre ASC';
+            
+            const [rows] = await pool.query(query, params);
+            return rows;
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = Producto;
