@@ -420,6 +420,17 @@ class CierreOrdenService {
                 throw new Error('La orden ya está abierta');
             }
 
+            // Verificar que NO haya otras órdenes abiertas
+            const ordenesAbiertas = await Orden.findOrdenesAbiertas(id_orden);
+
+            if (ordenesAbiertas.length > 0) {
+                const ordenAbierta = ordenesAbiertas[0];
+                throw new Error(
+                    `No se puede reabrir esta orden porque ya existe otra orden abierta: "${ordenAbierta.nombre_orden}". ` +
+                    `Solo puede haber una orden abierta a la vez. Cierra primero la orden actual.`
+                );
+            }
+
             const resultado = await Orden.reabrirOrden(id_orden, usuario_id);
 
             if (!resultado) {
@@ -491,24 +502,21 @@ class CierreOrdenService {
 
                 throw new Error(
                     `NO_PUEDE_CREAR_ORDEN|No se puede crear una nueva orden mientras la orden "${orden.nombre_orden}" ` +
-                    `está en periodo de gracia. Opciones: 1) Espera ${horasRestantes}h para que expire automáticamente, ` +
-                    `2) Remata manualmente a los clientes morosos (POST /api/cierre-ordenes/${orden.id}/rematar)`
+                    `está en periodo de gracia.\n\n` +
+                    `Opciones:\n` +
+                    `  1) Espera ${horasRestantes}h para que expire automáticamente\n` +
+                    `  2) Remata manualmente a los clientes morosos`
                 );
             }
 
             // VALIDACIÓN 2: Verificar que NO haya otras órdenes abiertas
-            const [ordenesAbiertas] = await connection.query(
-                `SELECT id, nombre_orden, fecha_inicio, fecha_fin
-                 FROM ordenes
-                 WHERE estado_orden = 'abierta' 
-                   AND estado = 'activo'`
-            );
+            const ordenesAbiertas = await Orden.findOrdenesAbiertas();
 
             if (ordenesAbiertas.length > 0) {
                 const orden = ordenesAbiertas[0];
                 throw new Error(
                     `NO_PUEDE_CREAR_ORDEN|No se puede crear una nueva orden mientras la orden "${orden.nombre_orden}" ` +
-                    `está abierta. Debes CERRAR la orden actual antes de crear una nueva (POST /api/cierre-ordenes/${orden.id}/cerrar)`
+                    `está abierta. Debes cerrar la orden actual antes de crear una nueva.`
                 );
             }
 

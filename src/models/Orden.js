@@ -276,6 +276,28 @@ class Orden {
             throw error;
         }
     }
+
+    /**
+     * Buscar órdenes abiertas (con opción de excluir una)
+     */
+    static async findOrdenesAbiertas(excludeId = null) {
+        try {
+            let query = `SELECT id, nombre_orden, fecha_inicio, fecha_fin 
+                         FROM ordenes 
+                         WHERE estado_orden = 'abierta' AND estado = 'activo'`;
+            let params = [];
+            
+            if (excludeId) {
+                query += ' AND id != ?';
+                params.push(excludeId);
+            }
+            
+            const [rows] = await pool.query(query, params);
+            return rows;
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = Orden;
