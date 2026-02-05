@@ -586,6 +586,23 @@ class CierreOrdenService {
             connection.release();
         }
     }
+
+    /**
+     * Obtener todos los productos rematados con filtros
+     */
+    static async obtenerProductosRematados(filters = {}) {
+        try {
+            const productos = await ProductoRematado.findAll(filters);
+            
+            return {
+                success: true,
+                total: productos.length,
+                data: productos
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = CierreOrdenService;

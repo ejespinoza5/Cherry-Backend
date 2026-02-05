@@ -260,6 +260,32 @@ class CierreOrdenController {
             });
         }
     }
+
+    /**
+     * Obtener todos los productos rematados
+     */
+    static async obtenerProductosRematados(req, res) {
+        try {
+            const filters = {
+                id_orden: req.query.id_orden,
+                id_cliente: req.query.id_cliente,
+                fecha_desde: req.query.fecha_desde,
+                fecha_hasta: req.query.fecha_hasta,
+                limit: req.query.limit
+            };
+
+            const resultado = await CierreOrdenService.obtenerProductosRematados(filters);
+
+            res.status(200).json(resultado);
+        } catch (error) {
+            console.error('Error al obtener productos rematados:', error);
+            res.status(500).json({
+                success: false,
+                message: 'Error al obtener productos rematados',
+                error: error.message
+            });
+        }
+    }
 }
 
 module.exports = CierreOrdenController;

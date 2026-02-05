@@ -107,4 +107,16 @@ router.post(
     CierreOrdenController.verificarEstadoPago
 );
 
+/**
+ * @route   GET /api/cierre-ordenes/productos-rematados
+ * @desc    Obtener todos los productos rematados (con filtros opcionales)
+ * @access  Private
+ * @query   id_orden, id_cliente, fecha_desde, fecha_hasta, limit
+ */
+router.get(
+    '/productos-rematados',
+    verifyToken,
+    CierreOrdenController.obtenerProductosRematados
+);
+
 module.exports = router;

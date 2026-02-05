@@ -122,6 +122,64 @@ class ProductoRematado {
             throw error;
         }
     }
+
+    /**
+     * Obtener todos los productos rematados con filtros opcionales
+     */
+    static async findAll(filters = {}) {
+        try {
+            let query = `
+                SELECT pr.*, 
+                       c.nombre as cliente_nombre, 
+                       c.apellido as cliente_apellido,
+                       c.codigo as cliente_codigo,
+                       o.nombre_orden,
+                       p.detalles as producto_detalles,
+                       p.cantidad_articulos,
+                       p.valor_etiqueta,
+                       u.correo as rematado_por_correo
+                FROM productos_rematados pr
+                INNER JOIN clientes c ON pr.id_cliente = c.id
+                INNER JOIN ordenes o ON pr.id_orden = o.id
+                INNER JOIN productos p ON pr.id_producto = p.id
+                LEFT JOIN usuarios u ON pr.created_by = u.id
+                WHERE 1=1`;
+            
+            const params = [];
+            
+            if (filters.id_orden) {
+                query += ' AND pr.id_orden = ?';
+                params.push(filters.id_orden);
+            }
+            
+            if (filters.id_cliente) {
+                query += ' AND pr.id_cliente = ?';
+                params.push(filters.id_cliente);
+            }
+            
+            if (filters.fecha_desde) {
+                query += ' AND pr.created_at >= ?';
+                params.push(filters.fecha_desde);
+            }
+            
+            if (filters.fecha_hasta) {
+                query += ' AND pr.created_at <= ?';
+                params.push(filters.fecha_hasta);
+            }
+            
+            query += ' ORDER BY pr.created_at DESC';
+            
+            if (filters.limit) {
+                query += ' LIMIT ?';
+                params.push(parseInt(filters.limit));
+            }
+            
+            const [rows] = await pool.query(query, params);
+            return rows;
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = ProductoRematado;
