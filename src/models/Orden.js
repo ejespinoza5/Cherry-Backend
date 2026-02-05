@@ -154,7 +154,7 @@ class Orden {
                      tipo_cierre = NULL,
                      closed_by = NULL,
                      updated_by = ?
-                 WHERE id = ? AND estado_orden IN ('cerrada', 'en_periodo_gracia')`,
+                 WHERE id = ? AND estado_orden = 'cerrada'`,
                 [updated_by, id]
             );
             

@@ -420,6 +420,13 @@ class CierreOrdenService {
                 throw new Error('La orden ya está abierta');
             }
 
+            if (orden.estado_orden === 'en_periodo_gracia') {
+                throw new Error(
+                    `No se puede reabrir esta orden porque está en periodo de gracia con clientes pendientes de pago. ` +
+                    `Primero debes resolver las deudas pendientes: espera a que los clientes paguen o remata a los morosos.`
+                );
+            }
+
             // Verificar que NO haya otras órdenes abiertas
             const ordenesAbiertas = await Orden.findOrdenesAbiertas(id_orden);
 
