@@ -28,7 +28,6 @@ class PDFService {
                 return buffer;
             }
         } catch (error) {
-            console.error('Error convirtiendo imagen:', error);
             return null;
         }
     }
@@ -219,7 +218,6 @@ class PDFService {
                                         valign: 'center'
                                     });
                                 } catch (error) {
-                                    console.error('Error insertando imagen en PDF:', error);
                                     // Si falla, mostrar rectángulo con texto
                                     doc.rect(55, yPosition + 5, 50, 70)
                                        .stroke('#DDDDDD');
