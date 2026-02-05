@@ -91,7 +91,7 @@ class CierreOrdenService {
 
             const orden = await Orden.findById(id_orden);
             const fecha_cierre = new Date();
-            const fecha_limite_pago = new Date(fecha_cierre.getTime() + (48 * 60 * 60 * 1000)); // +48 horas
+            const fecha_limite_pago = new Date(fecha_cierre.getTime() + (1 * 60 * 1000)); // +1 minuto
 
             // Obtener todos los clientes que participaron en esta orden
             const [clientes] = await useConnection.query(
