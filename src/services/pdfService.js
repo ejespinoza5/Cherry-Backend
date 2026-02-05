@@ -1,12 +1,59 @@
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
+const sharp = require('sharp');
 
 class PDFService {
+    /**
+     * Convertir imagen WebP a JPEG buffer
+     */
+    static async convertirImagenParaPDF(imagePath) {
+        try {
+            if (!fs.existsSync(imagePath)) {
+                return null;
+            }
+
+            if (imagePath.toLowerCase().endsWith('.webp')) {
+                // Convertir WebP a JPEG
+                const buffer = await sharp(imagePath)
+                    .resize(50, 70, { fit: 'inside', withoutEnlargement: true })
+                    .jpeg({ quality: 85 })
+                    .toBuffer();
+                return buffer;
+            } else {
+                // JPEG o PNG - redimensionar para optimizar
+                const buffer = await sharp(imagePath)
+                    .resize(50, 70, { fit: 'inside', withoutEnlargement: true })
+                    .toBuffer();
+                return buffer;
+            }
+        } catch (error) {
+            console.error('Error convirtiendo imagen:', error);
+            return null;
+        }
+    }
+
     /**
      * Generar PDF de productos de un cliente
      */
     static async generarPDFProductosCliente(data) {
+        // Pre-procesar todas las imágenes ANTES de generar el PDF
+        const imagenesCache = new Map();
+        
+        for (const orden of data.ordenes) {
+            for (const producto of orden.productos) {
+                if (producto.imagen_producto && !imagenesCache.has(producto.imagen_producto)) {
+                    let imagenRelativa = producto.imagen_producto;
+                    if (imagenRelativa.startsWith('/')) {
+                        imagenRelativa = imagenRelativa.substring(1);
+                    }
+                    const imagePath = path.join(__dirname, '../../', imagenRelativa);
+                    const imageBuffer = await this.convertirImagenParaPDF(imagePath);
+                    imagenesCache.set(producto.imagen_producto, imageBuffer);
+                }
+            }
+        }
+
         return new Promise((resolve, reject) => {
             try {
                 const doc = new PDFDocument({ 
@@ -16,7 +63,11 @@ class PDFService {
 
                 const chunks = [];
                 doc.on('data', (chunk) => chunks.push(chunk));
-                doc.on('end', () => resolve(Buffer.concat(chunks)));
+                doc.on('end', () => {
+                    // Limpiar caché de imágenes
+                    imagenesCache.clear();
+                    resolve(Buffer.concat(chunks));
+                });
                 doc.on('error', reject);
 
                 // Colores basados en el logo Cherry (rosa/fucsia)
@@ -156,16 +207,11 @@ class PDFService {
 
                         // Imagen del producto (si existe)
                         if (producto.imagen_producto) {
-                            // Construir la ruta correcta - remover el / inicial si existe
-                            let imagenRelativa = producto.imagen_producto;
-                            if (imagenRelativa.startsWith('/')) {
-                                imagenRelativa = imagenRelativa.substring(1);
-                            }
-                            const imagePath = path.join(__dirname, '../../', imagenRelativa);
+                            const imageBuffer = imagenesCache.get(producto.imagen_producto);
                             
-                            if (fs.existsSync(imagePath)) {
+                            if (imageBuffer) {
                                 try {
-                                    doc.image(imagePath, 55, yPosition + 5, { 
+                                    doc.image(imageBuffer, 55, yPosition + 5, { 
                                         width: 50, 
                                         height: 70,
                                         fit: [50, 70],
@@ -173,7 +219,7 @@ class PDFService {
                                         valign: 'center'
                                     });
                                 } catch (error) {
-                                    console.error('Error cargando imagen:', error);
+                                    console.error('Error insertando imagen en PDF:', error);
                                     // Si falla, mostrar rectángulo con texto
                                     doc.rect(55, yPosition + 5, 50, 70)
                                        .stroke('#DDDDDD');
@@ -183,7 +229,7 @@ class PDFService {
                                        .text('Sin imagen', 55, yPosition + 32, { width: 50, align: 'center' });
                                 }
                             } else {
-                                // Si no existe la imagen, mostrar rectángulo con texto
+                                // Si no se pudo convertir la imagen, mostrar rectángulo con texto
                                 doc.rect(55, yPosition + 5, 50, 70)
                                    .stroke('#DDDDDD');
                                 doc.fontSize(7)
