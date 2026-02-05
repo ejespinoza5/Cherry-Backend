@@ -161,9 +161,10 @@ class PDFService {
                    .text('Imagen', 55, yPosition + 8, { width: 50, align: 'center' })
                    .text('Cant.', 110, yPosition + 8, { width: 30, align: 'center' })
                    .text('Detalle', 145, yPosition + 8, { width: 155 })
-                   .text('Precio', 305, yPosition + 8, { width: 65, align: 'right' })
-                   .text('Comisión', 375, yPosition + 8, { width: 70, align: 'right' })
-                   .text('Total', 450, yPosition + 8, { width: 100, align: 'right' });
+                   .text('Fecha', 305, yPosition + 8, { width: 45, align: 'center' })
+                   .text('Precio', 355, yPosition + 8, { width: 50, align: 'right' })
+                   .text('Com.', 410, yPosition + 8, { width: 45, align: 'right' })
+                   .text('Total', 460, yPosition + 8, { width: 55, align: 'right' });
 
                 yPosition += 25;
 
@@ -186,9 +187,10 @@ class PDFService {
                                .text('Imagen', 55, yPosition + 8, { width: 50, align: 'center' })
                                .text('Cant.', 110, yPosition + 8, { width: 30, align: 'center' })
                                .text('Detalle', 145, yPosition + 8, { width: 155 })
-                               .text('Precio', 305, yPosition + 8, { width: 65, align: 'right' })
-                               .text('Comisión', 375, yPosition + 8, { width: 70, align: 'right' })
-                               .text('Total', 450, yPosition + 8, { width: 100, align: 'right' });
+                               .text('Fecha', 305, yPosition + 8, { width: 45, align: 'center' })
+                               .text('Precio', 355, yPosition + 8, { width: 50, align: 'right' })
+                               .text('Com.', 410, yPosition + 8, { width: 45, align: 'right' })
+                               .text('Total', 460, yPosition + 8, { width: 55, align: 'right' });
 
                             yPosition += 25;
                             altRow = false;
@@ -224,31 +226,13 @@ class PDFService {
                                         valign: 'center'
                                     });
                                 } catch (error) {
-                                    // Si falla, mostrar rectángulo con texto
-                                    doc.rect(55, yPosition + 3, 50, 54)
-                                       .stroke('#DDDDDD');
-                                    doc.fontSize(7)
-                                       .fillColor('#999999')
-                                       .font('Helvetica')
-                                       .text('Sin imagen', 55, yPosition + 25, { width: 50, align: 'center' });
+                                    // Si falla, no mostrar nada (espacio vacío)
                                 }
                             } else {
-                                // Si no se pudo convertir la imagen, mostrar rectángulo con texto
-                                doc.rect(55, yPosition + 3, 50, 54)
-                                   .stroke('#DDDDDD');
-                                doc.fontSize(7)
-                                   .fillColor('#999999')
-                                   .font('Helvetica')
-                                   .text('Sin imagen', 55, yPosition + 25, { width: 50, align: 'center' });
+                                // Si no se pudo convertir la imagen, dejar espacio vacío
                             }
                         } else {
-                            // Sin imagen en BD, mostrar rectángulo vacío
-                            doc.rect(55, yPosition + 3, 50, 54)
-                               .stroke('#DDDDDD');
-                            doc.fontSize(7)
-                               .fillColor('#999999')
-                               .font('Helvetica')
-                               .text('Sin imagen', 55, yPosition + 25, { width: 50, align: 'center' });
+                            // Sin imagen en BD, dejar espacio vacío
                         }
 
                         // Datos del producto
@@ -259,19 +243,28 @@ class PDFService {
 
                         doc.font('Helvetica')
                            .text(producto.detalles, 145, textYPosition, { 
-                               width: 155, 
+                               width: 155,
+                               ellipsis: true,
                                height: rowHeight - 20 
                            });
 
-                        doc.text(`$${producto.valor_etiqueta.toLocaleString('es-CO', { minimumFractionDigits: 2 })}`, 
-                               305, textYPosition, { width: 65, align: 'right' });
+                        // Fecha formateada
+                        const fecha = new Date(producto.created_at);
+                        const fechaFormateada = `${fecha.getDate().toString().padStart(2, '0')}/${(fecha.getMonth() + 1).toString().padStart(2, '0')}/${fecha.getFullYear()}`;
+                        doc.fontSize(8)
+                           .fillColor(textColor)
+                           .text(fechaFormateada, 305, textYPosition, { width: 45, align: 'center' });
+
+                        doc.fontSize(9)
+                           .text(`$${producto.valor_etiqueta.toLocaleString('es-CO', { minimumFractionDigits: 2 })}`, 
+                               355, textYPosition, { width: 50, align: 'right' });
                         
                         doc.text(`$${producto.comision.toLocaleString('es-CO', { minimumFractionDigits: 2 })}`, 
-                               375, textYPosition, { width: 70, align: 'right' });
+                               410, textYPosition, { width: 45, align: 'right' });
                         
                         doc.font('Helvetica-Bold')
                            .text(`$${total.toLocaleString('es-CO', { minimumFractionDigits: 2 })}`, 
-                               450, textYPosition, { width: 100, align: 'right' });
+                               460, textYPosition, { width: 55, align: 'right' });
 
                         yPosition += rowHeight;
                         altRow = !altRow;

@@ -285,7 +285,7 @@ class Producto {
                 INNER JOIN productos p ON c.id = p.id_cliente
                 INNER JOIN ordenes o ON p.id_orden = o.id
                 WHERE c.id = ? AND o.id = ? AND p.estado = 'activo' AND c.estado = 'activo' AND o.estado = 'activo'
-                ORDER BY o.created_at DESC, p.created_at DESC`,
+                ORDER BY p.detalles ASC`,
                 [id_cliente, id_orden]
             );
             return rows;
