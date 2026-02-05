@@ -23,13 +23,21 @@ class VerificarPagoOrdenService {
             );
 
             for (const orden of ordenesEnGracia) {
-                // Obtener el saldo ACTUAL del cliente
+                // Obtener el saldo ACTUAL y estado del cliente
                 const [cliente] = await pool.query(
-                    `SELECT saldo FROM clientes WHERE id = ?`,
+                    `SELECT saldo, estado_actividad FROM clientes WHERE id = ?`,
                     [id_cliente]
                 );
 
                 const saldo_actual = parseFloat(cliente[0].saldo);
+                const estado_actividad = cliente[0].estado_actividad;
+
+                // IMPORTANTE: NO procesar clientes BLOQUEADOS (fueron rematados)
+                // Los clientes rematados permanecen bloqueados aunque tengan saldo
+                if (estado_actividad === 'bloqueado') {
+                    console.log(`Cliente ${id_cliente} está bloqueado (rematado), no se procesa el pago automático`);
+                    continue;
+                }
 
                 // Si el saldo ya NO es negativo, significa que pagó su deuda
                 if (saldo_actual >= 0) {
