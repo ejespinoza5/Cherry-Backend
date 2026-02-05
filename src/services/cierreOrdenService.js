@@ -420,8 +420,8 @@ class CierreOrdenService {
                 throw new Error('La orden ya está abierta');
             }
 
-            // Verificar que NO haya órdenes en periodo de gracia en el sistema
-            const ordenesEnGracia = await Orden.findOrdenesEnGracia();
+            // Verificar que NO haya OTRAS órdenes en periodo de gracia en el sistema
+            const ordenesEnGracia = await Orden.findOrdenesEnGracia(id_orden);
 
             if (ordenesEnGracia.length > 0) {
                 const ordenGracia = ordenesEnGracia[0];

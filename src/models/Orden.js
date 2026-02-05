@@ -302,15 +302,21 @@ class Orden {
     /**
      * Buscar órdenes en periodo de gracia
      */
-    static async findOrdenesEnGracia() {
+    static async findOrdenesEnGracia(excludeId = null) {
         try {
-            const [rows] = await pool.query(
-                `SELECT o.id, o.nombre_orden, co.fecha_limite_pago 
-                 FROM ordenes o
-                 INNER JOIN cierre_orden co ON o.id = co.id_orden
-                 WHERE o.estado_orden = 'en_periodo_gracia' 
-                   AND o.estado = 'activo'`
-            );
+            let query = `SELECT o.id, o.nombre_orden, co.fecha_limite_pago 
+                         FROM ordenes o
+                         INNER JOIN cierre_orden co ON o.id = co.id_orden
+                         WHERE o.estado_orden = 'en_periodo_gracia' 
+                           AND o.estado = 'activo'`;
+            let params = [];
+            
+            if (excludeId) {
+                query += ' AND o.id != ?';
+                params.push(excludeId);
+            }
+            
+            const [rows] = await pool.query(query, params);
             return rows;
         } catch (error) {
             throw error;
