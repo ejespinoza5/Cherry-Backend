@@ -154,7 +154,7 @@ class Orden {
                      tipo_cierre = NULL,
                      closed_by = NULL,
                      updated_by = ?
-                 WHERE id = ? AND estado_orden = 'cerrada'`,
+                 WHERE id = ? AND estado_orden IN ('cerrada', 'en_periodo_gracia')`,
                 [updated_by, id]
             );
             
@@ -293,6 +293,24 @@ class Orden {
             }
             
             const [rows] = await pool.query(query, params);
+            return rows;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Buscar órdenes en periodo de gracia
+     */
+    static async findOrdenesEnGracia() {
+        try {
+            const [rows] = await pool.query(
+                `SELECT o.id, o.nombre_orden, co.fecha_limite_pago 
+                 FROM ordenes o
+                 INNER JOIN cierre_orden co ON o.id = co.id_orden
+                 WHERE o.estado_orden = 'en_periodo_gracia' 
+                   AND o.estado = 'activo'`
+            );
             return rows;
         } catch (error) {
             throw error;

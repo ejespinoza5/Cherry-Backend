@@ -420,10 +420,19 @@ class CierreOrdenService {
                 throw new Error('La orden ya está abierta');
             }
 
-            if (orden.estado_orden === 'en_periodo_gracia') {
+            // Verificar que NO haya órdenes en periodo de gracia en el sistema
+            const ordenesEnGracia = await Orden.findOrdenesEnGracia();
+
+            if (ordenesEnGracia.length > 0) {
+                const ordenGracia = ordenesEnGracia[0];
+                const fechaLimite = new Date(ordenGracia.fecha_limite_pago);
+                const ahora = new Date();
+                const horasRestantes = Math.ceil((fechaLimite - ahora) / (1000 * 60 * 60));
+
                 throw new Error(
-                    `No se puede reabrir esta orden porque está en periodo de gracia con clientes pendientes de pago. ` +
-                    `Primero debes resolver las deudas pendientes: espera a que los clientes paguen o remata a los morosos.`
+                    `No se puede reabrir esta orden porque existe otra orden "${ordenGracia.nombre_orden}" ` +
+                    `en periodo de gracia con clientes pendientes de pago. ` +
+                    `Espera ${horasRestantes}h para que expire automáticamente o remata a los morosos.`
                 );
             }
 
@@ -493,13 +502,7 @@ class CierreOrdenService {
             await connection.beginTransaction();
 
             // VALIDACIÓN 1: Verificar que NO haya órdenes en periodo de gracia
-            const [ordenesEnGracia] = await connection.query(
-                `SELECT o.id, o.nombre_orden, co.fecha_limite_pago 
-                 FROM ordenes o
-                 INNER JOIN cierre_orden co ON o.id = co.id_orden
-                 WHERE o.estado_orden = 'en_periodo_gracia' 
-                   AND o.estado = 'activo'`
-            );
+            const ordenesEnGracia = await Orden.findOrdenesEnGracia();
 
             if (ordenesEnGracia.length > 0) {
                 const orden = ordenesEnGracia[0];
