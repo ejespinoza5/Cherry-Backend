@@ -293,6 +293,51 @@ class Producto {
             throw error;
         }
     }
+
+    /**
+     * Obtener productos en riesgo de remate (clientes en periodo de gracia)
+     */
+    static async obtenerProductosEnRiesgoRemate(id_orden) {
+        try {
+            const [rows] = await pool.query(
+                `SELECT 
+                    p.id as id_producto,
+                    p.cantidad_articulos,
+                    p.detalles,
+                    p.valor_etiqueta,
+                    p.comision,
+                    p.imagen_producto,
+                    p.observacion,
+                    c.id as id_cliente,
+                    c.nombre,
+                    c.apellido,
+                    c.codigo,
+                    c.saldo,
+                    c.telefono,
+                    co.pago_actual,
+                    co.pago_semanal,
+                    co.debe_pagar,
+                    (p.valor_etiqueta - (p.valor_etiqueta * (p.comision / 100))) as valor_producto,
+                    (co.debe_pagar - co.pago_actual) as deuda_actual,
+                    co.fecha_limite_pago
+                FROM productos p
+                INNER JOIN clientes c ON p.id_cliente = c.id
+                INNER JOIN cliente_orden co ON c.id = co.id_cliente AND p.id_orden = co.id_orden
+                INNER JOIN ordenes o ON p.id_orden = o.id
+                WHERE p.id_orden = ? 
+                    AND p.estado = 'activo'
+                    AND c.estado = 'activo'
+                    AND o.estado_orden = 'en_periodo_gracia'
+                    AND co.fecha_limite_pago > NOW()
+                    AND co.pago_actual < co.debe_pagar
+                ORDER BY c.nombre, c.apellido, p.detalles`,
+                [id_orden]
+            );
+            return rows;
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = Producto;

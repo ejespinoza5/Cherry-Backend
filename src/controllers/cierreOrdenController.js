@@ -286,6 +286,42 @@ class CierreOrdenController {
             });
         }
     }
+
+    /**
+     * Obtener productos en riesgo de remate (durante periodo de gracia)
+     */
+    static async obtenerProductosEnRiesgo(req, res) {
+        try {
+            const { id_orden } = req.query;
+
+            if (!id_orden) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Se requiere el parámetro id_orden'
+                });
+            }
+
+            const resultado = await CierreOrdenService.obtenerProductosEnRiesgo(id_orden);
+
+            res.status(200).json(resultado);
+        } catch (error) {
+            console.error('Error al obtener productos en riesgo:', error);
+            
+            let statusCode = 500;
+            let message = 'Error al obtener productos en riesgo';
+
+            if (error.message === 'Orden no encontrada') {
+                statusCode = 404;
+                message = error.message;
+            }
+
+            res.status(statusCode).json({
+                success: false,
+                message,
+                error: error.message
+            });
+        }
+    }
 }
 
 module.exports = CierreOrdenController;

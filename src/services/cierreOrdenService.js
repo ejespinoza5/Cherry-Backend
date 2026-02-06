@@ -683,6 +683,77 @@ class CierreOrdenService {
             throw error;
         }
     }
+
+    /**
+     * Obtener productos en riesgo de remate (durante periodo de gracia)
+     */
+    static async obtenerProductosEnRiesgo(id_orden) {
+        try {
+            const orden = await Orden.findById(id_orden);
+            
+            if (!orden) {
+                throw new Error('Orden no encontrada');
+            }
+
+            if (orden.estado_orden !== 'en_periodo_gracia') {
+                return {
+                    success: false,
+                    message: `La orden "${orden.nombre_orden}" no está en periodo de gracia. Estado actual: ${orden.estado_orden}`,
+                    data: []
+                };
+            }
+
+            const productos = await Producto.obtenerProductosEnRiesgoRemate(id_orden);
+
+            // Agrupar productos por cliente
+            const clientesConProductos = {};
+
+            productos.forEach(producto => {
+                const clienteKey = producto.id_cliente;
+
+                if (!clientesConProductos[clienteKey]) {
+                    clientesConProductos[clienteKey] = {
+                        id_cliente: producto.id_cliente,
+                        nombre: producto.nombre,
+                        apellido: producto.apellido,
+                        codigo: producto.codigo,
+                        telefono: producto.telefono,
+                        saldo_actual: parseFloat(producto.saldo) || 0,
+                        pago_actual: parseFloat(producto.pago_actual) || 0,
+                        debe_pagar: parseFloat(producto.debe_pagar) || 0,
+                        deuda_actual: parseFloat(producto.deuda_actual) || 0,
+                        fecha_limite_pago: producto.fecha_limite_pago,
+                        productos: []
+                    };
+                }
+
+                clientesConProductos[clienteKey].productos.push({
+                    id_producto: producto.id_producto,
+                    cantidad_articulos: producto.cantidad_articulos,
+                    detalles: producto.detalles,
+                    valor_etiqueta: parseFloat(producto.valor_etiqueta) || 0,
+                    comision: parseFloat(producto.comision) || 0,
+                    valor_producto: parseFloat(producto.valor_producto) || 0,
+                    imagen_producto: producto.imagen_producto,
+                    observacion: producto.observacion
+                });
+            });
+
+            const clientesArray = Object.values(clientesConProductos);
+
+            return {
+                success: true,
+                id_orden: parseInt(id_orden),
+                nombre_orden: orden.nombre_orden,
+                estado_orden: orden.estado_orden,
+                total_clientes_en_riesgo: clientesArray.length,
+                fecha_limite_gracia: orden.fecha_limite_pago,
+                data: clientesArray
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = CierreOrdenService;
