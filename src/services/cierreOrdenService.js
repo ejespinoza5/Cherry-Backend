@@ -699,6 +699,8 @@ class CierreOrdenService {
                 return {
                     success: false,
                     message: `La orden "${orden.nombre_orden}" no está en periodo de gracia. Estado actual: ${orden.estado_orden}`,
+                    total_clientes: 0,
+                    total_productos: 0,
                     data: []
                 };
             }
@@ -707,6 +709,7 @@ class CierreOrdenService {
 
             // Agrupar productos por cliente
             const clientesConProductos = {};
+            let totalProductos = 0;
 
             productos.forEach(producto => {
                 const clienteKey = producto.id_cliente;
@@ -714,40 +717,49 @@ class CierreOrdenService {
                 if (!clientesConProductos[clienteKey]) {
                     clientesConProductos[clienteKey] = {
                         id_cliente: producto.id_cliente,
-                        nombre: producto.nombre,
-                        apellido: producto.apellido,
+                        nombre: producto.nombre_completo,
                         codigo: producto.codigo,
-                        telefono: producto.telefono,
                         saldo_actual: parseFloat(producto.saldo) || 0,
-                        pago_actual: parseFloat(producto.pago_actual) || 0,
-                        debe_pagar: parseFloat(producto.debe_pagar) || 0,
-                        deuda_actual: parseFloat(producto.deuda_actual) || 0,
+                        deuda_pendiente: parseFloat(producto.deuda_pendiente) || 0,
+                        abonos_perdidos: parseFloat(producto.abonos_perdidos) || 0,
                         fecha_limite_pago: producto.fecha_limite_pago,
+                        estado_plazo: 'vigente',
+                        nombre_orden: producto.nombre_orden,
+                        id_orden: parseInt(id_orden),
                         productos: []
                     };
                 }
 
+                const valorProducto = parseFloat(producto.valor_producto) || 0;
+                
                 clientesConProductos[clienteKey].productos.push({
-                    id_producto: producto.id_producto,
-                    cantidad_articulos: producto.cantidad_articulos,
+                    id: producto.id_producto,
                     detalles: producto.detalles,
+                    cantidad_articulos: producto.cantidad_articulos,
                     valor_etiqueta: parseFloat(producto.valor_etiqueta) || 0,
                     comision: parseFloat(producto.comision) || 0,
-                    valor_producto: parseFloat(producto.valor_producto) || 0,
-                    imagen_producto: producto.imagen_producto,
-                    observacion: producto.observacion
+                    valor_total: valorProducto,
+                    imagen_producto: producto.imagen_producto
                 });
+
+                totalProductos++;
             });
 
-            const clientesArray = Object.values(clientesConProductos);
+            // Calcular totales por cliente
+            const clientesArray = Object.values(clientesConProductos).map(cliente => {
+                const valorTotalProductos = cliente.productos.reduce((sum, p) => sum + p.valor_total, 0);
+                
+                return {
+                    ...cliente,
+                    total_productos: cliente.productos.length,
+                    valor_total_productos: parseFloat(valorTotalProductos.toFixed(2))
+                };
+            });
 
             return {
                 success: true,
-                id_orden: parseInt(id_orden),
-                nombre_orden: orden.nombre_orden,
-                estado_orden: orden.estado_orden,
-                total_clientes_en_riesgo: clientesArray.length,
-                fecha_limite_gracia: orden.fecha_limite_pago,
+                total_clientes: clientesArray.length,
+                total_productos: totalProductos,
                 data: clientesArray
             };
         } catch (error) {
