@@ -34,7 +34,6 @@ CREATE TABLE clientes (
   apellido VARCHAR(100),
   codigo VARCHAR(50) UNIQUE,
   direccion VARCHAR(255),
-  saldo DECIMAL(10,2) DEFAULT 0.00,
   estado_actividad ENUM('activo','deudor','bloqueado','inactivo') DEFAULT 'activo',
   estado ENUM('activo','inactivo') DEFAULT 'activo',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -109,7 +108,13 @@ CREATE TABLE productos (
 CREATE TABLE historial_abono (
   id INT AUTO_INCREMENT PRIMARY KEY,
   id_cliente INT NOT NULL,
+  id_orden INT NOT NULL,
   cantidad DECIMAL(10,2) NOT NULL,
+  comprobante_pago VARCHAR(255) COMMENT 'Ruta del comprobante de pago',
+  estado_verificacion ENUM('pendiente','verificado','rechazado') DEFAULT 'pendiente',
+  fecha_verificacion DATETIME COMMENT 'Fecha en que se verificó el comprobante',
+  verificado_by VARCHAR(100) COMMENT 'Correo del usuario que verificó el comprobante',
+  observaciones_verificacion TEXT COMMENT 'Notas u observaciones sobre la verificación',
   estado ENUM('activo','inactivo') DEFAULT 'activo',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -117,6 +122,8 @@ CREATE TABLE historial_abono (
   updated_by INT,
   CONSTRAINT fk_abono_cliente
     FOREIGN KEY (id_cliente) REFERENCES clientes(id),
+  CONSTRAINT fk_abono_orden
+    FOREIGN KEY (id_orden) REFERENCES ordenes(id),
   CONSTRAINT fk_abono_created_by
     FOREIGN KEY (created_by) REFERENCES usuarios(id),
   CONSTRAINT fk_abono_updated_by
@@ -227,6 +234,12 @@ ON productos (id_cliente, id_orden);
 
 CREATE INDEX idx_historial_abono_cliente
 ON historial_abono (id_cliente);
+
+CREATE INDEX idx_historial_abono_orden
+ON historial_abono (id_orden);
+
+CREATE INDEX idx_historial_abono_verificacion
+ON historial_abono (estado_verificacion, fecha_verificacion);
 
 CREATE INDEX idx_cliente_orden_estado
 ON cliente_orden (id_orden, estado_pago);

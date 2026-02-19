@@ -61,6 +61,66 @@ const getAbonosByCliente = async (req, res) => {
 };
 
 /**
+ * Obtener abonos de una orden específica
+ */
+const getAbonosByOrden = async (req, res) => {
+    try {
+        const { id_orden } = req.params;
+        const abonos = await AbonoService.getAbonosByOrden(id_orden);
+
+        res.json({
+            success: true,
+            data: abonos
+        });
+
+    } catch (error) {
+        console.error('Error al obtener abonos de la orden:', error);
+
+        if (error.message === 'INVALID_ORDER_ID') {
+            return res.status(400).json({
+                success: false,
+                message: 'ID de orden inválido'
+            });
+        }
+
+        if (error.message === 'ORDER_NOT_FOUND') {
+            return res.status(404).json({
+                success: false,
+                message: 'Orden no encontrada'
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener abonos de la orden',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
+/**
+ * Obtener abonos pendientes de verificación
+ */
+const getAbonosPendientes = async (req, res) => {
+    try {
+        const abonos = await AbonoService.getAbonosPendientes();
+
+        res.json({
+            success: true,
+            data: abonos
+        });
+
+    } catch (error) {
+        console.error('Error al obtener abonos pendientes:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener abonos pendientes',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
+/**
  * Obtener abono por ID
  */
 const getAbonoById = async (req, res) => {
@@ -99,29 +159,33 @@ const getAbonoById = async (req, res) => {
 };
 
 /**
- * Crear nuevo abono
+ * Crear nuevo abono con comprobante
  */
 const createAbono = async (req, res) => {
     try {
-        const { id_cliente, cantidad } = req.body;
+        const { id_cliente, id_orden, cantidad } = req.body;
 
         // Validar campos requeridos
-        if (!id_cliente || !cantidad) {
+        if (!id_cliente || !id_orden || !cantidad) {
             return res.status(400).json({
                 success: false,
-                message: 'ID de cliente y cantidad son requeridos'
+                message: 'ID de cliente, ID de orden y cantidad son requeridos'
             });
         }
 
+        // Obtener la URL del comprobante si se subió
+        const comprobante_pago = req.comprobanteUrl || null;
+
         // Crear abono
         const nuevoAbono = await AbonoService.createAbono(
-            { id_cliente, cantidad },
+            { id_cliente, id_orden, cantidad },
+            comprobante_pago,
             req.user.id
         );
 
         res.status(201).json({
             success: true,
-            message: 'Abono registrado exitosamente',
+            message: 'Abono registrado exitosamente. Pendiente de verificación.',
             data: nuevoAbono
         });
 
@@ -131,7 +195,7 @@ const createAbono = async (req, res) => {
         if (error.message === 'FIELDS_REQUIRED') {
             return res.status(400).json({
                 success: false,
-                message: 'ID de cliente y cantidad son requeridos'
+                message: 'ID de cliente, ID de orden y cantidad son requeridos'
             });
         }
 
@@ -139,6 +203,13 @@ const createAbono = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'ID de cliente inválido'
+            });
+        }
+
+        if (error.message === 'INVALID_ORDER_ID') {
+            return res.status(400).json({
+                success: false,
+                message: 'ID de orden inválido'
             });
         }
 
@@ -156,9 +227,144 @@ const createAbono = async (req, res) => {
             });
         }
 
+        if (error.message === 'ORDER_NOT_FOUND') {
+            return res.status(404).json({
+                success: false,
+                message: 'Orden no encontrada'
+            });
+        }
+
+        if (error.message === 'COMPROBANTE_REQUIRED') {
+            return res.status(400).json({
+                success: false,
+                message: 'El comprobante de pago es requerido'
+            });
+        }
+
         res.status(500).json({
             success: false,
             message: 'Error al crear abono',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
+/**
+ * Verificar comprobante de pago
+ */
+const verificarComprobante = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const observaciones = req.body?.observaciones || '';
+
+        // Verificar comprobante
+        const abonoVerificado = await AbonoService.verificarComprobante(
+            id,
+            req.user.correo,
+            observaciones
+        );
+
+        res.json({
+            success: true,
+            message: 'Comprobante verificado exitosamente. Saldo actualizado.',
+            data: abonoVerificado
+        });
+
+    } catch (error) {
+        console.error('Error al verificar comprobante:', error);
+
+        if (error.message === 'INVALID_ABONO_ID') {
+            return res.status(400).json({
+                success: false,
+                message: 'ID de abono inválido'
+            });
+        }
+
+        if (error.message === 'ABONO_NOT_FOUND') {
+            return res.status(404).json({
+                success: false,
+                message: 'Abono no encontrado'
+            });
+        }
+
+        if (error.message === 'ABONO_ALREADY_PROCESSED') {
+            return res.status(400).json({
+                success: false,
+                message: 'Este comprobante ya ha sido procesado'
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Error al verificar comprobante',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
+/**
+ * Rechazar comprobante de pago
+ */
+const rechazarComprobante = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const observaciones = req.body?.observaciones || '';
+
+        // Validar observaciones requeridas
+        if (!observaciones || observaciones.trim() === '') {
+            return res.status(400).json({
+                success: false,
+                message: 'Las observaciones son requeridas al rechazar un comprobante'
+            });
+        }
+
+        // Rechazar comprobante
+        const abonoRechazado = await AbonoService.rechazarComprobante(
+            id,
+            req.user.correo,
+            observaciones
+        );
+
+        res.json({
+            success: true,
+            message: 'Comprobante rechazado',
+            data: abonoRechazado
+        });
+
+    } catch (error) {
+        console.error('Error al rechazar comprobante:', error);
+
+        if (error.message === 'INVALID_ABONO_ID') {
+            return res.status(400).json({
+                success: false,
+                message: 'ID de abono inválido'
+            });
+        }
+
+        if (error.message === 'ABONO_NOT_FOUND') {
+            return res.status(404).json({
+                success: false,
+                message: 'Abono no encontrado'
+            });
+        }
+
+        if (error.message === 'ABONO_ALREADY_PROCESSED') {
+            return res.status(400).json({
+                success: false,
+                message: 'Este comprobante ya ha sido procesado'
+            });
+        }
+
+        if (error.message === 'OBSERVACIONES_REQUIRED') {
+            return res.status(400).json({
+                success: false,
+                message: 'Las observaciones son requeridas al rechazar un comprobante'
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Error al rechazar comprobante',
             error: process.env.NODE_ENV === 'development' ? error.message : {}
         });
     }
@@ -267,8 +473,12 @@ const deleteAbono = async (req, res) => {
 module.exports = {
     getAllAbonos,
     getAbonosByCliente,
+    getAbonosByOrden,
+    getAbonosPendientes,
     getAbonoById,
     createAbono,
+    verificarComprobante,
+    rechazarComprobante,
     updateAbono,
     deleteAbono
 };

@@ -2,9 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const path = require('path');
-const cron = require('node-cron');
 const { testConnection } = require('./src/config/database');
-const CierreOrdenService = require('./src/services/cierreOrdenService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -65,35 +63,6 @@ app.use((err, req, res, next) => {
         error: process.env.NODE_ENV === 'development' ? err.message : {}
     });
 });
-
-// ⏰ Configuración de tareas automáticas con CRON
-console.log('📅 Configurando tareas automáticas...');
-
-// Ejecutar remate automático cada minuto
-cron.schedule('* * * * *', async () => {
-    try {
-        const resultados = await CierreOrdenService.procesarRematesAutomaticos();
-        if (resultados && resultados.length > 0) {
-            console.log(`✅ Remate automático ejecutado: ${resultados.length} orden(es) procesada(s)`);
-        }
-    } catch (error) {
-        console.error('❌ Error en remate automático:', error.message);
-    }
-});
-
-// Ejecutar cierre automático de órdenes cada hora
-cron.schedule('0 * * * *', async () => {
-    try {
-        const resultados = await CierreOrdenService.cerrarOrdenesAutomaticamente();
-        if (resultados && resultados.length > 0) {
-            console.log(`✅ Cierre automático ejecutado: ${resultados.length} orden(es) cerrada(s)`);
-        }
-    } catch (error) {
-        console.error('❌ Error en cierre automático:', error.message);
-    }
-});
-
-console.log('✅ Tareas automáticas configuradas correctamente');
 
 // Iniciar servidor
 const startServer = async () => {

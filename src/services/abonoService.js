@@ -1,6 +1,5 @@
 const Abono = require('../models/Abono');
 const { isPositiveInteger } = require('../utils/validators');
-const VerificarPagoOrdenService = require('./verificarPagoOrdenService');
 
 class AbonoService {
     /**
@@ -10,15 +9,24 @@ class AbonoService {
         return {
             id: abono.id,
             id_cliente: abono.id_cliente,
+            id_orden: abono.id_orden,
             cantidad: parseFloat(abono.cantidad),
+            comprobante_pago: abono.comprobante_pago,
+            estado_verificacion: abono.estado_verificacion,
+            fecha_verificacion: abono.fecha_verificacion,
+            verificado_by: abono.verificado_by,
+            observaciones_verificacion: abono.observaciones_verificacion,
             estado: abono.estado,
             created_at: abono.created_at,
             updated_at: abono.updated_at,
             cliente: {
                 nombre: abono.cliente_nombre,
                 apellido: abono.cliente_apellido,
-                codigo: abono.cliente_codigo,
-                saldo_actual: parseFloat(abono.cliente_saldo_actual)
+                codigo: abono.cliente_codigo
+            },
+            orden: {
+                nombre: abono.nombre_orden,
+                estado: abono.estado_orden
             },
             creado_por: abono.creado_por_correo,
             actualizado_por: abono.actualizado_por_correo
@@ -53,6 +61,65 @@ class AbonoService {
     }
 
     /**
+     * Obtener abonos por orden
+     */
+    static async getAbonosByOrden(id_orden) {
+        // Validar que el ID sea válido
+        if (!isPositiveInteger(id_orden)) {
+            throw new Error('INVALID_ORDER_ID');
+        }
+
+        // Verificar que la orden existe
+        const ordenExists = await Abono.ordenExists(id_orden);
+        if (!ordenExists) {
+            throw new Error('ORDER_NOT_FOUND');
+        }
+
+        const abonos = await Abono.findByOrden(id_orden);
+        return abonos.map(abono => ({
+            id: abono.id,
+            id_cliente: abono.id_cliente,
+            cantidad: parseFloat(abono.cantidad),
+            comprobante_pago: abono.comprobante_pago,
+            estado_verificacion: abono.estado_verificacion,
+            fecha_verificacion: abono.fecha_verificacion,
+            verificado_by: abono.verificado_by,
+            observaciones_verificacion: abono.observaciones_verificacion,
+            created_at: abono.created_at,
+            cliente: {
+                nombre: abono.cliente_nombre,
+                apellido: abono.cliente_apellido,
+                codigo: abono.cliente_codigo
+            }
+        }));
+    }
+
+    /**
+     * Obtener abonos pendientes de verificación
+     */
+    static async getAbonosPendientes() {
+        const abonos = await Abono.findPendingVerification();
+        return abonos.map(abono => ({
+            id: abono.id,
+            id_cliente: abono.id_cliente,
+            id_orden: abono.id_orden,
+            cantidad: parseFloat(abono.cantidad),
+            comprobante_pago: abono.comprobante_pago,
+            estado_verificacion: abono.estado_verificacion,
+            created_at: abono.created_at,
+            cliente: {
+                nombre: abono.cliente_nombre,
+                apellido: abono.cliente_apellido,
+                codigo: abono.cliente_codigo
+            },
+            orden: {
+                nombre: abono.nombre_orden,
+                estado: abono.estado_orden
+            }
+        }));
+    }
+
+    /**
      * Obtener abono por ID
      */
     static async getAbonoById(id) {
@@ -71,19 +138,29 @@ class AbonoService {
     }
 
     /**
-     * Crear nuevo abono
+     * Crear nuevo abono con comprobante
      */
-    static async createAbono(data, created_by) {
-        const { id_cliente, cantidad } = data;
+    static async createAbono(data, comprobante_pago, created_by) {
+        const { id_cliente, id_orden, cantidad } = data;
 
         // Validar campos requeridos
-        if (!id_cliente || !cantidad) {
+        if (!id_cliente || !id_orden || !cantidad) {
             throw new Error('FIELDS_REQUIRED');
         }
+
+        // Validar que no se requiera comprobante (puedes hacerlo opcional o requerido)
+        // if (!comprobante_pago) {
+        //     throw new Error('COMPROBANTE_REQUIRED');
+        // }
 
         // Validar que el ID del cliente sea válido
         if (!isPositiveInteger(id_cliente)) {
             throw new Error('INVALID_CLIENT_ID');
+        }
+
+        // Validar que el ID de la orden sea válido
+        if (!isPositiveInteger(id_orden)) {
+            throw new Error('INVALID_ORDER_ID');
         }
 
         // Validar que la cantidad sea positiva
@@ -98,20 +175,61 @@ class AbonoService {
             throw new Error('CLIENT_NOT_FOUND');
         }
 
-        // Crear abono
-        const abonoId = await Abono.create(id_cliente, cantidadNum, created_by);
-
-        // Verificar si el cliente completó su pago en órdenes en periodo de gracia
-        try {
-            await VerificarPagoOrdenService.verificarYActualizarPagoCliente(id_cliente);
-        } catch (error) {
-            console.error('Error al verificar pago de orden:', error);
-            // No detener la creación del abono si falla la verificación
+        // Verificar que la orden existe
+        const ordenExists = await Abono.ordenExists(id_orden);
+        if (!ordenExists) {
+            throw new Error('ORDER_NOT_FOUND');
         }
+
+        // Crear abono con comprobante (estado pendiente por defecto)
+        const abonoId = await Abono.create(id_cliente, id_orden, cantidadNum, comprobante_pago, created_by);
+
+        // NO verificar pago aquí, se hará cuando se verifique el comprobante
 
         // Retornar el abono creado
         const abonoCreado = await Abono.findById(abonoId);
         return this.formatAbonoData(abonoCreado);
+    }
+
+    /**
+     * Verificar comprobante de pago
+     */
+    static async verificarComprobante(id, verificado_by_email, observaciones = null) {
+        // Validar que el ID sea válido
+        if (!isPositiveInteger(id)) {
+            throw new Error('INVALID_ABONO_ID');
+        }
+
+        // Verificar comprobante
+        await Abono.verificarComprobante(id, verificado_by_email, observaciones);
+
+        // Obtener el abono actualizado
+        const abono = await Abono.findById(id);
+
+        // Retornar el abono actualizado
+        return this.formatAbonoData(abono);
+    }
+
+    /**
+     * Rechazar comprobante de pago
+     */
+    static async rechazarComprobante(id, verificado_by_email, observaciones) {
+        // Validar que el ID sea válido
+        if (!isPositiveInteger(id)) {
+            throw new Error('INVALID_ABONO_ID');
+        }
+
+        // Validar que hay observaciones (requerido al rechazar)
+        if (!observaciones || observaciones.trim() === '') {
+            throw new Error('OBSERVACIONES_REQUIRED');
+        }
+
+        // Rechazar comprobante
+        await Abono.rechazarComprobante(id, verificado_by_email, observaciones);
+
+        // Retornar el abono actualizado
+        const abono = await Abono.findById(id);
+        return this.formatAbonoData(abono);
     }
 
     /**

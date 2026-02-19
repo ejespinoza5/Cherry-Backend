@@ -122,18 +122,19 @@ class CierreOrdenService {
                 // Actualizar totales de compras y abonos (para registro histórico)
                 const totales = await ClienteOrden.actualizarTotales(id_cliente, id_orden, useConnection);
                 
-                // Obtener el saldo ACTUAL del cliente
-                const [clienteData] = await useConnection.query(
-                    `SELECT saldo FROM clientes WHERE id = ?`,
-                    [id_cliente]
+                // Obtener el saldo ACTUAL del cliente en esta orden (compras - abonos)
+                const [clienteOrdenData] = await useConnection.query(
+                    `SELECT (total_compras - total_abonos) as saldo_restante 
+                     FROM cliente_orden 
+                     WHERE id_cliente = ? AND id_orden = ?`,
+                    [id_cliente, id_orden]
                 );
                 
-                const saldo_actual = parseFloat(clienteData[0].saldo);
+                const saldo_actual = parseFloat(clienteOrdenData[0].saldo_restante);
 
-                // El saldo ya está calculado en tiempo real (abonos - compras)
-                // Si es negativo, el cliente tiene deuda
+                // Si el saldo es positivo, el cliente tiene deuda
                 let estado_pago = 'pagado';
-                if (saldo_actual < 0) {
+                if (saldo_actual > 0) {
                     estado_pago = 'en_gracia';
                     stats.clientes_con_deuda++;
                     
@@ -147,9 +148,9 @@ class CierreOrdenService {
                 }
 
                 // Actualizar estado al cierre
-                // saldo_al_cierre es el valor absoluto de lo que debe (si es negativo)
+                // saldo_al_cierre es el valor de lo que debe (si es positivo)
                 await ClienteOrden.actualizarAlCierre(id_cliente, id_orden, {
-                    saldo_al_cierre: Math.abs(saldo_actual < 0 ? saldo_actual : 0),
+                    saldo_al_cierre: (saldo_actual > 0 ? saldo_actual : 0),
                     fecha_cierre: fecha_cierre,
                     fecha_limite_pago: fecha_limite_pago,
                     estado_pago: estado_pago
@@ -613,29 +614,8 @@ class CierreOrdenService {
                 created_by: usuario_id
             });
 
-            // Solo resetear saldos negativos (deudas) a 0
-            // Los saldos positivos se mantienen
-            // Los clientes bloqueados también se resetean a 0
-            const [resetResult] = await connection.query(
-                `UPDATE clientes 
-                 SET saldo = 0.00
-                 WHERE estado = 'activo' 
-                   AND (
-                       (estado_actividad IN ('activo', 'deudor') AND saldo < 0)
-                       OR estado_actividad = 'bloqueado'
-                   )`
-            );
-
-            // Obtener clientes con saldo positivo
-            const [clientesConSaldo] = await connection.query(
-                `SELECT COUNT(*) as total 
-                 FROM clientes 
-                 WHERE estado = 'activo' 
-                   AND estado_actividad IN ('activo', 'deudor')
-                   AND saldo > 0`
-            );
-
-            // Cambiar clientes deudores a activos (nueva oportunidad)
+            // Cambiar clientes deudores a activos (nueva oportunidad con la nueva orden)
+            // Los clientes bloqueados permanecen bloqueados
             await connection.query(
                 `UPDATE clientes 
                  SET estado_actividad = 'activo'
@@ -644,20 +624,10 @@ class CierreOrdenService {
 
             await connection.commit();
 
-            const clientesConCredito = clientesConSaldo[0].total;
-            let mensaje = 'Nueva orden iniciada. ';
-            
-            if (clientesConCredito > 0) {
-                mensaje += `${clientesConCredito} cliente(s) mantienen su saldo a favor. Las deudas fueron reseteadas a $0.`;
-            } else {
-                mensaje += 'Todos los clientes comienzan con saldo $0.';
-            }
-
             return {
                 success: true,
                 id_orden,
-                mensaje,
-                clientes_con_saldo: clientesConCredito
+                mensaje: 'Nueva orden iniciada. Todos los clientes activos pueden participar.'
             };
         } catch (error) {
             await connection.rollback();
@@ -719,7 +689,7 @@ class CierreOrdenService {
                         id_cliente: producto.id_cliente,
                         nombre: producto.nombre_completo,
                         codigo: producto.codigo,
-                        saldo_actual: parseFloat(producto.saldo) || 0,
+                        saldo_actual: (parseFloat(producto.total_compras) - parseFloat(producto.total_abonos)) || 0,
                         deuda_pendiente: parseFloat(producto.deuda_pendiente) || 0,
                         abonos_perdidos: parseFloat(producto.abonos_perdidos) || 0,
                         fecha_limite_pago: producto.fecha_limite_pago,

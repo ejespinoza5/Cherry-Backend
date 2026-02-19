@@ -320,13 +320,15 @@ class Cliente {
 
             const total_abonado = parseFloat(abonos[0].total_abonado || 0);
 
-            // Obtener saldo actual del cliente
-            const [cliente] = await pool.query(
-                `SELECT saldo FROM clientes WHERE id = ?`,
+            // Obtener saldo pendiente actual del cliente (suma de todas sus órdenes)
+            const [saldoData] = await pool.query(
+                `SELECT COALESCE(SUM(total_compras - total_abonos), 0) as saldo_total
+                 FROM cliente_orden 
+                 WHERE id_cliente = ? AND (total_compras - total_abonos) > 0`,
                 [id_cliente]
             );
 
-            const saldo_pendiente = parseFloat(cliente[0].saldo || 0);
+            const saldo_pendiente = parseFloat(saldoData[0].saldo_total || 0);
 
             return {
                 total_ordenes: parseInt(ordenesCount[0].total_ordenes || 0),
@@ -339,65 +341,6 @@ class Cliente {
                 total_abonado: parseFloat(total_abonado.toFixed(2)),
                 saldo_pendiente: parseFloat(saldo_pendiente.toFixed(2))
             };
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    /**
-     * Actualizar saldo del cliente (resta o suma)
-     */
-    static async actualizarSaldo(id_cliente, monto) {
-        try {
-            const [result] = await pool.query(
-                `UPDATE clientes 
-                 SET saldo = saldo + (?)
-                 WHERE id = ?`,
-                [monto, id_cliente]
-            );
-            
-            // Actualizar automáticamente el estado_actividad basado en el nuevo saldo
-            await this.actualizarEstadoActividad(id_cliente);
-            
-            return result.affectedRows > 0;
-        } catch (error) {
-            throw error;
-        }
-    }
-
-    /**
-     * Actualizar estado_actividad automáticamente basado en el saldo
-     * Límite de deuda: $300
-     */
-    static async actualizarEstadoActividad(id_cliente) {
-        try {
-            const LIMITE_DEUDA = -300.00;
-            
-            // Obtener saldo actual
-            const saldo = await this.getSaldo(id_cliente);
-            
-            let nuevoEstado;
-            
-            if (saldo >= 0) {
-                // Saldo positivo o cero: ACTIVO
-                nuevoEstado = 'activo';
-            } else if (saldo > LIMITE_DEUDA) {
-                // Saldo negativo pero no ha superado el límite: DEUDOR
-                nuevoEstado = 'deudor';
-            } else {
-                // Saldo <= -$300: BLOQUEADO
-                nuevoEstado = 'bloqueado';
-            }
-            
-            // Actualizar el estado
-            await pool.query(
-                `UPDATE clientes 
-                 SET estado_actividad = ?
-                 WHERE id = ?`,
-                [nuevoEstado, id_cliente]
-            );
-            
-            return nuevoEstado;
         } catch (error) {
             throw error;
         }
@@ -422,16 +365,18 @@ class Cliente {
     }
 
     /**
-     * Obtener saldo actual del cliente
+     * Obtener saldo total pendiente del cliente (suma de todas las órdenes)
      */
     static async getSaldo(id_cliente) {
         try {
             const [rows] = await pool.query(
-                `SELECT saldo FROM clientes WHERE id = ?`,
+                `SELECT COALESCE(SUM(total_compras - total_abonos), 0) as saldo_total
+                 FROM cliente_orden 
+                 WHERE id_cliente = ? AND (total_compras - total_abonos) > 0`,
                 [id_cliente]
             );
             
-            return rows[0] ? parseFloat(rows[0].saldo) : 0;
+            return parseFloat(rows[0].saldo_total || 0);
         } catch (error) {
             throw error;
         }

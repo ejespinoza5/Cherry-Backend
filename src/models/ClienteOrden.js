@@ -197,8 +197,8 @@ class ClienteOrden {
             
             const [rows] = await useConnection.query(
                 `SELECT co.*, 
-                        c.nombre, c.apellido, c.codigo, c.saldo,
-                        ABS(c.saldo) as deuda_pendiente,
+                        c.nombre, c.apellido, c.codigo,
+                        (co.total_compras - co.total_abonos) as deuda_pendiente,
                         CASE 
                             WHEN co.fecha_limite_pago < NOW() THEN 'VENCIDO'
                             ELSE 'VIGENTE'
@@ -208,7 +208,7 @@ class ClienteOrden {
                  WHERE co.id_orden = ? 
                    AND co.estado_pago = 'en_gracia'
                    ${condicionFecha}
-                   AND c.saldo < 0`,
+                   AND (co.total_compras - co.total_abonos) > 0`,
                 [id_orden]
             );
             return rows;
@@ -238,24 +238,15 @@ class ClienteOrden {
 
             const total_compras = parseFloat(compras[0].total);
 
-            // Obtener el saldo ACTUAL del cliente (ya incluye todos sus abonos históricos)
-            const [cliente] = await useConnection.query(
-                `SELECT saldo FROM clientes WHERE id = ?`,
-                [id_cliente]
+            // Calcular el total de abonos para esta orden específica
+            const [abonos] = await useConnection.query(
+                `SELECT COALESCE(SUM(monto), 0) as total
+                 FROM historial_abono 
+                 WHERE id_cliente = ? AND id_orden = ? AND estado_verificacion = 'verificado'`,
+                [id_cliente, id_orden]
             );
 
-            const saldo_actual_cliente = parseFloat(cliente[0].saldo);
-
-            // El total_abonos se registra para referencia, pero lo que importa es:
-            // Si el cliente tiene saldo positivo, puede cubrir sus compras
-            // Si tiene saldo negativo, tiene deuda
-            // 
-            // Como el saldo del cliente ya se descuenta cuando compra productos,
-            // el saldo_actual ya refleja: abonos_totales - compras_totales
-            
-            // Para esta tabla, registramos las compras de esta orden y 
-            // usamos el saldo actual como referencia de "abonos disponibles"
-            const total_abonos = saldo_actual_cliente + total_compras; // Abonos que tenía antes de las compras de esta orden
+            const total_abonos = parseFloat(abonos[0].total);
 
             // Actualizar registro
             await useConnection.query(

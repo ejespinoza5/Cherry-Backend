@@ -134,9 +134,9 @@ class ProductoService {
             created_by: createdBy
         });
 
-        // Restar el total del saldo del cliente (restar = sumar valor negativo)
-        // Esto automáticamente actualizará el estado_actividad
-        await Cliente.actualizarSaldo(id_cliente, -totalConIva);
+        // Actualizar totales de compras en cliente_orden
+        const ClienteOrden = require('../models/ClienteOrden');
+        await ClienteOrden.actualizarTotales(id_cliente, id_orden);
 
         // Obtener y devolver el producto creado
         const producto = await Producto.findById(productoId);
@@ -240,24 +240,26 @@ class ProductoService {
         const impuestoCalculadoNuevo = subtotalNuevo * impuestoNuevo;
         const totalNuevo = subtotalNuevo + impuestoCalculadoNuevo + comisionNueva;
 
-        // Calcular la diferencia y actualizar saldo
-        // Si el cliente cambió, devolver al anterior y restar del nuevo
-        const clienteAnterior = producto.id_cliente;
-        const clienteNuevo = updateData.id_cliente;
-
-        if (clienteAnterior !== clienteNuevo) {
-            // Devolver el total al cliente anterior
-            await Cliente.actualizarSaldo(clienteAnterior, totalAnterior);
-            // Restar el total del nuevo cliente
-            await Cliente.actualizarSaldo(clienteNuevo, -totalNuevo);
-        } else {
-            // Mismo cliente: devolver el monto anterior y restar el nuevo
-            await Cliente.actualizarSaldo(clienteAnterior, totalAnterior);
-            await Cliente.actualizarSaldo(clienteNuevo, -totalNuevo);
-        }
-
         // Actualizar el producto
         await Producto.update(id, updateData, updatedBy);
+
+        // Actualizar totales de compras en cliente_orden
+        const ClienteOrden = require('../models/ClienteOrden');
+        // Si el cliente cambió, actualizar ambas órdenes
+        const clienteAnterior = producto.id_cliente;
+        const clienteNuevo = updateData.id_cliente;
+        const idOrdenAnterior = producto.id_orden;
+        const idOrdenNueva = updateData.id_orden;
+
+        if (clienteAnterior !== clienteNuevo || idOrdenAnterior !== idOrdenNueva) {
+            // Actualizar totales del cliente/orden anterior
+            await ClienteOrden.actualizarTotales(clienteAnterior, idOrdenAnterior);
+            // Actualizar totales del nuevo cliente/orden
+            await ClienteOrden.actualizarTotales(clienteNuevo, idOrdenNueva);
+        } else {
+            // Mismo cliente y orden, solo actualizar totales
+            await ClienteOrden.actualizarTotales(clienteNuevo, idOrdenNueva);
+        }
 
         // Obtener y devolver el producto actualizado
         const productoActualizado = await Producto.findById(id);
@@ -293,10 +295,11 @@ class ProductoService {
         // Eliminar el producto (soft delete)
         await Producto.delete(id, deletedBy);
 
-        // Devolver el monto al saldo del cliente (sumar de vuelta)
-        await Cliente.actualizarSaldo(producto.id_cliente, totalConIva);
+        // Actualizar totales de compras en cliente_orden
+        const ClienteOrden = require('../models/ClienteOrden');
+        await ClienteOrden.actualizarTotales(producto.id_cliente, producto.id_orden);
 
-        return { message: 'Producto eliminado correctamente y saldo actualizado' };
+        return { message: 'Producto eliminado correctamente y totales actualizados' };
     }
 
     /**
@@ -352,7 +355,6 @@ class ProductoService {
                     apellido: row.cliente_apellido,
                     codigo: row.cliente_codigo,
                     direccion: row.cliente_direccion,
-                    saldo: parseFloat(row.cliente_saldo || 0).toFixed(2),
                     estado_actividad: row.cliente_estado_actividad,
                     productos: []
                 });
@@ -423,7 +425,6 @@ class ProductoService {
             codigo: rows[0].cliente_codigo,
             direccion: rows[0].cliente_direccion,
             correo: rows[0].cliente_correo,
-            saldo: parseFloat(rows[0].cliente_saldo || 0).toFixed(2),
             estado_actividad: rows[0].cliente_estado_actividad
         };
 

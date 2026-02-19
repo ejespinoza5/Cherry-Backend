@@ -23,13 +23,12 @@ class VerificarPagoOrdenService {
             );
 
             for (const orden of ordenesEnGracia) {
-                // Obtener el saldo ACTUAL y estado del cliente
+                // Obtener el estado del cliente
                 const [cliente] = await pool.query(
-                    `SELECT saldo, estado_actividad FROM clientes WHERE id = ?`,
+                    `SELECT estado_actividad FROM clientes WHERE id = ?`,
                     [id_cliente]
                 );
 
-                const saldo_actual = parseFloat(cliente[0].saldo);
                 const estado_actividad = cliente[0].estado_actividad;
 
                 // IMPORTANTE: NO procesar clientes BLOQUEADOS (fueron rematados)
@@ -39,8 +38,18 @@ class VerificarPagoOrdenService {
                     continue;
                 }
 
-                // Si el saldo ya NO es negativo, significa que pagó su deuda
-                if (saldo_actual >= 0) {
+                // Calcular saldo actual en esta orden (total_compras - total_abonos)
+                const [clienteOrden] = await pool.query(
+                    `SELECT (total_compras - total_abonos) as saldo_restante
+                     FROM cliente_orden 
+                     WHERE id_cliente = ? AND id_orden = ?`,
+                    [id_cliente, orden.id_orden]
+                );
+
+                const saldo_actual = parseFloat(clienteOrden[0].saldo_restante);
+
+                // Si el saldo ya NO es positivo, significa que pagó su deuda
+                if (saldo_actual <= 0) {
                     // Marcar cliente como pagado
                     await ClienteOrden.marcarComoPagado(id_cliente, orden.id_orden);
 

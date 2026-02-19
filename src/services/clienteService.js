@@ -16,13 +16,22 @@ class ClienteService {
 
             const usuario = await Usuario.findById(id_usuario);
 
+            // Calcular saldo pendiente total sumando todas las órdenes
+            const { pool } = require('../config/database');
+            const [saldoResult] = await pool.query(
+                `SELECT COALESCE(SUM(total_compras - total_abonos), 0) as saldo_total
+                 FROM cliente_orden 
+                 WHERE id_cliente = ? AND (total_compras - total_abonos) > 0`,
+                [cliente.id]
+            );
+
             return {
                 id: cliente.id,
                 nombre: cliente.nombre,
                 apellido: cliente.apellido,
                 codigo: cliente.codigo,
                 direccion: cliente.direccion,
-                saldo_pendiente: parseFloat(cliente.saldo || 0),
+                saldo_pendiente: parseFloat(saldoResult[0].saldo_total || 0),
                 correo: usuario.correo,
                 estado: cliente.estado_actividad,
                 created_at: cliente.created_at
