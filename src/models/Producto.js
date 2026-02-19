@@ -269,7 +269,6 @@ class Producto {
                     c.estado_actividad as cliente_estado_actividad,
                     o.id as orden_id,
                     o.nombre_orden,
-                    o.impuesto as orden_impuesto,
                     p.id as producto_id,
                     p.cantidad_articulos,
                     p.detalles,

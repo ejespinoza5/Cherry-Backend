@@ -31,13 +31,6 @@ router.get('/agrupados/:id_orden', productosController.getProductosAgrupadosPorC
 router.get('/cliente/:id_cliente/:id_orden', productosController.getProductosPorCliente);
 
 /**
- * @route   GET /api/productos/pdf/:id_cliente/:id_orden
- * @desc    Generar PDF con productos de un cliente en una orden específica
- * @access  Privado
- */
-router.get('/pdf/:id_cliente/:id_orden', productosController.generarPDFProductosCliente);
-
-/**
  * @route   GET /api/productos/resumen/:id_orden/:id_cliente
  * @desc    Obtener resumen de productos por cliente en una orden
  * @access  Privado

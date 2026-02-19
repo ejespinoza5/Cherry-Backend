@@ -159,32 +159,29 @@ class CierreOrdenService {
 
             stats.clientes_pendientes = stats.clientes_con_deuda;
 
-            // Calcular totales de la orden
+            // Calcular totales de la orden (sin impuestos automáticos)
             const [totalesOrden] = await useConnection.query(
                 `SELECT 
                     SUM(p.valor_etiqueta * p.cantidad_articulos) as subtotal,
-                    SUM((p.valor_etiqueta * p.cantidad_articulos) * ?) as impuestos,
                     SUM(p.comision) as comisiones
                  FROM productos p
                  WHERE p.id_orden = ? AND p.estado = 'activo'`,
-                [orden.impuesto, id_orden]
+                [id_orden]
             );
 
             const subtotal = parseFloat(totalesOrden[0].subtotal) || 0;
-            const impuestos = parseFloat(totalesOrden[0].impuestos) || 0;
             const comisiones = parseFloat(totalesOrden[0].comisiones) || 0;
-            const total_final = subtotal + impuestos + comisiones;
+            const total_final = subtotal + comisiones;
 
             // Crear o actualizar registro de cierre
             await useConnection.query(
                 `INSERT INTO cierre_orden 
-                    (id_orden, subtotal, impuestos, comisiones, total_final, 
+                    (id_orden, subtotal, comisiones, total_final, 
                      fecha_cierre, fecha_limite_pago, tipo_cierre,
                      total_clientes, clientes_pagados, clientes_pendientes, created_by)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                  ON DUPLICATE KEY UPDATE
                     subtotal = VALUES(subtotal),
-                    impuestos = VALUES(impuestos),
                     comisiones = VALUES(comisiones),
                     total_final = VALUES(total_final),
                     fecha_cierre = VALUES(fecha_cierre),
@@ -193,7 +190,7 @@ class CierreOrdenService {
                     total_clientes = VALUES(total_clientes),
                     clientes_pagados = VALUES(clientes_pagados),
                     clientes_pendientes = VALUES(clientes_pendientes)`,
-                [id_orden, subtotal, impuestos, comisiones, total_final,
+                [id_orden, subtotal, comisiones, total_final,
                  fecha_cierre, fecha_limite_pago, orden.tipo_cierre || 'manual',
                  stats.total_clientes, stats.clientes_pagados, stats.clientes_pendientes,
                  usuario_id]
@@ -216,7 +213,6 @@ class CierreOrdenService {
                 fecha_limite_pago,
                 totales: {
                     subtotal,
-                    impuestos,
                     comisiones,
                     total_final
                 },
@@ -276,11 +272,9 @@ class CierreOrdenService {
                     const valorEtiqueta = parseFloat(producto.valor_etiqueta);
                     const cantidad = parseInt(producto.cantidad_articulos);
                     const comision = parseFloat(producto.comision);
-                    const impuesto = parseFloat((await Orden.findById(id_orden)).impuesto);
                     
                     const subtotal = valorEtiqueta * cantidad;
-                    const montoImpuesto = subtotal * impuesto;
-                    const valor_producto = subtotal + montoImpuesto + comision;
+                    const valor_producto = subtotal + comision;
 
                     const observacion = forzar 
                         ? `Remate manual por administrador antes de vencer el periodo de gracia (${clienteOrden.estado_plazo})`

@@ -1,5 +1,4 @@
 const ProductoService = require('../services/productoService');
-const PDFService = require('../services/pdfService');
 const { deleteImage } = require('../middlewares/upload');
 
 /**
@@ -454,59 +453,6 @@ const getProductosPorCliente = async (req, res) => {
     }
 };
 
-/**
- * Generar PDF de productos de un cliente en una orden
- */
-const generarPDFProductosCliente = async (req, res) => {
-    try {
-        const { id_cliente, id_orden } = req.params;
-        
-        // Obtener los datos del cliente y sus productos
-        const data = await ProductoService.getProductosPorCliente(id_cliente, id_orden);
-
-        // Generar el PDF
-        const pdfBuffer = await PDFService.generarPDFProductosCliente(data);
-
-        // Configurar headers para la descarga del PDF
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=productos_cliente_${id_cliente}_orden_${id_orden}.pdf`);
-        res.setHeader('Content-Length', pdfBuffer.length);
-
-        // Enviar el PDF
-        res.send(pdfBuffer);
-
-    } catch (error) {
-        console.error('Error al generar PDF:', error);
-
-        if (error.message === 'CLIENT_NOT_FOUND') {
-            return res.status(404).json({
-                success: false,
-                message: 'Cliente no encontrado'
-            });
-        }
-
-        if (error.message === 'ORDER_NOT_FOUND') {
-            return res.status(404).json({
-                success: false,
-                message: 'Orden no encontrada'
-            });
-        }
-
-        if (error.message === 'NO_PRODUCTS_FOUND') {
-            return res.status(404).json({
-                success: false,
-                message: 'No se encontraron productos para este cliente en esta orden'
-            });
-        }
-
-        res.status(500).json({
-            success: false,
-            message: 'Error al generar PDF',
-            error: process.env.NODE_ENV === 'development' ? error.message : {}
-        });
-    }
-};
-
 module.exports = {
     getAllProductos,
     getProductoById,
@@ -515,6 +461,5 @@ module.exports = {
     deleteProducto,
     getResumenPorCliente,
     getProductosAgrupadosPorCliente,
-    getProductosPorCliente,
-    generarPDFProductosCliente
+    getProductosPorCliente
 };

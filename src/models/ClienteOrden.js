@@ -12,20 +12,26 @@ class ClienteOrden {
                 total_compras = 0, 
                 total_abonos = 0,
                 saldo_al_cierre = 0,
+                valor_total = 0,
+                libras_acumuladas = 0,
+                link_excel = null,
                 estado_pago = 'activo'
             } = data;
             
             const useConnection = connection || pool;
             const [result] = await useConnection.query(
                 `INSERT INTO cliente_orden 
-                    (id_cliente, id_orden, total_compras, total_abonos, saldo_al_cierre, estado_pago) 
-                 VALUES (?, ?, ?, ?, ?, ?)
+                    (id_cliente, id_orden, total_compras, total_abonos, saldo_al_cierre, valor_total, libras_acumuladas, link_excel, estado_pago) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                  ON DUPLICATE KEY UPDATE
                     total_compras = VALUES(total_compras),
                     total_abonos = VALUES(total_abonos),
                     saldo_al_cierre = VALUES(saldo_al_cierre),
+                    valor_total = VALUES(valor_total),
+                    libras_acumuladas = VALUES(libras_acumuladas),
+                    link_excel = VALUES(link_excel),
                     estado_pago = VALUES(estado_pago)`,
-                [id_cliente, id_orden, total_compras, total_abonos, saldo_al_cierre, estado_pago]
+                [id_cliente, id_orden, total_compras, total_abonos, saldo_al_cierre, valor_total, libras_acumuladas, link_excel, estado_pago]
             );
             
             return result.insertId || result.affectedRows > 0;
@@ -219,21 +225,18 @@ class ClienteOrden {
 
     /**
      * Actualizar totales de compras y abonos
+     * Suma simple de productos sin impuestos ni comisiones automáticas
      */
     static async actualizarTotales(id_cliente, id_orden, connection = null) {
         try {
             const useConnection = connection || pool;
             
-            // Calcular total de compras EN ESTA ORDEN
+            // Calcular total de compras EN ESTA ORDEN (solo suma de productos)
             const [compras] = await useConnection.query(
-                `SELECT COALESCE(SUM(
-                    (valor_etiqueta * cantidad_articulos) + 
-                    ((valor_etiqueta * cantidad_articulos) * (SELECT impuesto FROM ordenes WHERE id = ?)) + 
-                    comision
-                ), 0) as total
+                `SELECT COALESCE(SUM(valor_etiqueta * cantidad_articulos), 0) as total
                 FROM productos 
                 WHERE id_cliente = ? AND id_orden = ? AND estado = 'activo'`,
-                [id_orden, id_cliente, id_orden]
+                [id_cliente, id_orden]
             );
 
             const total_compras = parseFloat(compras[0].total);
@@ -257,6 +260,26 @@ class ClienteOrden {
             );
 
             return { total_compras, total_abonos };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Actualizar campos manuales del cliente en una orden
+     */
+    static async actualizarCamposManuales(id_cliente, id_orden, data) {
+        try {
+            const { valor_total, libras_acumuladas, link_excel } = data;
+            
+            await pool.query(
+                `UPDATE cliente_orden 
+                 SET valor_total = ?, libras_acumuladas = ?, link_excel = ?
+                 WHERE id_cliente = ? AND id_orden = ?`,
+                [valor_total, libras_acumuladas, link_excel, id_cliente, id_orden]
+            );
+
+            return true;
         } catch (error) {
             throw error;
         }

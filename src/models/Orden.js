@@ -6,12 +6,25 @@ class Orden {
      */
     static async create(data) {
         try {
-            const { nombre_orden, fecha_inicio, fecha_fin, impuesto, estado, created_by } = data;
+            const { 
+                nombre_orden, 
+                fecha_inicio, 
+                fecha_fin, 
+                estado, 
+                created_by 
+            } = data;
             
             const [result] = await pool.query(
-                `INSERT INTO ordenes (nombre_orden, fecha_inicio, fecha_fin, impuesto, estado, estado_orden, created_by) 
-                 VALUES (?, ?, ?, ?, ?, 'abierta', ?)`,
-                [nombre_orden, fecha_inicio, fecha_fin || null, impuesto || 0.08, estado || 'activo', created_by]
+                `INSERT INTO ordenes 
+                    (nombre_orden, fecha_inicio, fecha_fin, estado, estado_orden, created_by) 
+                 VALUES (?, ?, ?, ?, 'abierta', ?)`,
+                [
+                    nombre_orden, 
+                    fecha_inicio, 
+                    fecha_fin || null, 
+                    estado || 'activo', 
+                    created_by
+                ]
             );
             
             return result.insertId;
@@ -86,13 +99,13 @@ class Orden {
      */
     static async update(id, data, updated_by) {
         try {
-            const { nombre_orden, fecha_inicio, fecha_fin, impuesto, estado } = data;
+            const { nombre_orden, fecha_inicio, fecha_fin, estado } = data;
             
             const [result] = await pool.query(
                 `UPDATE ordenes 
-                 SET nombre_orden = ?, fecha_inicio = ?, fecha_fin = ?, impuesto = ?, estado = ?, updated_by = ? 
+                 SET nombre_orden = ?, fecha_inicio = ?, fecha_fin = ?, estado = ?, updated_by = ? 
                  WHERE id = ?`,
-                [nombre_orden, fecha_inicio, fecha_fin || null, impuesto, estado, updated_by, id]
+                [nombre_orden, fecha_inicio, fecha_fin || null, estado, updated_by, id]
             );
             
             return result.affectedRows > 0;

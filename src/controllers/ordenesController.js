@@ -66,11 +66,11 @@ const getOrdenById = async (req, res) => {
  */
 const createOrden = async (req, res) => {
     try {
-        const { nombre_orden, fecha_inicio, fecha_fin, impuesto, estado } = req.body;
+        const { nombre_orden, fecha_inicio, fecha_fin, estado } = req.body;
         const createdBy = req.user.id;
 
         const orden = await OrdenService.createOrden(
-            { nombre_orden, fecha_inicio, fecha_fin, impuesto, estado },
+            { nombre_orden, fecha_inicio, fecha_fin, estado },
             createdBy
         );
 
@@ -111,13 +111,6 @@ const createOrden = async (req, res) => {
             });
         }
 
-        if (error.message === 'INVALID_TAX_VALUE') {
-            return res.status(400).json({
-                success: false,
-                message: 'El impuesto debe ser un valor entre 0 y 1 (0% a 100%)'
-            });
-        }
-
         // Validación de orden en periodo de gracia
         if (error.message.startsWith('NO_PUEDE_CREAR_ORDEN|')) {
             const mensaje = error.message.split('|')[1];
@@ -149,12 +142,12 @@ const createOrden = async (req, res) => {
 const updateOrden = async (req, res) => {
     try {
         const { id } = req.params;
-        const { nombre_orden, fecha_inicio, fecha_fin, impuesto, estado } = req.body;
+        const { nombre_orden, fecha_inicio, fecha_fin, estado } = req.body;
         const updatedBy = req.user.id;
 
         const orden = await OrdenService.updateOrden(
             id,
-            { nombre_orden, fecha_inicio, fecha_fin, impuesto, estado },
+            { nombre_orden, fecha_inicio, fecha_fin, estado },
             updatedBy
         );
 
@@ -199,13 +192,6 @@ const updateOrden = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Ya existe una orden con ese nombre'
-            });
-        }
-
-        if (error.message === 'INVALID_TAX_VALUE') {
-            return res.status(400).json({
-                success: false,
-                message: 'El impuesto debe ser un valor entre 0 y 1 (0% a 100%)'
             });
         }
 
@@ -288,11 +274,84 @@ const getOrdenEstadisticas = async (req, res) => {
     }
 };
 
+/**
+ * Actualizar campos manuales de un cliente en una orden
+ * PUT /api/ordenes/:id_orden/clientes/:id_cliente/datos-manuales
+ */
+const updateClienteOrdenDatosManuales = async (req, res) => {
+    try {
+        const { id_orden, id_cliente } = req.params;
+        const { valor_total, libras_acumuladas, link_excel } = req.body;
+
+        await OrdenService.updateClienteOrdenDatosManuales(
+            id_cliente,
+            id_orden,
+            { valor_total, libras_acumuladas, link_excel }
+        );
+
+        res.json({
+            success: true,
+            message: 'Datos manuales actualizados correctamente'
+        });
+
+    } catch (error) {
+        console.error('Error al actualizar datos manuales:', error);
+
+        if (error.message === 'CLIENT_ORDER_NOT_FOUND') {
+            return res.status(404).json({
+                success: false,
+                message: 'No se encontró el registro del cliente en esta orden'
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Error al actualizar datos manuales',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
+/**
+ * Obtener datos de un cliente en una orden específica
+ * GET /api/ordenes/:id_orden/clientes/:id_cliente
+ */
+const getClienteOrdenDatos = async (req, res) => {
+    try {
+        const { id_orden, id_cliente } = req.params;
+
+        const datos = await OrdenService.getClienteOrdenDatos(id_cliente, id_orden);
+
+        res.json({
+            success: true,
+            data: datos
+        });
+
+    } catch (error) {
+        console.error('Error al obtener datos del cliente en la orden:', error);
+
+        if (error.message === 'CLIENT_ORDER_NOT_FOUND') {
+            return res.status(404).json({
+                success: false,
+                message: 'No se encontró el registro del cliente en esta orden'
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener datos del cliente',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
 module.exports = {
     getAllOrdenes,
     getOrdenById,
     createOrden,
     updateOrden,
     deleteOrden,
-    getOrdenEstadisticas
+    getOrdenEstadisticas,
+    updateClienteOrdenDatosManuales,
+    getClienteOrdenDatos
 };

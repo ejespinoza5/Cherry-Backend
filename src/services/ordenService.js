@@ -12,7 +12,6 @@ class OrdenService {
             fecha_inicio: orden.fecha_inicio,
             fecha_fin: orden.fecha_fin,
             fecha_cierre: orden.fecha_cierre,
-            impuesto: parseFloat(orden.impuesto),
             estado_orden: orden.estado_orden,
             tipo_cierre: orden.tipo_cierre,
             estado: orden.estado,
@@ -48,7 +47,7 @@ class OrdenService {
      * Crear nueva orden
      */
     static async createOrden(data, createdBy) {
-        const { nombre_orden, fecha_inicio, fecha_fin, impuesto, estado } = data;
+        const { nombre_orden, fecha_inicio, fecha_fin, estado } = data;
 
         // Validar nombre de orden
         if (!nombre_orden || nombre_orden.trim() === '') {
@@ -71,18 +70,12 @@ class OrdenService {
             throw new Error('ORDER_NAME_EXISTS');
         }
 
-        // Validar impuesto
-        if (impuesto !== undefined && (impuesto < 0 || impuesto > 1)) {
-            throw new Error('INVALID_TAX_VALUE');
-        }
-
         try {
             // Crear la orden con reinicio de saldos
             const resultado = await CierreOrdenService.iniciarNuevaOrden({
                 nombre_orden,
                 fecha_inicio,
                 fecha_fin,
-                impuesto,
                 estado
             }, createdBy);
 
@@ -105,7 +98,7 @@ class OrdenService {
      * Actualizar orden
      */
     static async updateOrden(id, data, updatedBy) {
-        const { nombre_orden, fecha_inicio, fecha_fin, impuesto, estado } = data;
+        const { nombre_orden, fecha_inicio, fecha_fin, estado } = data;
 
         // Verificar que la orden existe
         const orden = await Orden.findById(id);
@@ -139,17 +132,11 @@ class OrdenService {
             }
         }
 
-        // Validar impuesto
-        if (impuesto !== undefined && (impuesto < 0 || impuesto > 1)) {
-            throw new Error('INVALID_TAX_VALUE');
-        }
-
         // Preparar datos para actualizar (solo los campos proporcionados)
         const updateData = {
             nombre_orden: nombre_orden !== undefined ? nombre_orden : orden.nombre_orden,
             fecha_inicio: fecha_inicio !== undefined ? fecha_inicio : orden.fecha_inicio,
             fecha_fin: fecha_fin !== undefined ? fecha_fin : orden.fecha_fin,
-            impuesto: impuesto !== undefined ? impuesto : orden.impuesto,
             estado: estado !== undefined ? estado : orden.estado
         };
 
@@ -191,11 +178,10 @@ class OrdenService {
 
         const estadisticas = await Orden.getEstadisticas(id);
 
-        // Calcular totales
+        // Calcular totales (sin impuestos automáticos)
         const subtotal = parseFloat(estadisticas.subtotal || 0);
-        const impuestos = subtotal * parseFloat(orden.impuesto);
         const comisiones = parseFloat(estadisticas.total_comisiones || 0);
-        const total = subtotal + impuestos + comisiones;
+        const total = subtotal + comisiones;
 
         return {
             orden: this.formatOrdenData(orden),
@@ -204,10 +190,60 @@ class OrdenService {
                 total_productos: parseInt(estadisticas.total_productos || 0),
                 total_articulos: parseInt(estadisticas.total_articulos || 0),
                 subtotal: subtotal.toFixed(2),
-                impuestos: impuestos.toFixed(2),
                 comisiones: comisiones.toFixed(2),
                 total: total.toFixed(2)
             }
+        };
+    }
+
+    /**
+     * Actualizar campos manuales de un cliente en una orden
+     */
+    static async updateClienteOrdenDatosManuales(id_cliente, id_orden, data) {
+        const ClienteOrden = require('../models/ClienteOrden');
+
+        // Verificar que el registro existe
+        const registro = await ClienteOrden.findByClienteAndOrden(id_cliente, id_orden);
+        if (!registro) {
+            throw new Error('CLIENT_ORDER_NOT_FOUND');
+        }
+
+        // Actualizar los campos manuales
+        await ClienteOrden.actualizarCamposManuales(id_cliente, id_orden, data);
+
+        return { message: 'Datos manuales actualizados correctamente' };
+    }
+
+    /**
+     * Obtener datos de un cliente en una orden específica
+     */
+    static async getClienteOrdenDatos(id_cliente, id_orden) {
+        const ClienteOrden = require('../models/ClienteOrden');
+
+        // Obtener registro
+        const registro = await ClienteOrden.findByClienteAndOrden(id_cliente, id_orden);
+        if (!registro) {
+            throw new Error('CLIENT_ORDER_NOT_FOUND');
+        }
+
+        return {
+            id_cliente: registro.id_cliente,
+            id_orden: registro.id_orden,
+            cliente: {
+                nombre: registro.nombre,
+                apellido: registro.apellido,
+                codigo: registro.codigo
+            },
+            orden: {
+                nombre: registro.nombre_orden
+            },
+            total_compras: parseFloat(registro.total_compras || 0).toFixed(2),
+            total_abonos: parseFloat(registro.total_abonos || 0).toFixed(2),
+            saldo_pendiente: (parseFloat(registro.total_compras || 0) - parseFloat(registro.total_abonos || 0)).toFixed(2),
+            valor_total: parseFloat(registro.valor_total || 0).toFixed(2),
+            libras_acumuladas: parseFloat(registro.libras_acumuladas || 0).toFixed(2),
+            link_excel: registro.link_excel,
+            estado_pago: registro.estado_pago
         };
     }
 }

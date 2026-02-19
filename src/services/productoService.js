@@ -110,16 +110,6 @@ class ProductoService {
             throw new Error('INVALID_COMMISSION');
         }
 
-        // Obtener la orden para calcular el impuesto
-        const orden = await Orden.findById(id_orden);
-        const impuesto = parseFloat(orden.impuesto || 0);
-        
-        // Calcular el total con IVA
-        const subtotal = parseFloat(valor_etiqueta);
-        const comisionFinal = parseFloat(comision || 3.00);
-        const impuestoCalculado = subtotal * impuesto;
-        const totalConIva = subtotal + impuestoCalculado + comisionFinal;
-
         // Crear el producto
         const productoId = await Producto.create({
             id_cliente,
@@ -211,14 +201,6 @@ class ProductoService {
             throw new Error('INVALID_COMMISSION');
         }
 
-        // Calcular total anterior del producto
-        const ordenAnterior = await Orden.findById(producto.id_orden);
-        const impuestoAnterior = parseFloat(ordenAnterior.impuesto || 0);
-        const subtotalAnterior = parseFloat(producto.valor_etiqueta);
-        const comisionAnterior = parseFloat(producto.comision || 3.00);
-        const impuestoCalculadoAnterior = subtotalAnterior * impuestoAnterior;
-        const totalAnterior = subtotalAnterior + impuestoCalculadoAnterior + comisionAnterior;
-
         // Preparar datos para actualizar
         const updateData = {
             id_cliente: id_cliente !== undefined ? id_cliente : producto.id_cliente,
@@ -231,14 +213,6 @@ class ProductoService {
             observacion: observacion !== undefined ? observacion : producto.observacion,
             estado: estado !== undefined ? estado : producto.estado
         };
-
-        // Calcular total nuevo del producto
-        const ordenNueva = await Orden.findById(updateData.id_orden);
-        const impuestoNuevo = parseFloat(ordenNueva.impuesto || 0);
-        const subtotalNuevo = parseFloat(updateData.valor_etiqueta);
-        const comisionNueva = parseFloat(updateData.comision || 3.00);
-        const impuestoCalculadoNuevo = subtotalNuevo * impuestoNuevo;
-        const totalNuevo = subtotalNuevo + impuestoCalculadoNuevo + comisionNueva;
 
         // Actualizar el producto
         await Producto.update(id, updateData, updatedBy);
@@ -281,16 +255,6 @@ class ProductoService {
         if (ordenCerrada) {
             throw new Error('ORDER_CLOSED');
         }
-
-        // Obtener la orden para calcular el impuesto
-        const orden = await Orden.findById(producto.id_orden);
-        const impuesto = parseFloat(orden.impuesto || 0);
-        
-        // Calcular el total que se había restado del saldo
-        const subtotal = parseFloat(producto.valor_etiqueta);
-        const comisionFinal = parseFloat(producto.comision || 3.00);
-        const impuestoCalculado = subtotal * impuesto;
-        const totalConIva = subtotal + impuestoCalculado + comisionFinal;
 
         // Eliminar el producto (soft delete)
         await Producto.delete(id, deletedBy);
@@ -455,7 +419,7 @@ class ProductoService {
             });
         });
 
-        // Convertir Map a array (sin calcular totales por orden)
+        // Convertir Map a array
         const ordenes = Array.from(ordenesMap.values()).map(orden => {
             return {
                 id: orden.id,
@@ -464,16 +428,11 @@ class ProductoService {
             };
         });
 
-        // Obtener el impuesto de la orden (viene en todos los registros, usamos el primero)
-        const impuesto_orden = parseFloat(rows[0].orden_impuesto || 0);
-
-        // Calcular totales generales
+        // Calcular totales generales (sin impuestos)
         const total_productos_general = rows.length;
         const total_articulos_general = rows.reduce((sum, r) => sum + r.cantidad_articulos, 0);
         const subtotal_general = rows.reduce((sum, r) => 
             sum + (parseFloat(r.valor_etiqueta) * r.cantidad_articulos), 0);
-        const impuesto_aplicado = subtotal_general * impuesto_orden;
-        const total_con_impuestos = subtotal_general + impuesto_aplicado;
         const total_comisiones_general = rows.reduce((sum, r) => sum + parseFloat(r.comision), 0);
 
         return {
@@ -482,11 +441,8 @@ class ProductoService {
             total_productos: total_productos_general,
             total_articulos: total_articulos_general,
             subtotal_general: subtotal_general.toFixed(2),
-            impuesto: (impuesto_orden * 100).toFixed(0) + '%',
-            impuesto_aplicado: impuesto_aplicado.toFixed(2),
-            total_con_impuestos: total_con_impuestos.toFixed(2),
             total_comisiones_general: total_comisiones_general.toFixed(2),
-            total_general: (total_con_impuestos + total_comisiones_general).toFixed(2),
+            total_general: (subtotal_general + total_comisiones_general).toFixed(2),
             ordenes: ordenes
         };
     }

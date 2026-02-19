@@ -118,7 +118,6 @@ class Cliente {
                     o.nombre_orden,
                     o.fecha_inicio,
                     o.fecha_fin,
-                    o.impuesto,
                     o.estado,
                     o.created_at
                 FROM ordenes o
@@ -128,7 +127,7 @@ class Cliente {
                 [id_cliente]
             );
 
-            // Para cada orden, calcular sus totales
+            // Para cada orden, calcular sus totales (sin impuestos automáticos)
             const ordenesConTotales = await Promise.all(ordenes.map(async (orden) => {
                 // Obtener productos de esta orden específica
                 const [productos] = await pool.query(
@@ -144,20 +143,17 @@ class Cliente {
 
                 const subtotal = parseFloat(productos[0].subtotal || 0);
                 const comisiones = parseFloat(productos[0].total_comisiones || 0);
-                const impuestos = subtotal * parseFloat(orden.impuesto);
-                const total = subtotal + impuestos + comisiones;
+                const total = subtotal + comisiones;
 
                 return {
                     id: orden.id,
                     nombre_orden: orden.nombre_orden,
                     fecha_inicio: orden.fecha_inicio,
                     fecha_fin: orden.fecha_fin,
-                    impuesto: parseFloat(orden.impuesto),
                     estado: orden.estado,
                     total_productos: parseInt(productos[0].total_productos || 0),
                     total_articulos: parseInt(productos[0].total_articulos || 0),
                     subtotal: parseFloat(subtotal.toFixed(2)),
-                    impuestos: parseFloat(impuestos.toFixed(2)),
                     comisiones: parseFloat(comisiones.toFixed(2)),
                     total: parseFloat(total.toFixed(2)),
                     created_at: orden.created_at
@@ -209,7 +205,7 @@ class Cliente {
                 [id_orden, id_cliente]
             );
 
-            // Calcular totales
+            // Calcular totales (sin impuestos automáticos)
             let subtotal = 0;
             let total_comisiones = 0;
             let total_articulos = 0;
@@ -220,8 +216,7 @@ class Cliente {
                 total_articulos += parseInt(p.cantidad_articulos);
             });
 
-            const impuestos = subtotal * parseFloat(orden.impuesto);
-            const total = subtotal + impuestos + total_comisiones;
+            const total = subtotal + total_comisiones;
 
             // Obtener historial de abonos
             const [abonos] = await pool.query(
@@ -245,7 +240,6 @@ class Cliente {
                 nombre_orden: orden.nombre_orden,
                 fecha_inicio: orden.fecha_inicio,
                 fecha_fin: orden.fecha_fin,
-                impuesto: parseFloat(orden.impuesto),
                 estado: orden.estado,
                 productos: productos.map(p => ({
                     id: p.id,
@@ -262,7 +256,6 @@ class Cliente {
                     total_productos: productos.length,
                     total_articulos: total_articulos,
                     subtotal: parseFloat(subtotal.toFixed(2)),
-                    impuestos: parseFloat(impuestos.toFixed(2)),
                     comisiones: parseFloat(total_comisiones.toFixed(2)),
                     total: parseFloat(total.toFixed(2))
                 },
@@ -307,8 +300,7 @@ class Cliente {
 
             const subtotal = parseFloat(compras[0].subtotal || 0);
             const total_comisiones = parseFloat(compras[0].total_comisiones || 0);
-            const impuestos = subtotal * 0.08; // 8% promedio
-            const total_compras = subtotal + impuestos + total_comisiones;
+            const total_compras = subtotal + total_comisiones;
 
             // Obtener total de abonos
             const [abonos] = await pool.query(
@@ -335,7 +327,6 @@ class Cliente {
                 total_productos: parseInt(compras[0].total_productos || 0),
                 total_articulos: parseInt(compras[0].total_articulos || 0),
                 subtotal: parseFloat(subtotal.toFixed(2)),
-                impuestos: parseFloat(impuestos.toFixed(2)),
                 comisiones: parseFloat(total_comisiones.toFixed(2)),
                 total_compras: parseFloat(total_compras.toFixed(2)),
                 total_abonado: parseFloat(total_abonado.toFixed(2)),

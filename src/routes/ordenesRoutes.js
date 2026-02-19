@@ -33,10 +33,17 @@ router.get('/:id', ordenesController.getOrdenById);
 router.get('/:id/estadisticas', ordenesController.getOrdenEstadisticas);
 
 /**
+ * @route   GET /api/ordenes/:id_orden/clientes/:id_cliente
+ * @desc    Obtener datos de un cliente específico en una orden (incluye campos manuales)
+ * @access  Privado
+ */
+router.get('/:id_orden/clientes/:id_cliente', ordenesController.getClienteOrdenDatos);
+
+/**
  * @route   POST /api/ordenes
  * @desc    Crear nueva orden
  * @access  Privado
- * @body    nombre_orden, fecha_inicio, fecha_fin (opcional), impuesto (opcional), comision (opcional), estado (opcional)
+ * @body    nombre_orden, fecha_inicio, fecha_fin (opcional), estado (opcional)
  */
 router.post('/', ordenesController.createOrden);
 
@@ -44,9 +51,17 @@ router.post('/', ordenesController.createOrden);
  * @route   PUT /api/ordenes/:id
  * @desc    Actualizar orden
  * @access  Privado
- * @body    nombre_orden, fecha_inicio, fecha_fin, impuesto, comision, estado
+ * @body    nombre_orden, fecha_inicio, fecha_fin, estado
  */
 router.put('/:id', ordenesController.updateOrden);
+
+/**
+ * @route   PUT /api/ordenes/:id_orden/clientes/:id_cliente/datos-manuales
+ * @desc    Actualizar campos manuales de un cliente en una orden (valor_total, libras_acumuladas, link_excel)
+ * @access  Privado
+ * @body    valor_total (opcional), libras_acumuladas (opcional), link_excel (opcional)
+ */
+router.put('/:id_orden/clientes/:id_cliente/datos-manuales', ordenesController.updateClienteOrdenDatosManuales);
 
 /**
  * @route   DELETE /api/ordenes/:id
