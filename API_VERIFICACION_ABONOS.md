@@ -33,9 +33,9 @@ Esta documentación describe las APIs para consultar y gestionar los abonos de c
       "apellido": "Pérez",
       "codigo": "CLI001",
       "estado_actividad": "activo",
-      "total_compras": "500.00",
+      "valor_total": "500.00",
       "total_abonos": "250.00",
-      "saldo_al_cierre": "250.00",
+      "saldo_pendiente": "250.00",
       "estado_pago": "pendiente",
       "abonos": [
         {
@@ -66,9 +66,9 @@ Esta documentación describe las APIs para consultar y gestionar los abonos de c
       "apellido": "García",
       "codigo": "CLI002",
       "estado_actividad": "activo",
-      "total_compras": "300.00",
+      "valor_total": "300.00",
       "total_abonos": "100.00",
-      "saldo_al_cierre": "200.00",
+      "saldo_pendiente": "200.00",
       "estado_pago": "pendiente",
       "abonos": [
         {

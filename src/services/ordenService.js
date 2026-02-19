@@ -244,7 +244,7 @@ class OrdenService {
             },
             total_compras: parseFloat(registro.total_compras || 0).toFixed(2),
             total_abonos: parseFloat(registro.total_abonos || 0).toFixed(2),
-            saldo_pendiente: (parseFloat(registro.total_compras || 0) - parseFloat(registro.total_abonos || 0)).toFixed(2),
+            saldo_pendiente: Math.max(0, parseFloat(registro.valor_total || 0) - parseFloat(registro.total_abonos || 0)).toFixed(2),
             valor_total: parseFloat(registro.valor_total || 0).toFixed(2),
             libras_acumuladas: parseFloat(registro.libras_acumuladas || 0).toFixed(2),
             link_excel: registro.link_excel,

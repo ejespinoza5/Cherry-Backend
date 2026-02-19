@@ -485,6 +485,7 @@ class Abono {
                     ha.created_at as fecha_abono,
                     co.total_compras,
                     co.total_abonos,
+                    co.valor_total,
                     co.saldo_al_cierre,
                     co.estado_pago
                 FROM historial_abono ha
@@ -507,15 +508,19 @@ class Abono {
                 const clienteId = row.id_cliente;
                 
                 if (!clientesMap.has(clienteId)) {
+                    const valor_total = parseFloat(row.valor_total || 0);
+                    const total_abonos = parseFloat(row.total_abonos || 0);
+                    const saldo_pendiente = Math.max(0, valor_total - total_abonos);
+                    
                     clientesMap.set(clienteId, {
                         id_cliente: row.id_cliente,
                         nombre: row.nombre,
                         apellido: row.apellido,
                         codigo: row.codigo,
                         estado_actividad: row.estado_actividad,
-                        total_compras: parseFloat(row.total_compras || 0).toFixed(2),
-                        total_abonos: parseFloat(row.total_abonos || 0).toFixed(2),
-                        saldo_al_cierre: parseFloat(row.saldo_al_cierre || 0).toFixed(2),
+                        valor_total: valor_total.toFixed(2),
+                        total_abonos: total_abonos.toFixed(2),
+                        saldo_pendiente: saldo_pendiente.toFixed(2),
                         estado_pago: row.estado_pago,
                         abonos: []
                     });

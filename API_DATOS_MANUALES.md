@@ -57,7 +57,7 @@ Los siguientes campos se gestionan manualmente **por cliente y por orden**:
     },
     "total_compras": "150.00",
     "total_abonos": "50.00",
-    "saldo_pendiente": "100.00",
+    "saldo_pendiente": "200.50",
     "valor_total": "250.50",
     "libras_acumuladas": "35.50",
     "link_excel": "https://docs.google.com/spreadsheets/d/xxxxx",
@@ -65,6 +65,13 @@ Los siguientes campos se gestionan manualmente **por cliente y por orden**:
   }
 }
 ```
+
+**Nota sobre saldo_pendiente:**
+El `saldo_pendiente` se calcula como: `MAX(0, valor_total - total_abonos)`
+- Si el cliente debe más: muestra la diferencia
+- Si el cliente pagó todo o pagó de más: muestra 0 (nunca negativo)
+- Ejemplo: valor_total=$250.50, total_abonos=$50 → saldo_pendiente=$200.50
+- Ejemplo: valor_total=$250.50, total_abonos=$300 → saldo_pendiente=$0.00
 
 **Respuesta de error (404 - Cliente no encontrado):**
 ```json
@@ -146,7 +153,7 @@ const actualizarDatosManuales = async (idOrden, idCliente) => {
     },
     "total_compras": "150.00",
     "total_abonos": "50.00",
-    "saldo_pendiente": "100.00",
+    "saldo_pendiente": "200.50",
     "valor_total": "250.50",
     "libras_acumuladas": "35.50",
     "link_excel": "https://docs.google.com/spreadsheets/d/xxxxx",

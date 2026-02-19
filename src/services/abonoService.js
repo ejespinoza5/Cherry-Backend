@@ -299,10 +299,10 @@ class AbonoService {
             throw new Error('CLIENT_ORDER_NOT_FOUND');
         }
 
-        // Calcular saldo pendiente
-        const total_compras = parseFloat(registro.total_compras || 0);
+        // Calcular saldo pendiente (usando valor_total manual, nunca negativo)
+        const valor_total = parseFloat(registro.valor_total || 0);
         const total_abonos = parseFloat(registro.total_abonos || 0);
-        const saldo_pendiente = total_compras - total_abonos;
+        const saldo_pendiente = Math.max(0, valor_total - total_abonos);
 
         return {
             id_cliente: registro.id_cliente,
@@ -315,7 +315,7 @@ class AbonoService {
             orden: {
                 nombre: registro.nombre_orden
             },
-            total_compras: parseFloat(total_compras.toFixed(2)),
+            valor_total: parseFloat(valor_total.toFixed(2)),
             total_abonos: parseFloat(total_abonos.toFixed(2)),
             saldo_pendiente: parseFloat(saldo_pendiente.toFixed(2)),
             estado_pago: registro.estado_pago,
