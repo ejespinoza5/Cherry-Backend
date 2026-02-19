@@ -275,7 +275,7 @@ const getOrdenEstadisticas = async (req, res) => {
 };
 
 /**
- * Actualizar campos manuales de un cliente en una orden
+ * Actualizar campos manuales de un cliente en una orden (crea si no existe)
  * PUT /api/ordenes/:id_orden/clientes/:id_cliente/datos-manuales
  */
 const updateClienteOrdenDatosManuales = async (req, res) => {
@@ -283,7 +283,7 @@ const updateClienteOrdenDatosManuales = async (req, res) => {
         const { id_orden, id_cliente } = req.params;
         const { valor_total, libras_acumuladas, link_excel } = req.body;
 
-        await OrdenService.updateClienteOrdenDatosManuales(
+        const datosActualizados = await OrdenService.updateClienteOrdenDatosManuales(
             id_cliente,
             id_orden,
             { valor_total, libras_acumuladas, link_excel }
@@ -291,16 +291,24 @@ const updateClienteOrdenDatosManuales = async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Datos manuales actualizados correctamente'
+            message: 'Datos manuales actualizados correctamente',
+            data: datosActualizados
         });
 
     } catch (error) {
         console.error('Error al actualizar datos manuales:', error);
 
-        if (error.message === 'CLIENT_ORDER_NOT_FOUND') {
+        if (error.message === 'CLIENT_NOT_FOUND') {
             return res.status(404).json({
                 success: false,
-                message: 'No se encontró el registro del cliente en esta orden'
+                message: 'Cliente no encontrado'
+            });
+        }
+
+        if (error.message === 'ORDER_NOT_FOUND') {
+            return res.status(404).json({
+                success: false,
+                message: 'Orden no encontrada'
             });
         }
 

@@ -24,6 +24,23 @@ router.get('/', abonosController.getAllAbonos);
 router.get('/pendientes', abonosController.getAbonosPendientes);
 
 /**
+ * @route   GET /api/abonos/ordenes/:id_orden/clientes
+ * @desc    Obtener clientes con sus abonos por orden, filtrados por estado de verificación
+ * @query   estado (opcional): pendiente, verificado, rechazado
+ * @query   page (opcional, default: 1): número de página
+ * @query   limit (opcional, default: 10): registros por página
+ * @access  Private (Admin o SuperAdmin)
+ */
+router.get('/ordenes/:id_orden/clientes', abonosController.getClientesConAbonosPorOrden);
+
+/**
+ * @route   GET /api/abonos/ordenes/:id_orden/contador-estados
+ * @desc    Obtener contador de abonos por estado de verificación en una orden
+ * @access  Private (Admin o SuperAdmin)
+ */
+router.get('/ordenes/:id_orden/contador-estados', abonosController.getContadorEstadosVerificacion);
+
+/**
  * @route   GET /api/abonos/saldo/:id_cliente/:id_orden
  * @desc    Obtener saldo actualizado de un cliente en una orden específica
  * @access  Private (Admin o SuperAdmin)

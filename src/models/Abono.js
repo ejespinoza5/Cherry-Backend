@@ -449,6 +449,156 @@ class Abono {
             throw error;
         }
     }
+
+    /**
+     * Obtener clientes con sus abonos por orden, filtrados por estado de verificación
+     * Con paginación
+     */
+    static async getClientesPorOrdenConAbonos(id_orden, estado_verificacion = null, page = 1, limit = 10) {
+        try {
+            const offset = (page - 1) * limit;
+            
+            // Construir filtro de estado
+            let whereEstado = '';
+            const params = [id_orden];
+            
+            if (estado_verificacion && ['pendiente', 'verificado', 'rechazado'].includes(estado_verificacion)) {
+                whereEstado = 'AND ha.estado_verificacion = ?';
+                params.push(estado_verificacion);
+            }
+            
+            // Query para obtener clientes con sus abonos
+            const query = `
+                SELECT 
+                    c.id as id_cliente,
+                    c.nombre,
+                    c.apellido,
+                    c.codigo,
+                    c.estado_actividad,
+                    ha.id as id_abono,
+                    ha.cantidad,
+                    ha.comprobante_pago,
+                    ha.estado_verificacion,
+                    ha.fecha_verificacion,
+                    ha.verificado_by,
+                    ha.observaciones_verificacion,
+                    ha.created_at as fecha_abono,
+                    co.total_compras,
+                    co.total_abonos,
+                    co.saldo_al_cierre,
+                    co.estado_pago
+                FROM historial_abono ha
+                INNER JOIN clientes c ON ha.id_cliente = c.id
+                LEFT JOIN cliente_orden co ON co.id_cliente = c.id AND co.id_orden = ha.id_orden
+                WHERE ha.id_orden = ? 
+                    AND ha.estado = 'activo'
+                    ${whereEstado}
+                ORDER BY ha.created_at DESC
+                LIMIT ? OFFSET ?
+            `;
+            
+            params.push(limit, offset);
+            const [rows] = await pool.query(query, params);
+            
+            // Agrupar por cliente
+            const clientesMap = new Map();
+            
+            rows.forEach(row => {
+                const clienteId = row.id_cliente;
+                
+                if (!clientesMap.has(clienteId)) {
+                    clientesMap.set(clienteId, {
+                        id_cliente: row.id_cliente,
+                        nombre: row.nombre,
+                        apellido: row.apellido,
+                        codigo: row.codigo,
+                        estado_actividad: row.estado_actividad,
+                        total_compras: parseFloat(row.total_compras || 0).toFixed(2),
+                        total_abonos: parseFloat(row.total_abonos || 0).toFixed(2),
+                        saldo_al_cierre: parseFloat(row.saldo_al_cierre || 0).toFixed(2),
+                        estado_pago: row.estado_pago,
+                        abonos: []
+                    });
+                }
+                
+                clientesMap.get(clienteId).abonos.push({
+                    id_abono: row.id_abono,
+                    cantidad: parseFloat(row.cantidad).toFixed(2),
+                    comprobante_pago: row.comprobante_pago,
+                    estado_verificacion: row.estado_verificacion,
+                    fecha_verificacion: row.fecha_verificacion,
+                    verificado_by: row.verificado_by,
+                    observaciones_verificacion: row.observaciones_verificacion,
+                    fecha_abono: row.fecha_abono
+                });
+            });
+            
+            // Contar total de registros
+            const countParams = [id_orden];
+            let countQuery = `
+                SELECT COUNT(DISTINCT ha.id) as total
+                FROM historial_abono ha
+                WHERE ha.id_orden = ? 
+                    AND ha.estado = 'activo'
+                    ${whereEstado}
+            `;
+            
+            if (estado_verificacion && ['pendiente', 'verificado', 'rechazado'].includes(estado_verificacion)) {
+                countParams.push(estado_verificacion);
+            }
+            
+            const [countResult] = await pool.query(countQuery, countParams);
+            const total = countResult[0].total;
+            
+            return {
+                clientes: Array.from(clientesMap.values()),
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total: total,
+                    totalPages: Math.ceil(total / limit)
+                }
+            };
+            
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Obtener contador de abonos por estado de verificación en una orden
+     */
+    static async getContadorEstadosVerificacion(id_orden) {
+        try {
+            const [rows] = await pool.query(
+                `SELECT 
+                    estado_verificacion,
+                    COUNT(*) as cantidad
+                FROM historial_abono
+                WHERE id_orden = ? AND estado = 'activo'
+                GROUP BY estado_verificacion`,
+                [id_orden]
+            );
+            
+            // Formatear resultado
+            const contador = {
+                pendiente: 0,
+                verificado: 0,
+                rechazado: 0,
+                total: 0
+            };
+            
+            rows.forEach(row => {
+                contador[row.estado_verificacion] = row.cantidad;
+                contador.total += row.cantidad;
+            });
+            
+            return contador;
+            
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = Abono;

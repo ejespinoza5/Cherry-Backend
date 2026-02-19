@@ -323,6 +323,70 @@ class AbonoService {
             fecha_limite_pago: registro.fecha_limite_pago
         };
     }
+
+    /**
+     * Obtener clientes con abonos por orden, filtrados por estado de verificación
+     */
+    static async getClientesConAbonosPorOrden(id_orden, estado_verificacion = null, page = 1, limit = 10) {
+        // Validar que el ID de orden sea válido
+        if (!isPositiveInteger(id_orden)) {
+            throw new Error('INVALID_ORDER_ID');
+        }
+
+        // Validar páginas
+        if (!isPositiveInteger(page) || page < 1) {
+            throw new Error('INVALID_PAGE');
+        }
+
+        if (!isPositiveInteger(limit) || limit < 1 || limit > 100) {
+            throw new Error('INVALID_LIMIT');
+        }
+
+        // Validar estado_verificacion si se proporciona
+        if (estado_verificacion && !['pendiente', 'verificado', 'rechazado'].includes(estado_verificacion)) {
+            throw new Error('INVALID_VERIFICATION_STATUS');
+        }
+
+        // Verificar que la orden existe
+        const Orden = require('../models/Orden');
+        const orden = await Orden.findById(id_orden);
+
+        if (!orden) {
+            throw new Error('ORDER_NOT_FOUND');
+        }
+
+        // Obtener clientes con sus abonos
+        const resultado = await Abono.getClientesPorOrdenConAbonos(id_orden, estado_verificacion, page, limit);
+
+        return resultado;
+    }
+
+    /**
+     * Obtener contador de abonos por estado de verificación en una orden
+     */
+    static async getContadorEstadosVerificacionPorOrden(id_orden) {
+        // Validar que el ID de orden sea válido
+        if (!isPositiveInteger(id_orden)) {
+            throw new Error('INVALID_ORDER_ID');
+        }
+
+        // Verificar que la orden existe
+        const Orden = require('../models/Orden');
+        const orden = await Orden.findById(id_orden);
+
+        if (!orden) {
+            throw new Error('ORDER_NOT_FOUND');
+        }
+
+        // Obtener contador
+        const contador = await Abono.getContadorEstadosVerificacion(id_orden);
+
+        return {
+            id_orden: parseInt(id_orden),
+            nombre_orden: orden.nombre_orden,
+            contador_verificacion: contador
+        };
+    }
 }
 
 module.exports = AbonoService;

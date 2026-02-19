@@ -266,18 +266,84 @@ class ClienteOrden {
     }
 
     /**
-     * Actualizar campos manuales del cliente en una orden
+     * Actualizar campos manuales del cliente en una orden (crea el registro si no existe)
+     * Solo actualiza los campos que se envíen, manteniendo los valores anteriores de los demás
      */
     static async actualizarCamposManuales(id_cliente, id_orden, data) {
         try {
             const { valor_total, libras_acumuladas, link_excel } = data;
             
-            await pool.query(
-                `UPDATE cliente_orden 
-                 SET valor_total = ?, libras_acumuladas = ?, link_excel = ?
-                 WHERE id_cliente = ? AND id_orden = ?`,
-                [valor_total, libras_acumuladas, link_excel, id_cliente, id_orden]
+            // Verificar que el cliente existe
+            const [cliente] = await pool.query(
+                'SELECT id FROM clientes WHERE id = ? AND estado = "activo"',
+                [id_cliente]
             );
+            
+            if (cliente.length === 0) {
+                throw new Error('CLIENT_NOT_FOUND');
+            }
+            
+            // Verificar que la orden existe
+            const [orden] = await pool.query(
+                'SELECT id FROM ordenes WHERE id = ? AND estado = "activo"',
+                [id_orden]
+            );
+            
+            if (orden.length === 0) {
+                throw new Error('ORDER_NOT_FOUND');
+            }
+            
+            // Verificar si ya existe el registro
+            const [registroExistente] = await pool.query(
+                'SELECT id FROM cliente_orden WHERE id_cliente = ? AND id_orden = ?',
+                [id_cliente, id_orden]
+            );
+
+            if (registroExistente.length === 0) {
+                // Si no existe, crear uno nuevo con los valores enviados
+                await pool.query(
+                    `INSERT INTO cliente_orden 
+                        (id_cliente, id_orden, valor_total, libras_acumuladas, link_excel, total_compras, total_abonos)
+                     VALUES (?, ?, ?, ?, ?, 0, 0)`,
+                    [
+                        id_cliente, 
+                        id_orden, 
+                        valor_total !== undefined ? valor_total : 0, 
+                        libras_acumuladas !== undefined ? libras_acumuladas : 0, 
+                        link_excel !== undefined ? link_excel : null
+                    ]
+                );
+            } else {
+                // Si ya existe, actualizar SOLO los campos que se enviaron
+                const camposActualizar = [];
+                const valores = [];
+
+                if (valor_total !== undefined) {
+                    camposActualizar.push('valor_total = ?');
+                    valores.push(valor_total);
+                }
+
+                if (libras_acumuladas !== undefined) {
+                    camposActualizar.push('libras_acumuladas = ?');
+                    valores.push(libras_acumuladas);
+                }
+
+                if (link_excel !== undefined) {
+                    camposActualizar.push('link_excel = ?');
+                    valores.push(link_excel);
+                }
+
+                // Solo hacer UPDATE si hay campos para actualizar
+                if (camposActualizar.length > 0) {
+                    valores.push(id_cliente, id_orden);
+                    await pool.query(
+                        `UPDATE cliente_orden 
+                         SET ${camposActualizar.join(', ')}
+                         WHERE id_cliente = ? AND id_orden = ?`,
+                        valores
+                    );
+                }
+            }
 
             return true;
         } catch (error) {

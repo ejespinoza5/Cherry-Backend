@@ -197,21 +197,26 @@ class OrdenService {
     }
 
     /**
-     * Actualizar campos manuales de un cliente en una orden
+     * Actualizar campos manuales de un cliente en una orden (crea el registro si no existe)
      */
     static async updateClienteOrdenDatosManuales(id_cliente, id_orden, data) {
         const ClienteOrden = require('../models/ClienteOrden');
 
-        // Verificar que el registro existe
-        const registro = await ClienteOrden.findByClienteAndOrden(id_cliente, id_orden);
-        if (!registro) {
-            throw new Error('CLIENT_ORDER_NOT_FOUND');
+        try {
+            // Actualizar o crear los campos manuales (valida existencia de cliente y orden)
+            await ClienteOrden.actualizarCamposManuales(id_cliente, id_orden, data);
+
+            // Retornar los datos actualizados
+            return await OrdenService.getClienteOrdenDatos(id_cliente, id_orden);
+        } catch (error) {
+            if (error.message === 'CLIENT_NOT_FOUND') {
+                throw new Error('CLIENT_NOT_FOUND');
+            }
+            if (error.message === 'ORDER_NOT_FOUND') {
+                throw new Error('ORDER_NOT_FOUND');
+            }
+            throw error;
         }
-
-        // Actualizar los campos manuales
-        await ClienteOrden.actualizarCamposManuales(id_cliente, id_orden, data);
-
-        return { message: 'Datos manuales actualizados correctamente' };
     }
 
     /**

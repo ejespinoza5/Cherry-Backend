@@ -508,6 +508,107 @@ const getSaldoClienteOrden = async (req, res) => {
     }
 };
 
+/**
+ * Obtener clientes con sus abonos por orden, filtrados por estado de verificación
+ * GET /api/abonos/ordenes/:id_orden/clientes?estado=pendiente&page=1&limit=10
+ */
+const getClientesConAbonosPorOrden = async (req, res) => {
+    try {
+        const { id_orden } = req.params;
+        const { estado, page = 1, limit = 10 } = req.query;
+
+        const resultado = await AbonoService.getClientesConAbonosPorOrden(
+            id_orden, 
+            estado, 
+            parseInt(page), 
+            parseInt(limit)
+        );
+
+        res.json({
+            success: true,
+            data: resultado.clientes,
+            pagination: resultado.pagination
+        });
+
+    } catch (error) {
+        console.error('Error al obtener clientes con abonos:', error);
+
+        if (error.message === 'INVALID_ORDER_ID') {
+            return res.status(400).json({
+                success: false,
+                message: 'ID de orden inválido'
+            });
+        }
+
+        if (error.message === 'INVALID_PAGE' || error.message === 'INVALID_LIMIT') {
+            return res.status(400).json({
+                success: false,
+                message: 'Parámetros de paginación inválidos'
+            });
+        }
+
+        if (error.message === 'INVALID_VERIFICATION_STATUS') {
+            return res.status(400).json({
+                success: false,
+                message: 'Estado de verificación inválido. Use: pendiente, verificado o rechazado'
+            });
+        }
+
+        if (error.message === 'ORDER_NOT_FOUND') {
+            return res.status(404).json({
+                success: false,
+                message: 'Orden no encontrada'
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener clientes con abonos',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
+/**
+ * Obtener contador de abonos por estado de verificación en una orden
+ * GET /api/abonos/ordenes/:id_orden/contador-estados
+ */
+const getContadorEstadosVerificacion = async (req, res) => {
+    try {
+        const { id_orden } = req.params;
+
+        const resultado = await AbonoService.getContadorEstadosVerificacionPorOrden(id_orden);
+
+        res.json({
+            success: true,
+            data: resultado
+        });
+
+    } catch (error) {
+        console.error('Error al obtener contador de estados:', error);
+
+        if (error.message === 'INVALID_ORDER_ID') {
+            return res.status(400).json({
+                success: false,
+                message: 'ID de orden inválido'
+            });
+        }
+
+        if (error.message === 'ORDER_NOT_FOUND') {
+            return res.status(404).json({
+                success: false,
+                message: 'Orden no encontrada'
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener contador de estados',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
 module.exports = {
     getAllAbonos,
     getAbonosByCliente,
@@ -519,5 +620,7 @@ module.exports = {
     rechazarComprobante,
     updateAbono,
     deleteAbono,
-    getSaldoClienteOrden
+    getSaldoClienteOrden,
+    getClientesConAbonosPorOrden,
+    getContadorEstadosVerificacion
 };
