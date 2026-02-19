@@ -277,6 +277,52 @@ class AbonoService {
 
         return true;
     }
+
+    /**
+     * Obtener saldo actualizado de un cliente en una orden específica
+     */
+    static async getSaldoClienteOrden(id_cliente, id_orden) {
+        // Validar que los IDs sean válidos
+        if (!isPositiveInteger(id_cliente)) {
+            throw new Error('INVALID_CLIENT_ID');
+        }
+
+        if (!isPositiveInteger(id_orden)) {
+            throw new Error('INVALID_ORDER_ID');
+        }
+
+        // Obtener registro de cliente_orden
+        const ClienteOrden = require('../models/ClienteOrden');
+        const registro = await ClienteOrden.findByClienteAndOrden(id_cliente, id_orden);
+
+        if (!registro) {
+            throw new Error('CLIENT_ORDER_NOT_FOUND');
+        }
+
+        // Calcular saldo pendiente
+        const total_compras = parseFloat(registro.total_compras || 0);
+        const total_abonos = parseFloat(registro.total_abonos || 0);
+        const saldo_pendiente = total_compras - total_abonos;
+
+        return {
+            id_cliente: registro.id_cliente,
+            id_orden: registro.id_orden,
+            cliente: {
+                nombre: registro.nombre,
+                apellido: registro.apellido,
+                codigo: registro.codigo
+            },
+            orden: {
+                nombre: registro.nombre_orden
+            },
+            total_compras: parseFloat(total_compras.toFixed(2)),
+            total_abonos: parseFloat(total_abonos.toFixed(2)),
+            saldo_pendiente: parseFloat(saldo_pendiente.toFixed(2)),
+            estado_pago: registro.estado_pago,
+            fecha_cierre: registro.fecha_cierre,
+            fecha_limite_pago: registro.fecha_limite_pago
+        };
+    }
 }
 
 module.exports = AbonoService;

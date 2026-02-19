@@ -24,6 +24,13 @@ router.get('/', abonosController.getAllAbonos);
 router.get('/pendientes', abonosController.getAbonosPendientes);
 
 /**
+ * @route   GET /api/abonos/saldo/:id_cliente/:id_orden
+ * @desc    Obtener saldo actualizado de un cliente en una orden específica
+ * @access  Private (Admin o SuperAdmin)
+ */
+router.get('/saldo/:id_cliente/:id_orden', abonosController.getSaldoClienteOrden);
+
+/**
  * @route   GET /api/abonos/cliente/:id_cliente
  * @desc    Obtener todos los abonos de un cliente específico
  * @access  Private (Admin o SuperAdmin)

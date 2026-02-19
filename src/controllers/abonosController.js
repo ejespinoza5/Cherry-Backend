@@ -470,6 +470,44 @@ const deleteAbono = async (req, res) => {
     }
 };
 
+/**
+ * Obtener saldo actualizado de un cliente en una orden específica
+ */
+const getSaldoClienteOrden = async (req, res) => {
+    try {
+        const { id_cliente, id_orden } = req.params;
+        const saldoInfo = await AbonoService.getSaldoClienteOrden(id_cliente, id_orden);
+
+        res.json({
+            success: true,
+            data: saldoInfo
+        });
+
+    } catch (error) {
+        console.error('Error al obtener saldo del cliente en la orden:', error);
+
+        if (error.message === 'INVALID_CLIENT_ID' || error.message === 'INVALID_ORDER_ID') {
+            return res.status(400).json({
+                success: false,
+                message: 'ID de cliente u orden inválido'
+            });
+        }
+
+        if (error.message === 'CLIENT_ORDER_NOT_FOUND') {
+            return res.status(404).json({
+                success: false,
+                message: 'No se encontró registro del cliente en esta orden'
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener saldo',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
 module.exports = {
     getAllAbonos,
     getAbonosByCliente,
@@ -480,5 +518,6 @@ module.exports = {
     verificarComprobante,
     rechazarComprobante,
     updateAbono,
-    deleteAbono
+    deleteAbono,
+    getSaldoClienteOrden
 };

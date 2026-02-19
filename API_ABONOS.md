@@ -463,7 +463,64 @@ curl -X GET http://localhost:3000/api/abonos/orden/5 \
 
 ---
 
-### 8. Obtener Abono por ID
+### 8. Obtener Saldo de Cliente en Orden
+
+**GET** `/api/abonos/saldo/:id_cliente/:id_orden`
+
+Obtiene el saldo actualizado de un cliente en una orden específica con el desglose de compras y abonos.
+
+**Parámetros URL:**
+- `id_cliente`: ID del cliente
+- `id_orden`: ID de la orden
+
+**Ejemplo:**
+```bash
+curl -X GET http://localhost:3000/api/abonos/saldo/1/5 \
+  -H "Authorization: Bearer TU_TOKEN"
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "id_cliente": 1,
+    "id_orden": 5,
+    "cliente": {
+      "nombre": "Juan",
+      "apellido": "Pérez",
+      "codigo": "CLI001"
+    },
+    "orden": {
+      "nombre": "Live Febrero 2026"
+    },
+    "total_compras": 500.50,
+    "total_abonos": 350.00,
+    "saldo_pendiente": 150.50,
+    "estado_pago": "activo",
+    "fecha_cierre": null,
+    "fecha_limite_pago": null
+  }
+}
+```
+
+**Campos en la respuesta:**
+- `total_compras`: Total de productos comprados en esta orden (con impuestos y comisiones)
+- `total_abonos`: Suma de todos los abonos **verificados** en esta orden
+- `saldo_pendiente`: Deuda restante (total_compras - total_abonos)
+- `estado_pago`: Estado del pago (`activo`, `en_gracia`, `pagado`)
+- `fecha_cierre`: Fecha en que se cerró la orden (null si está abierta)
+- `fecha_limite_pago`: Fecha límite para pagar (null si está abierta o pagado)
+
+**Nota:** Solo los abonos con `estado_verificacion = 'verificado'` se incluyen en `total_abonos`.
+
+**Errores:**
+- **400** - ID de cliente u orden inválido
+- **404** - No se encontró registro del cliente en esta orden
+
+---
+
+### 9. Obtener Abono por ID
 
 **GET** `/api/abonos/:id`
 
@@ -516,7 +573,7 @@ curl -X GET http://localhost:3000/api/abonos/1 \
 
 ---
 
-### 9. Actualizar Abono
+### 10. Actualizar Abono
 
 **PUT** `/api/abonos/:id`
 
@@ -567,7 +624,7 @@ curl -X PUT http://localhost:3000/api/abonos/1 \
 
 ---
 
-### 10. Eliminar Abono
+### 11. Eliminar Abono
 
 **DELETE** `/api/abonos/:id`
 
@@ -598,7 +655,23 @@ curl -X DELETE http://localhost:3000/api/abonos/1 \
 
 ## 📊 Consultar Saldo del Cliente por Orden
 
-Para ver el saldo de un cliente en una orden específica, consulta la tabla `cliente_orden`:
+**Opción 1: Usar el endpoint de la API (Recomendado)**
+
+```bash
+curl -X GET http://localhost:3000/api/abonos/saldo/1/5 \
+  -H "Authorization: Bearer TU_TOKEN"
+```
+
+Esto devuelve toda la información del saldo actualizado incluyendo:
+- Total de compras
+- Total de abonos verificados
+- Saldo pendiente
+- Estado de pago
+- Información del cliente y orden
+
+**Opción 2: Consulta SQL directa**
+
+Si prefieres consultar directamente la base de datos:
 
 ```sql
 SELECT 
@@ -670,7 +743,11 @@ curl -X PUT http://localhost:3000/api/abonos/1/verificar \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"observaciones": "Comprobante válido"}'
 
-# 5. Ver todos los abonos del cliente
+# 5. Consultar saldo actualizado del cliente en la orden
+curl -X GET http://localhost:3000/api/abonos/saldo/1/5 \
+  -H "Authorization: Bearer $TOKEN"
+
+# 6. Ver todos los abonos del cliente
 curl -X GET http://localhost:3000/api/abonos/cliente/1 \
   -H "Authorization: Bearer $TOKEN"
 ```
