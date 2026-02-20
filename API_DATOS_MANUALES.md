@@ -4,11 +4,17 @@ Esta documentación describe las APIs para ingresar y consultar los datos manual
 
 ## Campos Manuales
 
-Los siguientes campos se gestionan manualmente **por cliente y por orden**:
+Los siguientes campos se gestionan manualmente:
 
-- **`valor_total`** (DECIMAL): El valor total asignado al cliente en esta orden
-- **`libras_acumuladas`** (DECIMAL): El peso acumulado en libras del cliente en esta orden
-- **`link_excel`** (TEXT): URL del archivo de Google Sheets o Excel relacionado
+### Por Cliente y por Orden:
+- **`valor_total`** (DECIMAL): El valor total asignado al cliente en esta orden específica
+- **`libras_acumuladas`** (DECIMAL): El peso acumulado en libras del cliente en esta orden específica
+
+### Por Cliente (compartido en todas las órdenes):
+- **`link_excel`** (TEXT): URL del archivo de Google Sheets o Excel del cliente
+  - ⚠️ **IMPORTANTE:** Este campo es del **cliente**, no de la orden
+  - Al actualizar el link_excel, se actualiza para **todas las órdenes** del cliente
+  - Cada cliente tiene un único link que aparece en todas sus órdenes
 
 ---
 
@@ -38,6 +44,12 @@ Los siguientes campos se gestionan manualmente **por cliente y por orden**:
 ⚠️ **IMPORTANTE:** Solo se actualizan los campos que envíes. Los campos que no incluyas en el request **mantienen su valor anterior**. Por ejemplo:
 - Si solo envías `libras_acumuladas: 42.5`, entonces solo ese campo se actualiza
 - Los campos `valor_total` y `link_excel` **mantienen sus valores anteriores**
+
+⚠️ **COMPORTAMIENTO DEL link_excel:**
+- `valor_total` y `libras_acumuladas` son **específicos de esta orden**
+- `link_excel` es **del cliente** y se comparte en **todas sus órdenes**
+- Si actualizas el `link_excel` aquí, el nuevo link aparecerá en **todas las órdenes del cliente**
+- **Ejemplo:** Cliente tiene Orden 1, 2 y 3. Si actualizas su link en Orden 1, el link también cambia en Orden 2 y 3
 
 **Respuesta exitosa (200):**
 ```json
@@ -199,14 +211,21 @@ const obtenerDatosCliente = async (idOrden, idCliente) => {
 
 2. **Permisos**: Verifica que el usuario tenga los permisos necesarios para actualizar datos de órdenes
 
-3. **Valores por defecto**: Si no se envía un campo, se utilizan los siguientes valores por defecto:
+3. **Alcance de los campos**:
+   - **Por orden** (`valor_total`, `libras_acumuladas`): Específicos de cada orden, pueden ser diferentes en cada una
+   - **Por cliente** (`link_excel`): Único por cliente, compartido en todas sus órdenes
+   - Al actualizar `link_excel` en cualquier orden, se actualiza para **todas las órdenes del cliente**
+
+4. **Valores por defecto**: Si no se envía un campo al crear un nuevo registro:
    - `valor_total`: 0
    - `libras_acumuladas`: 0
-   - `link_excel`: null
+   - `link_excel`: null (el que tenga el cliente)
 
-4. **Creación automática**: El endpoint de actualización (PUT) crea automáticamente el registro si no existe la relación cliente-orden
+5. **Creación automática**: El endpoint de actualización (PUT) crea automáticamente el registro si no existe la relación cliente-orden
 
-5. **Validaciones**: Se valida la existencia del cliente y la orden antes de crear o actualizar datos
+6. **Validaciones**: Se valida la existencia del cliente y la orden antes de crear o actualizar datos
+
+7. **link_excel global**: Si un cliente ID=1 tiene el link "http://excel.com/abc", al consultar cualquier orden de ese cliente siempre verás ese mismo link
 
 ---
 
@@ -274,4 +293,36 @@ fetch(`http://localhost:3000/api/ordenes/5/clientes/1/datos-manuales`, {
     link_excel: "https://docs.google.com/spreadsheets/d/xyz789"
   })
 });
+```
+
+### Escenario 4: Comportamiento del link_excel global
+
+```javascript
+// Cliente ID=1 tiene 3 órdenes: Orden 5, Orden 6, Orden 7
+
+// 1. Actualizar link en Orden 5
+await fetch(`http://localhost:3000/api/ordenes/5/clientes/1/datos-manuales`, {
+  method: 'PUT',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    link_excel: "https://docs.google.com/spreadsheets/d/NUEVO_LINK"
+  })
+});
+
+// 2. Al consultar Orden 6 (sin actualizar ahí), el link YA está actualizado
+const orden6 = await fetch(`http://localhost:3000/api/ordenes/6/clientes/1`, {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+// Respuesta: link_excel = "https://docs.google.com/spreadsheets/d/NUEVO_LINK"
+
+// 3. Lo mismo en Orden 7
+const orden7 = await fetch(`http://localhost:3000/api/ordenes/7/clientes/1`, {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+// Respuesta: link_excel = "https://docs.google.com/spreadsheets/d/NUEVO_LINK"
+
+// CONCLUSIÓN: Al actualizar el link en UNA orden, se actualiza en TODAS las órdenes del cliente
 ```

@@ -34,6 +34,7 @@ CREATE TABLE clientes (
   apellido VARCHAR(100),
   codigo VARCHAR(50) UNIQUE,
   direccion VARCHAR(255),
+  link_excel TEXT COMMENT 'Link de Excel del cliente (compartido en todas las órdenes)',
   estado_actividad ENUM('activo','deudor','bloqueado','inactivo') DEFAULT 'activo',
   estado ENUM('activo','inactivo') DEFAULT 'activo',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -164,8 +165,7 @@ CREATE TABLE cliente_orden (
   total_abonos DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Total abonos realizados',
   saldo_al_cierre DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Saldo cuando se cerró la orden',
   valor_total DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Valor total manual por cliente en esta orden',
-  libras_acumuladas DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Libras acumuladas manual por cliente',
-  link_excel TEXT COMMENT 'Link de Excel individual del cliente',
+  libras_acumuladas DECIMAL(10,2) DEFAULT 0.00 COMMENT 'Libras acumuladas manual por cliente en esta orden',
   estado_pago ENUM('activo','pagado','pendiente','en_gracia','rematado','perdido') DEFAULT 'activo',
   fecha_cierre DATETIME COMMENT 'Fecha en que se cerró esta orden',
   fecha_limite_pago DATETIME COMMENT 'Fecha límite para pagar después del cierre',
@@ -228,6 +228,27 @@ CREATE TABLE historial_incumplimientos (
 );
 
 -- =====================================
+-- TABLA HISTORIAL ACTUALIZACION LIBRAS
+-- =====================================
+CREATE TABLE historial_actualizacion_libras (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  id_cliente INT NOT NULL,
+  id_orden INT NOT NULL,
+  libras_anterior DECIMAL(10,2) NOT NULL COMMENT 'Valor anterior de libras',
+  libras_nueva DECIMAL(10,2) NOT NULL COMMENT 'Nuevo valor de libras',
+  fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+  actualizado_por INT NOT NULL COMMENT 'ID del usuario que hizo la actualización',
+  observaciones TEXT COMMENT 'Notas opcionales sobre el cambio',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_hist_libras_cliente
+    FOREIGN KEY (id_cliente) REFERENCES clientes(id),
+  CONSTRAINT fk_hist_libras_orden
+    FOREIGN KEY (id_orden) REFERENCES ordenes(id),
+  CONSTRAINT fk_hist_libras_usuario
+    FOREIGN KEY (actualizado_por) REFERENCES usuarios(id)
+);
+
+-- =====================================
 -- INDICES RECOMENDADOS
 -- =====================================
 CREATE INDEX idx_productos_cliente_orden
@@ -256,4 +277,10 @@ ON productos_rematados (id_cliente);
 
 CREATE INDEX idx_historial_incump_cliente
 ON historial_incumplimientos (id_cliente, afecta_credito);
+
+CREATE INDEX idx_historial_libras_cliente_orden
+ON historial_actualizacion_libras (id_cliente, id_orden);
+
+CREATE INDEX idx_historial_libras_fecha
+ON historial_actualizacion_libras (fecha_actualizacion);
 

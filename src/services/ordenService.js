@@ -198,13 +198,48 @@ class OrdenService {
 
     /**
      * Actualizar campos manuales de un cliente en una orden (crea el registro si no existe)
+     * NOTA: valor_total y libras_acumuladas son por orden, link_excel es del cliente (todas las órdenes)
      */
-    static async updateClienteOrdenDatosManuales(id_cliente, id_orden, data) {
+    static async updateClienteOrdenDatosManuales(id_cliente, id_orden, data, actualizado_por) {
         const ClienteOrden = require('../models/ClienteOrden');
+        const Cliente = require('../models/Cliente');
+        const HistorialActualizacionLibras = require('../models/HistorialActualizacionLibras');
 
         try {
-            // Actualizar o crear los campos manuales (valida existencia de cliente y orden)
-            await ClienteOrden.actualizarCamposManuales(id_cliente, id_orden, data);
+            // Separar campos por orden y del cliente
+            const { valor_total, libras_acumuladas, link_excel } = data;
+            
+            // Si se va a actualizar libras_acumuladas, obtener valor anterior para el historial
+            if (libras_acumuladas !== undefined) {
+                const registroActual = await ClienteOrden.findByClienteAndOrden(id_cliente, id_orden);
+                const libras_anterior = registroActual ? parseFloat(registroActual.libras_acumuladas || 0) : 0;
+                const libras_nueva = parseFloat(libras_acumuladas);
+
+                // Solo registrar en el historial si el valor cambió
+                if (libras_anterior !== libras_nueva) {
+                    await HistorialActualizacionLibras.create({
+                        id_cliente,
+                        id_orden,
+                        libras_anterior,
+                        libras_nueva,
+                        actualizado_por
+                    });
+                }
+            }
+            
+            // Actualizar campos por orden (valor_total y libras_acumuladas)
+            const datosPorOrden = {};
+            if (valor_total !== undefined) datosPorOrden.valor_total = valor_total;
+            if (libras_acumuladas !== undefined) datosPorOrden.libras_acumuladas = libras_acumuladas;
+            
+            if (Object.keys(datosPorOrden).length > 0) {
+                await ClienteOrden.actualizarCamposManuales(id_cliente, id_orden, datosPorOrden);
+            }
+            
+            // Actualizar link_excel del cliente (si se proporciona)
+            if (link_excel !== undefined) {
+                await Cliente.updateLinkExcel(id_cliente, link_excel);
+            }
 
             // Retornar los datos actualizados
             return await OrdenService.getClienteOrdenDatos(id_cliente, id_orden);

@@ -282,11 +282,13 @@ const updateClienteOrdenDatosManuales = async (req, res) => {
     try {
         const { id_orden, id_cliente } = req.params;
         const { valor_total, libras_acumuladas, link_excel } = req.body;
+        const actualizado_por = req.user.id; // Usuario que realiza la actualización
 
         const datosActualizados = await OrdenService.updateClienteOrdenDatosManuales(
             id_cliente,
             id_orden,
-            { valor_total, libras_acumuladas, link_excel }
+            { valor_total, libras_acumuladas, link_excel },
+            actualizado_por
         );
 
         res.json({
@@ -353,6 +355,62 @@ const getClienteOrdenDatos = async (req, res) => {
     }
 };
 
+/**
+ * Obtener historial de actualizaciones de libras por cliente y orden
+ * GET /api/ordenes/:id_orden/clientes/:id_cliente/historial-libras
+ */
+const getHistorialLibrasByClienteOrden = async (req, res) => {
+    try {
+        const { id_orden, id_cliente } = req.params;
+        const HistorialActualizacionLibras = require('../models/HistorialActualizacionLibras');
+
+        const historial = await HistorialActualizacionLibras.findByClienteAndOrden(id_cliente, id_orden);
+
+        res.json({
+            success: true,
+            data: historial,
+            count: historial.length
+        });
+
+    } catch (error) {
+        console.error('Error al obtener historial de libras:', error);
+
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener historial de libras',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
+/**
+ * Obtener historial de actualizaciones de libras por orden (todos los clientes)
+ * GET /api/ordenes/:id_orden/historial-libras
+ */
+const getHistorialLibrasByOrden = async (req, res) => {
+    try {
+        const { id_orden } = req.params;
+        const HistorialActualizacionLibras = require('../models/HistorialActualizacionLibras');
+
+        const historial = await HistorialActualizacionLibras.findByOrden(id_orden);
+
+        res.json({
+            success: true,
+            data: historial,
+            count: historial.length
+        });
+
+    } catch (error) {
+        console.error('Error al obtener historial de libras por orden:', error);
+
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener historial de libras',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
 module.exports = {
     getAllOrdenes,
     getOrdenById,
@@ -361,5 +419,7 @@ module.exports = {
     deleteOrden,
     getOrdenEstadisticas,
     updateClienteOrdenDatosManuales,
-    getClienteOrdenDatos
+    getClienteOrdenDatos,
+    getHistorialLibrasByClienteOrden,
+    getHistorialLibrasByOrden
 };

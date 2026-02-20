@@ -372,6 +372,24 @@ class Cliente {
             throw error;
         }
     }
+
+    /**
+     * Actualizar link de Excel del cliente (compartido en todas las órdenes)
+     */
+    static async updateLinkExcel(id_cliente, link_excel) {
+        try {
+            await pool.query(
+                `UPDATE clientes 
+                 SET link_excel = ?
+                 WHERE id = ?`,
+                [link_excel, id_cliente]
+            );
+            
+            return true;
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = Cliente;

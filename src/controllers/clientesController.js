@@ -86,6 +86,29 @@ class ClientesController {
             });
         }
     }
+
+    /**
+     * Obtener historial de actualizaciones de libras del cliente en todas las órdenes
+     * GET /api/cliente/historial-libras
+     */
+    static async getHistorialLibras(req, res) {
+        try {
+            const HistorialActualizacionLibras = require('../models/HistorialActualizacionLibras');
+            const historial = await HistorialActualizacionLibras.findByCliente(req.user.id);
+
+            res.json({
+                success: true,
+                data: historial,
+                count: historial.length
+            });
+        } catch (error) {
+            console.error('Error al obtener historial de libras:', error);
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Error al obtener historial de libras'
+            });
+        }
+    }
 }
 
 module.exports = ClientesController;

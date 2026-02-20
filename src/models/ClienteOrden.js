@@ -42,12 +42,13 @@ class ClienteOrden {
 
     /**
      * Buscar registro por cliente y orden
+     * (incluye link_excel desde la tabla clientes)
      */
     static async findByClienteAndOrden(id_cliente, id_orden) {
         try {
             const [rows] = await pool.query(
                 `SELECT co.*, 
-                        c.nombre, c.apellido, c.codigo,
+                        c.nombre, c.apellido, c.codigo, c.link_excel,
                         o.nombre_orden
                  FROM cliente_orden co
                  INNER JOIN clientes c ON co.id_cliente = c.id
@@ -268,10 +269,11 @@ class ClienteOrden {
     /**
      * Actualizar campos manuales del cliente en una orden (crea el registro si no existe)
      * Solo actualiza los campos que se envíen, manteniendo los valores anteriores de los demás
+     * NOTA: link_excel ya NO se maneja aquí, ahora está en la tabla clientes
      */
     static async actualizarCamposManuales(id_cliente, id_orden, data) {
         try {
-            const { valor_total, libras_acumuladas, link_excel } = data;
+            const { valor_total, libras_acumuladas } = data;
             
             // Verificar que el cliente existe
             const [cliente] = await pool.query(
@@ -303,14 +305,13 @@ class ClienteOrden {
                 // Si no existe, crear uno nuevo con los valores enviados
                 await pool.query(
                     `INSERT INTO cliente_orden 
-                        (id_cliente, id_orden, valor_total, libras_acumuladas, link_excel, total_compras, total_abonos)
-                     VALUES (?, ?, ?, ?, ?, 0, 0)`,
+                        (id_cliente, id_orden, valor_total, libras_acumuladas, total_compras, total_abonos)
+                     VALUES (?, ?, ?, ?, 0, 0)`,
                     [
                         id_cliente, 
                         id_orden, 
                         valor_total !== undefined ? valor_total : 0, 
-                        libras_acumuladas !== undefined ? libras_acumuladas : 0, 
-                        link_excel !== undefined ? link_excel : null
+                        libras_acumuladas !== undefined ? libras_acumuladas : 0
                     ]
                 );
             } else {
@@ -326,11 +327,6 @@ class ClienteOrden {
                 if (libras_acumuladas !== undefined) {
                     camposActualizar.push('libras_acumuladas = ?');
                     valores.push(libras_acumuladas);
-                }
-
-                if (link_excel !== undefined) {
-                    camposActualizar.push('link_excel = ?');
-                    valores.push(link_excel);
                 }
 
                 // Solo hacer UPDATE si hay campos para actualizar

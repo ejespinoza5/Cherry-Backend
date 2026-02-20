@@ -46,4 +46,11 @@ router.get('/ordenes/:id', ClientesController.getOrdenDetalle);
  */
 router.get('/resumen-financiero', ClientesController.getResumenFinanciero);
 
+/**
+ * @route   GET /api/cliente/historial-libras
+ * @desc    Obtener historial de actualizaciones de libras en todas las órdenes
+ * @access  Cliente
+ */
+router.get('/historial-libras', ClientesController.getHistorialLibras);
+
 module.exports = router;

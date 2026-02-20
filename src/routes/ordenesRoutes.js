@@ -40,6 +40,20 @@ router.get('/:id/estadisticas', ordenesController.getOrdenEstadisticas);
 router.get('/:id_orden/clientes/:id_cliente', ordenesController.getClienteOrdenDatos);
 
 /**
+ * @route   GET /api/ordenes/:id_orden/clientes/:id_cliente/historial-libras
+ * @desc    Obtener historial de actualizaciones de libras de un cliente en una orden
+ * @access  Privado
+ */
+router.get('/:id_orden/clientes/:id_cliente/historial-libras', ordenesController.getHistorialLibrasByClienteOrden);
+
+/**
+ * @route   GET /api/ordenes/:id_orden/historial-libras
+ * @desc    Obtener historial de actualizaciones de libras de todos los clientes en una orden
+ * @access  Privado
+ */
+router.get('/:id_orden/historial-libras', ordenesController.getHistorialLibrasByOrden);
+
+/**
  * @route   POST /api/ordenes
  * @desc    Crear nueva orden
  * @access  Privado
