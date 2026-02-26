@@ -414,6 +414,53 @@ class Abono {
                 [cantidad, id_cliente, id_orden]
             );
 
+            // Verificar si el cliente completó su pago
+            const [clienteOrden] = await connection.query(
+                `SELECT valor_total, total_abonos, estado_pago, 
+                        (valor_total - total_abonos) as deuda_restante
+                 FROM cliente_orden 
+                 WHERE id_cliente = ? AND id_orden = ?`,
+                [id_cliente, id_orden]
+            );
+
+            if (clienteOrden.length > 0) {
+                const { valor_total, total_abonos, estado_pago, deuda_restante } = clienteOrden[0];
+                
+                // Si el cliente completó su pago y estaba en gracia, cambiar a pagado
+                if (parseFloat(deuda_restante) <= 0 && estado_pago === 'en_gracia') {
+                    await connection.query(
+                        `UPDATE cliente_orden 
+                         SET estado_pago = 'pagado', 
+                             fecha_pago_completo = NOW()
+                         WHERE id_cliente = ? AND id_orden = ?`,
+                        [id_cliente, id_orden]
+                    );
+
+                    // Verificar si todos los clientes de la orden ya pagaron
+                    const [pendientes] = await connection.query(
+                        `SELECT COUNT(*) as total
+                         FROM cliente_orden
+                         WHERE id_orden = ? AND estado_pago = 'en_gracia'`,
+                        [id_orden]
+                    );
+
+                    // Si ya no hay clientes pendientes, cerrar la orden
+                    if (pendientes[0].total === 0) {
+                        await connection.query(
+                            `UPDATE ordenes 
+                             SET estado_orden = 'cerrada'
+                             WHERE id = ? AND estado_orden = 'en_periodo_gracia'`,
+                            [id_orden]
+                        );
+                    }
+
+                    // Actualizar estado_actividad del cliente
+                    // Importar Cliente aquí para evitar dependencias circulares
+                    const Cliente = require('./Cliente');
+                    await Cliente.calcularYActualizarEstadoActividad(id_cliente, connection);
+                }
+            }
+
             await connection.commit();
             return true;
 
