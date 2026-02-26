@@ -198,7 +198,7 @@ class ClienteOrden {
         try {
             const useConnection = connection || pool;
             
-            // Si incluirVigentes = true, solo validamos que esté en_gracia y tenga deuda
+            // Si incluirVigentes = true, solo validamos que esté en_periodo_gracia y tenga deuda
             // Si incluirVigentes = false (automático), validamos que además ya venció el plazo
             const condicionFecha = incluirVigentes ? '' : 'AND co.fecha_limite_pago < NOW()';
             
@@ -213,7 +213,7 @@ class ClienteOrden {
                  FROM cliente_orden co
                  INNER JOIN clientes c ON co.id_cliente = c.id
                  WHERE co.id_orden = ? 
-                   AND co.estado_pago = 'en_gracia'
+                   AND co.estado_pago = 'en_periodo_gracia'
                    ${condicionFecha}
                    AND (co.total_compras - co.total_abonos) > 0`,
                 [id_orden]

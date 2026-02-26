@@ -409,7 +409,7 @@ class Cliente {
                  FROM cliente_orden co
                  INNER JOIN ordenes o ON co.id_orden = o.id
                  WHERE co.id_cliente = ? 
-                   AND o.estado_orden IN ('abierta', 'en_gracia')
+                   AND o.estado_orden IN ('abierta', 'en_periodo_gracia')
                    AND (co.total_compras - co.total_abonos) > 0`,
                 [id_cliente]
             );

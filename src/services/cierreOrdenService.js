@@ -132,7 +132,7 @@ class CierreOrdenService {
                 // Si el saldo es positivo, el cliente tiene deuda
                 let estado_pago = 'pagado';
                 if (saldo_actual > 0) {
-                    estado_pago = 'en_gracia';
+                    estado_pago = 'en_periodo_gracia';
                     stats.clientes_con_deuda++;
                 } else {
                     stats.clientes_pagados++;
@@ -191,9 +191,9 @@ class CierreOrdenService {
             );
 
             // Determinar el estado final de la orden:
-            // - 'en_gracia' si hay clientes con deuda
+            // - 'en_periodo_gracia' si hay clientes con deuda
             // - 'cerrada' si todos pagaron
-            const estado_final = stats.clientes_con_deuda > 0 ? 'en_gracia' : 'cerrada';
+            const estado_final = stats.clientes_con_deuda > 0 ? 'en_periodo_gracia' : 'cerrada';
 
             // Cerrar la orden con el estado correcto
             await useConnection.query(
@@ -358,7 +358,7 @@ class CierreOrdenService {
             const [pendientes] = await connection.query(
                 `SELECT COUNT(*) as total
                  FROM cliente_orden
-                 WHERE id_orden = ? AND estado_pago = 'en_gracia'`,
+                 WHERE id_orden = ? AND estado_pago = 'en_periodo_gracia'`,
                 [id_orden]
             );
 
@@ -660,7 +660,7 @@ class CierreOrdenService {
                 throw new Error('Orden no encontrada');
             }
 
-            if (orden.estado_orden !== 'en_gracia') {
+            if (orden.estado_orden !== 'en_periodo_gracia') {
                 return {
                     success: false,
                     message: `La orden "${orden.nombre_orden}" no está en periodo de gracia. Estado actual: ${orden.estado_orden}`,

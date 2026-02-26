@@ -323,7 +323,7 @@ class Producto {
                 WHERE p.id_orden = ? 
                     AND p.estado = 'activo'
                     AND c.estado = 'activo'
-                    AND o.estado_orden = 'en_gracia'
+                    AND o.estado_orden = 'en_periodo_gracia'
                     AND co.fecha_limite_pago > NOW()
                     AND co.total_abonos < co.total_compras
                 ORDER BY c.nombre, c.apellido, p.detalles`,
