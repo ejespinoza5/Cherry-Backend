@@ -26,10 +26,7 @@ class CierreOrdenService {
                 throw new Error('La orden ya está cerrada');
             }
 
-            // Cerrar la orden
-            await Orden.cerrarOrden(id_orden, usuario_id, 'manual', connection);
-
-            // Procesar el cierre
+            // Procesar el cierre (esto incluye cerrar la orden con el estado correcto)
             const resultadoCierre = await this._procesarCierre(id_orden, usuario_id, connection);
 
             await connection.commit();
@@ -193,15 +190,22 @@ class CierreOrdenService {
                  usuario_id]
             );
 
-            // Cambiar orden a estado 'en_gracia' si hay clientes con deuda
-            if (stats.clientes_con_deuda > 0) {
-                await useConnection.query(
-                    `UPDATE ordenes 
-                     SET estado_orden = 'en_gracia'
-                     WHERE id = ? AND estado_orden = 'cerrada'`,
-                    [id_orden]
-                );
-            }
+            // Determinar el estado final de la orden:
+            // - 'en_gracia' si hay clientes con deuda
+            // - 'cerrada' si todos pagaron
+            const estado_final = stats.clientes_con_deuda > 0 ? 'en_gracia' : 'cerrada';
+
+            // Cerrar la orden con el estado correcto
+            await useConnection.query(
+                `UPDATE ordenes 
+                 SET estado_orden = ?, 
+                     fecha_cierre = ?,
+                     tipo_cierre = ?,
+                     closed_by = ?,
+                     updated_by = ?
+                 WHERE id = ? AND estado_orden = 'abierta'`,
+                [estado_final, fecha_cierre, orden.tipo_cierre || 'manual', usuario_id, usuario_id, id_orden]
+            );
 
             if (!connection) await useConnection.commit();
 

@@ -34,7 +34,7 @@ CREATE TABLE clientes (
   apellido VARCHAR(100),
   codigo VARCHAR(50) UNIQUE,
   direccion VARCHAR(255),
-  link_excel TEXT COMMENT 'Link de Excel del cliente (compartido en todas las órdenes)',
+  link_excel TEXT NULL COMMENT 'Link de Excel del cliente (compartido en todas las órdenes)',
   estado_actividad ENUM('activo','deudor','bloqueado','inactivo') DEFAULT 'activo',
   estado ENUM('activo','inactivo') DEFAULT 'activo',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
