@@ -453,13 +453,12 @@ class Abono {
                             [id_orden]
                         );
                     }
-
-                    // Actualizar estado_actividad del cliente
-                    // Importar Cliente aquí para evitar dependencias circulares
-                    const Cliente = require('./Cliente');
-                    await Cliente.calcularYActualizarEstadoActividad(id_cliente, connection);
                 }
             }
+
+            // SIEMPRE actualizar estado_actividad del cliente después de verificar un abono
+            const Cliente = require('./Cliente');
+            await Cliente.calcularYActualizarEstadoActividad(id_cliente, connection);
 
             await connection.commit();
             return true;
