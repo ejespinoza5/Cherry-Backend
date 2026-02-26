@@ -236,17 +236,11 @@ class AbonoService {
      * Actualizar abono
      */
     static async updateAbono(id, data, updated_by) {
-        const { cantidad } = data;
+        const { cantidad, comprobante_pago } = data;
 
         // Validar que el ID sea válido
         if (!isPositiveInteger(id)) {
             throw new Error('INVALID_ABONO_ID');
-        }
-
-        // Validar que la cantidad sea positiva
-        const cantidadNum = parseFloat(cantidad);
-        if (isNaN(cantidadNum) || cantidadNum <= 0) {
-            throw new Error('INVALID_AMOUNT');
         }
 
         // Verificar que el abono existe
@@ -255,8 +249,17 @@ class AbonoService {
             throw new Error('ABONO_NOT_FOUND');
         }
 
-        // Actualizar abono
-        await Abono.update(id, cantidadNum, updated_by);
+        // Preparar datos para actualizar
+        let cantidadNum = null;
+        if (cantidad) {
+            cantidadNum = parseFloat(cantidad);
+            if (isNaN(cantidadNum) || cantidadNum <= 0) {
+                throw new Error('INVALID_AMOUNT');
+            }
+        }
+
+        // Actualizar abono (puede ser cantidad, comprobante o ambos)
+        await Abono.update(id, cantidadNum, comprobante_pago, updated_by);
 
         // Retornar el abono actualizado
         const abonoActualizado = await Abono.findById(id);

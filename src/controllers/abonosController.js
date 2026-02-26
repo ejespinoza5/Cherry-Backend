@@ -377,19 +377,31 @@ const updateAbono = async (req, res) => {
     try {
         const { id } = req.params;
         const { cantidad } = req.body;
+        
+        // Obtener la URL del comprobante comprimido si se subió uno nuevo
+        const comprobante_pago = req.comprobanteUrl || null;
 
-        // Validar campos requeridos
-        if (!cantidad) {
+        // Validar que al menos se envíe cantidad o comprobante
+        if (!cantidad && !comprobante_pago) {
             return res.status(400).json({
                 success: false,
-                message: 'La cantidad es requerida'
+                message: 'Debe proporcionar al menos la cantidad o el comprobante para actualizar'
             });
+        }
+
+        // Preparar datos para actualizar
+        const updateData = {};
+        if (cantidad) {
+            updateData.cantidad = cantidad;
+        }
+        if (comprobante_pago) {
+            updateData.comprobante_pago = comprobante_pago;
         }
 
         // Actualizar abono
         const abonoActualizado = await AbonoService.updateAbono(
             id,
-            { cantidad },
+            updateData,
             req.user.id
         );
 
@@ -420,6 +432,13 @@ const updateAbono = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: 'Abono no encontrado'
+            });
+        }
+
+        if (error.message === 'ABONO_NOT_EDITABLE') {
+            return res.status(400).json({
+                success: false,
+                message: 'Solo se pueden editar abonos en estado pendiente'
             });
         }
 
@@ -459,6 +478,13 @@ const deleteAbono = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: 'Abono no encontrado'
+            });
+        }
+
+        if (error.message === 'ABONO_NOT_DELETABLE') {
+            return res.status(400).json({
+                success: false,
+                message: 'Solo se pueden eliminar abonos en estado pendiente'
             });
         }
 

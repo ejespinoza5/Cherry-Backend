@@ -577,24 +577,42 @@ curl -X GET http://localhost:3000/api/abonos/1 \
 
 **PUT** `/api/abonos/:id`
 
-Actualiza la cantidad de un abono. Si el abono ya está verificado, recalcula el saldo en `cliente_orden`.
+Actualiza la cantidad y/o el comprobante de un abono. **Solo se pueden editar abonos en estado "pendiente"**. Una vez verificado o rechazado, el abono no puede ser modificado.
 
 **Parámetros URL:**
 - `id`: ID del abono
 
-**Request Body (JSON):**
-```json
-{
-  "cantidad": 175.00
-}
-```
+**Content-Type:** `multipart/form-data` (si se actualiza el comprobante) o `application/json` (solo cantidad)
 
-**Ejemplo:**
+**Campos (al menos uno es requerido):**
+- `cantidad` (opcional): Nueva cantidad del abono
+- `comprobante` (opcional): Nuevo archivo de comprobante de pago
+  - Formatos aceptados: JPEG, JPG, PNG, WEBP, PDF
+  - Tamaño máximo: 10MB
+  - **Se comprime automáticamente** a WebP con calidad 85% y máximo 1200x1200px
+  - El comprobante anterior se elimina automáticamente del servidor
+
+**Ejemplo 1 - Actualizar solo cantidad:**
 ```bash
 curl -X PUT http://localhost:3000/api/abonos/1 \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer TU_TOKEN" \
   -d '{"cantidad": 175.00}'
+```
+
+**Ejemplo 2 - Actualizar solo comprobante:**
+```bash
+curl -X PUT http://localhost:3000/api/abonos/1 \
+  -H "Authorization: Bearer TU_TOKEN" \
+  -F "comprobante=@nuevo-comprobante.jpg"
+```
+
+**Ejemplo 3 - Actualizar ambos:**
+```bash
+curl -X PUT http://localhost:3000/api/abonos/1 \
+  -H "Authorization: Bearer TU_TOKEN" \
+  -F "cantidad=200.00" \
+  -F "comprobante=@nuevo-comprobante.jpg"
 ```
 
 **Response (200):**
@@ -607,10 +625,10 @@ curl -X PUT http://localhost:3000/api/abonos/1 \
     "id_cliente": 1,
     "id_orden": 5,
     "cantidad": 175.00,
-    "comprobante_pago": "/uploads/comprobantes/comprobante-1234567890.jpg",
-    "estado_verificacion": "verificado",
-    "fecha_verificacion": "2026-02-19T12:00:00.000Z",
-    "verificado_by": "admin@cherry.com",
+    "comprobante_pago": "/uploads/comprobantes/comprobante-1234567890-new.webp",
+    "estado_verificacion": "pendiente",
+    "fecha_verificacion": null,
+    "verificado_by": null,
     "estado": "activo",
     "created_at": "2026-02-19T10:30:00.000Z",
     "updated_at": "2026-02-19T13:00:00.000Z"
@@ -619,7 +637,7 @@ curl -X PUT http://localhost:3000/api/abonos/1 \
 ```
 
 **Errores:**
-- **400** - Cantidad inválida
+- **400** - Cantidad inválida, abono no está en estado pendiente, o no se proporcionó ningún campo para actualizar
 - **404** - Abono no encontrado
 
 ---
@@ -628,7 +646,9 @@ curl -X PUT http://localhost:3000/api/abonos/1 \
 
 **DELETE** `/api/abonos/:id`
 
-Elimina un abono (soft delete). Si estaba verificado, resta el saldo de `cliente_orden`.
+Elimina un abono (soft delete). **Solo se pueden eliminar abonos en estado "pendiente"**. Una vez verificado o rechazado, el abono no puede ser eliminado para mantener la integridad del historial.
+
+**El comprobante asociado se elimina automáticamente del servidor.**
 
 **Parámetros URL:**
 - `id`: ID del abono
@@ -648,7 +668,7 @@ curl -X DELETE http://localhost:3000/api/abonos/1 \
 ```
 
 **Errores:**
-- **400** - ID de abono inválido
+- **400** - ID de abono inválido o abono no está en estado pendiente
 - **404** - Abono no encontrado
 
 ---

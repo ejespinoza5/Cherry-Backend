@@ -95,10 +95,14 @@ router.put('/:id/rechazar', abonosController.rechazarComprobante);
 
 /**
  * @route   PUT /api/abonos/:id
- * @desc    Actualizar abono (recalcula el saldo del cliente por orden si ya está verificado)
+ * @desc    Actualizar abono (solo si está pendiente, permite cambiar cantidad y/o comprobante)
  * @access  Private (Admin o SuperAdmin)
  */
-router.put('/:id', abonosController.updateAbono);
+router.put('/:id', 
+    uploadComprobante.single('comprobante'),
+    processComprobante,
+    abonosController.updateAbono
+);
 
 /**
  * @route   DELETE /api/abonos/:id

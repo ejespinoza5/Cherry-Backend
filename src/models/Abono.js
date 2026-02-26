@@ -1,4 +1,5 @@
 const { pool } = require('../config/database');
+const { deleteComprobante } = require('../middlewares/upload');
 
 class Abono {
     /**
@@ -155,16 +156,16 @@ class Abono {
     }
 
     /**
-     * Actualizar abono (recalcula el saldo del cliente por orden)
+     * Actualizar abono (solo permitido si está en estado pendiente)
      */
-    static async update(id, cantidad, updated_by) {
+    static async update(id, cantidad, comprobante_pago, updated_by) {
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
 
-            // Obtener abono anterior
+            // Obtener abono anterior con comprobante
             const [abonoAnterior] = await connection.query(
-                'SELECT id_cliente, id_orden, cantidad, estado_verificacion FROM historial_abono WHERE id = ?',
+                'SELECT id_cliente, id_orden, cantidad, comprobante_pago, estado_verificacion FROM historial_abono WHERE id = ? AND estado = "activo"',
                 [id]
             );
 
@@ -172,31 +173,43 @@ class Abono {
                 throw new Error('ABONO_NOT_FOUND');
             }
 
-            const { id_cliente, id_orden, cantidad: cantidadAnterior, estado_verificacion } = abonoAnterior[0];
-            const diferencia = cantidad - cantidadAnterior;
+            const { estado_verificacion, comprobante_pago: comprobanteAnterior } = abonoAnterior[0];
+
+            // Validar que el abono esté en estado pendiente
+            if (estado_verificacion !== 'pendiente') {
+                throw new Error('ABONO_NOT_EDITABLE');
+            }
+
+            // Si se está actualizando el comprobante, eliminar el anterior
+            if (comprobante_pago !== undefined && comprobante_pago !== null && comprobanteAnterior) {
+                await deleteComprobante(comprobanteAnterior);
+            }
+
+            // Construir query de actualización dinámicamente
+            const updates = [];
+            const values = [];
+
+            if (cantidad !== null) {
+                updates.push('cantidad = ?');
+                values.push(cantidad);
+            }
+
+            if (comprobante_pago !== undefined && comprobante_pago !== null) {
+                updates.push('comprobante_pago = ?');
+                values.push(comprobante_pago);
+            }
+
+            updates.push('updated_by = ?');
+            values.push(updated_by);
+
+            updates.push('updated_at = NOW()');
+            values.push(id);
 
             // Actualizar abono
             await connection.query(
-                'UPDATE historial_abono SET cantidad = ?, updated_by = ? WHERE id = ?',
-                [cantidad, updated_by, id]
+                `UPDATE historial_abono SET ${updates.join(', ')} WHERE id = ?`,
+                values
             );
-
-            // Si el abono ya está verificado, actualizar el saldo en cliente_orden
-            if (estado_verificacion === 'verificado') {
-                // Asegurar que existe el registro en cliente_orden
-                await connection.query(
-                    `INSERT INTO cliente_orden (id_cliente, id_orden, total_abonos) 
-                     VALUES (?, ?, 0) 
-                     ON DUPLICATE KEY UPDATE total_abonos = total_abonos`,
-                    [id_cliente, id_orden]
-                );
-
-                // Actualizar saldo del cliente por orden (ajustar con la diferencia)
-                await connection.query(
-                    'UPDATE cliente_orden SET total_abonos = total_abonos + ? WHERE id_cliente = ? AND id_orden = ?',
-                    [diferencia, id_cliente, id_orden]
-                );
-            }
 
             await connection.commit();
             return true;
@@ -210,16 +223,16 @@ class Abono {
     }
 
     /**
-     * Eliminar abono (cambia estado a inactivo y resta del saldo por orden si estaba verificado)
+     * Eliminar abono (solo permitido si está en estado pendiente)
      */
     static async delete(id, updated_by) {
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
 
-            // Obtener abono
+            // Obtener abono con comprobante
             const [abono] = await connection.query(
-                'SELECT id_cliente, id_orden, cantidad, estado_verificacion FROM historial_abono WHERE id = ? AND estado = "activo"',
+                'SELECT id_cliente, id_orden, cantidad, comprobante_pago, estado_verificacion FROM historial_abono WHERE id = ? AND estado = "activo"',
                 [id]
             );
 
@@ -227,20 +240,22 @@ class Abono {
                 throw new Error('ABONO_NOT_FOUND');
             }
 
-            const { id_cliente, id_orden, cantidad, estado_verificacion } = abono[0];
+            const { estado_verificacion, comprobante_pago } = abono[0];
+
+            // Validar que el abono esté en estado pendiente
+            if (estado_verificacion !== 'pendiente') {
+                throw new Error('ABONO_NOT_DELETABLE');
+            }
 
             // Cambiar estado a inactivo
             await connection.query(
-                'UPDATE historial_abono SET estado = "inactivo", updated_by = ? WHERE id = ?',
+                'UPDATE historial_abono SET estado = "inactivo", updated_by = ?, updated_at = NOW() WHERE id = ?',
                 [updated_by, id]
             );
 
-            // Si estaba verificado, restar del saldo en cliente_orden
-            if (estado_verificacion === 'verificado') {
-                await connection.query(
-                    'UPDATE cliente_orden SET total_abonos = total_abonos - ? WHERE id_cliente = ? AND id_orden = ?',
-                    [cantidad, id_cliente, id_orden]
-                );
+            // Eliminar el comprobante del servidor si existe
+            if (comprobante_pago) {
+                await deleteComprobante(comprobante_pago);
             }
 
             await connection.commit();
