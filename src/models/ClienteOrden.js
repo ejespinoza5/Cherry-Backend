@@ -198,14 +198,14 @@ class ClienteOrden {
         try {
             const useConnection = connection || pool;
             
-            // Si incluirVigentes = true, solo validamos que esté en_periodo_gracia y tenga deuda
+            // Si incluirVigentes = true, solo validamos que esté en_gracia y tenga deuda
             // Si incluirVigentes = false (automático), validamos que además ya venció el plazo
             const condicionFecha = incluirVigentes ? '' : 'AND co.fecha_limite_pago < NOW()';
             
             const [rows] = await useConnection.query(
                 `SELECT co.*, 
                         c.nombre, c.apellido, c.codigo,
-                        (co.total_compras - co.total_abonos) as deuda_pendiente,
+                        (co.valor_total - co.total_abonos) as deuda_pendiente,
                         CASE 
                             WHEN co.fecha_limite_pago < NOW() THEN 'VENCIDO'
                             ELSE 'VIGENTE'
@@ -213,9 +213,9 @@ class ClienteOrden {
                  FROM cliente_orden co
                  INNER JOIN clientes c ON co.id_cliente = c.id
                  WHERE co.id_orden = ? 
-                   AND co.estado_pago = 'en_periodo_gracia'
+                   AND co.estado_pago = 'en_gracia'
                    ${condicionFecha}
-                   AND (co.total_compras - co.total_abonos) > 0`,
+                   AND (co.valor_total - co.total_abonos) > 0`,
                 [id_orden]
             );
             return rows;
@@ -225,26 +225,17 @@ class ClienteOrden {
     }
 
     /**
-     * Actualizar totales de compras y abonos
-     * Suma simple de productos sin impuestos ni comisiones automáticas
+     * Actualizar totales de abonos (valor_total se ingresa manualmente)
+     * Solo actualiza total_abonos, NO total_compras
      */
     static async actualizarTotales(id_cliente, id_orden, connection = null) {
         try {
             const useConnection = connection || pool;
             
-            // Calcular total de compras EN ESTA ORDEN (solo suma de productos)
-            const [compras] = await useConnection.query(
-                `SELECT COALESCE(SUM(valor_etiqueta * cantidad_articulos), 0) as total
-                FROM productos 
-                WHERE id_cliente = ? AND id_orden = ? AND estado = 'activo'`,
-                [id_cliente, id_orden]
-            );
-
-            const total_compras = parseFloat(compras[0].total);
-
-            // Calcular el total de abonos para esta orden específica
+            // El valor_total se ingresa manualmente, así que NO lo calculamos desde productos
+            // Solo calculamos el total de abonos para esta orden específica
             const [abonos] = await useConnection.query(
-                `SELECT COALESCE(SUM(monto), 0) as total
+                `SELECT COALESCE(SUM(cantidad), 0) as total
                  FROM historial_abono 
                  WHERE id_cliente = ? AND id_orden = ? AND estado_verificacion = 'verificado'`,
                 [id_cliente, id_orden]
@@ -252,15 +243,15 @@ class ClienteOrden {
 
             const total_abonos = parseFloat(abonos[0].total);
 
-            // Actualizar registro
+            // Actualizar solo total_abonos (valor_total lo maneja actualizarCamposManuales)
             await useConnection.query(
                 `UPDATE cliente_orden 
-                 SET total_compras = ?, total_abonos = ?
+                 SET total_abonos = ?
                  WHERE id_cliente = ? AND id_orden = ?`,
-                [total_compras, total_abonos, id_cliente, id_orden]
+                [total_abonos, id_cliente, id_orden]
             );
 
-            return { total_compras, total_abonos };
+            return { total_abonos };
         } catch (error) {
             throw error;
         }

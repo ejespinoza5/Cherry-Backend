@@ -405,22 +405,22 @@ class Cliente {
         try {
             // Obtener saldo total del cliente (deuda total en todas las órdenes abiertas/en gracia)
             const [saldoData] = await useConnection.query(
-                `SELECT COALESCE(SUM(co.total_compras - co.total_abonos), 0) as deuda_total
+                `SELECT COALESCE(SUM(co.valor_total - co.total_abonos), 0) as deuda_total
                  FROM cliente_orden co
                  INNER JOIN ordenes o ON co.id_orden = o.id
                  WHERE co.id_cliente = ? 
                    AND o.estado_orden IN ('abierta', 'en_periodo_gracia')
-                   AND (co.total_compras - co.total_abonos) > 0`,
+                   AND (co.valor_total - co.total_abonos) > 0`,
                 [id_cliente]
             );
 
             const deuda = parseFloat(saldoData[0].deuda_total || 0);
 
-            // Obtener fecha de última compra
+            // Obtener fecha de última compra (última vez que se le asignó valor_total)
             const [ultimaCompra] = await useConnection.query(
-                `SELECT MAX(p.created_at) as ultima_compra
-                 FROM productos p
-                 WHERE p.id_cliente = ? AND p.estado = 'activo'`,
+                `SELECT MAX(co.created_at) as ultima_compra
+                 FROM cliente_orden co
+                 WHERE co.id_cliente = ? AND co.valor_total > 0`,
                 [id_cliente]
             );
 

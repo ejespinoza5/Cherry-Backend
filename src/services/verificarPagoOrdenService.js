@@ -18,7 +18,7 @@ class VerificarPagoOrdenService {
                  INNER JOIN ordenes o ON co.id_orden = o.id
                  WHERE co.id_cliente = ? 
                    AND o.estado_orden = 'en_periodo_gracia'
-                   AND co.estado_pago = 'en_periodo_gracia'`,
+                   AND co.estado_pago = 'en_gracia'`,
                 [id_cliente]
             );
 
@@ -95,7 +95,7 @@ class VerificarPagoOrdenService {
                 `SELECT COUNT(*) as total
                  FROM cliente_orden
                  WHERE id_orden = ? 
-                   AND estado_pago = 'en_periodo_gracia'`,
+                   AND estado_pago = 'en_gracia'`,
                 [id_orden]
             );
 
@@ -150,7 +150,7 @@ class VerificarPagoOrdenService {
                             (co.saldo_al_cierre - co.abonos_post_cierre) as deuda_pendiente
                      FROM cliente_orden co
                      INNER JOIN clientes c ON co.id_cliente = c.id
-                     WHERE co.id_orden = ? AND co.estado_pago = 'en_periodo_gracia'`,
+                     WHERE co.id_orden = ? AND co.estado_pago = 'en_gracia'`,
                     [id_orden]
                 );
 

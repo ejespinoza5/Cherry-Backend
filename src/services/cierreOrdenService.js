@@ -90,11 +90,11 @@ class CierreOrdenService {
             const fecha_cierre = new Date();
             const fecha_limite_pago = new Date(fecha_cierre.getTime() + (1 * 60 * 1000)); // +1 minuto
 
-            // Obtener todos los clientes que participaron en esta orden
+            // Obtener todos los clientes que tienen valor_total > 0 en esta orden
             const [clientes] = await useConnection.query(
-                `SELECT DISTINCT p.id_cliente 
-                 FROM productos p 
-                 WHERE p.id_orden = ? AND p.estado = 'activo'`,
+                `SELECT id_cliente, valor_total, total_abonos 
+                 FROM cliente_orden 
+                 WHERE id_orden = ? AND valor_total > 0`,
                 [id_orden]
             );
 
@@ -106,33 +106,18 @@ class CierreOrdenService {
             };
 
             // Procesar cada cliente
-            for (const { id_cliente } of clientes) {
+            for (const cliente of clientes) {
                 stats.total_clientes++;
 
-                // Crear o actualizar registro en cliente_orden
-                await ClienteOrden.createOrUpdate({
-                    id_cliente,
-                    id_orden,
-                    estado_pago: 'activo'
-                }, useConnection);
-
-                // Actualizar totales de compras y abonos (para registro histórico)
-                const totales = await ClienteOrden.actualizarTotales(id_cliente, id_orden, useConnection);
+                const { id_cliente, valor_total, total_abonos } = cliente;
                 
-                // Obtener el saldo ACTUAL del cliente en esta orden (compras - abonos)
-                const [clienteOrdenData] = await useConnection.query(
-                    `SELECT (total_compras - total_abonos) as saldo_restante 
-                     FROM cliente_orden 
-                     WHERE id_cliente = ? AND id_orden = ?`,
-                    [id_cliente, id_orden]
-                );
-                
-                const saldo_actual = parseFloat(clienteOrdenData[0].saldo_restante);
+                // Calcular deuda: valor_total - total_abonos
+                const saldo_actual = parseFloat(valor_total) - parseFloat(total_abonos);
 
                 // Si el saldo es positivo, el cliente tiene deuda
                 let estado_pago = 'pagado';
                 if (saldo_actual > 0) {
-                    estado_pago = 'en_periodo_gracia';
+                    estado_pago = 'en_gracia'; // Para cliente_orden
                     stats.clientes_con_deuda++;
                 } else {
                     stats.clientes_pagados++;
@@ -153,13 +138,13 @@ class CierreOrdenService {
 
             stats.clientes_pendientes = stats.clientes_con_deuda;
 
-            // Calcular totales de la orden (sin impuestos automáticos)
+            // Calcular totales de la orden desde cliente_orden
             const [totalesOrden] = await useConnection.query(
                 `SELECT 
-                    SUM(p.valor_etiqueta * p.cantidad_articulos) as subtotal,
-                    SUM(p.comision) as comisiones
-                 FROM productos p
-                 WHERE p.id_orden = ? AND p.estado = 'activo'`,
+                    COALESCE(SUM(valor_total), 0) as subtotal,
+                    0 as comisiones
+                 FROM cliente_orden
+                 WHERE id_orden = ? AND valor_total > 0`,
                 [id_orden]
             );
 
@@ -358,7 +343,7 @@ class CierreOrdenService {
             const [pendientes] = await connection.query(
                 `SELECT COUNT(*) as total
                  FROM cliente_orden
-                 WHERE id_orden = ? AND estado_pago = 'en_periodo_gracia'`,
+                 WHERE id_orden = ? AND estado_pago = 'en_gracia'`,
                 [id_orden]
             );
 
