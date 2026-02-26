@@ -57,4 +57,11 @@ router.patch('/:id/estado-actividad', usuariosController.updateEstadoActividad);
  */
 router.put('/clientes/:id_cliente/habilitar', usuariosController.habilitarCliente);
 
+/**
+ * @route   GET /api/usuarios/clientes/:id_cliente/saldo-ultima-orden
+ * @desc    Obtener saldo del cliente en su última orden
+ * @access  Private (Admin o SuperAdmin)
+ */
+router.get('/clientes/:id_cliente/saldo-ultima-orden', usuariosController.getSaldoUltimaOrden);
+
 module.exports = router;

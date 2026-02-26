@@ -109,6 +109,35 @@ class ClientesController {
             });
         }
     }
+
+    /**
+     * Obtener saldo del cliente en la última orden
+     * GET /api/cliente/saldo-ultima-orden
+     */
+    static async getSaldoUltimaOrden(req, res) {
+        try {
+            const Cliente = require('../models/Cliente');
+            const saldo = await Cliente.getSaldoUltimaOrden(req.user.id);
+
+            if (!saldo) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'No se encontró información de órdenes para este cliente'
+                });
+            }
+
+            res.json({
+                success: true,
+                data: saldo
+            });
+        } catch (error) {
+            console.error('Error al obtener saldo de última orden:', error);
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Error al obtener saldo de última orden'
+            });
+        }
+    }
 }
 
 module.exports = ClientesController;

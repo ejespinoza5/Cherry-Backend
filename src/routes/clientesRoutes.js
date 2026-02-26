@@ -53,4 +53,11 @@ router.get('/resumen-financiero', ClientesController.getResumenFinanciero);
  */
 router.get('/historial-libras', ClientesController.getHistorialLibras);
 
+/**
+ * @route   GET /api/cliente/saldo-ultima-orden
+ * @desc    Obtener saldo del cliente en la última orden
+ * @access  Cliente
+ */
+router.get('/saldo-ultima-orden', ClientesController.getSaldoUltimaOrden);
+
 module.exports = router;

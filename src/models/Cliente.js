@@ -487,6 +487,39 @@ class Cliente {
             throw error;
         }
     }
+
+    /**
+     * Obtener saldo del cliente en la última orden
+     */
+    static async getSaldoUltimaOrden(id_cliente) {
+        try {
+            const [result] = await pool.query(
+                `SELECT 
+                    o.id as id_orden,
+                    o.nombre_orden,
+                    o.estado_orden,
+                    o.fecha_inicio,
+                    o.fecha_cierre,
+                    co.valor_total,
+                    co.total_abonos,
+                    co.libras_acumuladas,
+                    (co.valor_total - co.total_abonos) as saldo_pendiente,
+                    co.estado_pago,
+                    co.fecha_limite_pago
+                 FROM cliente_orden co
+                 INNER JOIN ordenes o ON co.id_orden = o.id
+                 WHERE co.id_cliente = ? 
+                   AND o.estado = 'activo'
+                 ORDER BY o.created_at DESC
+                 LIMIT 1`,
+                [id_cliente]
+            );
+            
+            return result.length > 0 ? result[0] : null;
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = Cliente;

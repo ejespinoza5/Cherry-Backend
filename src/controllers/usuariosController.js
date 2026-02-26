@@ -392,6 +392,40 @@ const habilitarCliente = async (req, res) => {
     }
 };
 
+/**
+ * Obtener saldo del cliente en la última orden
+ * GET /api/usuarios/clientes/:id_cliente/saldo-ultima-orden
+ */
+const getSaldoUltimaOrden = async (req, res) => {
+    try {
+        const { id_cliente } = req.params;
+        const Cliente = require('../models/Cliente');
+        
+        const saldo = await Cliente.getSaldoUltimaOrden(id_cliente);
+
+        if (!saldo) {
+            return res.status(404).json({
+                success: false,
+                message: 'No se encontró información de órdenes para este cliente'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: saldo
+        });
+
+    } catch (error) {
+        console.error('Error al obtener saldo de última orden:', error);
+
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener saldo de última orden',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
 module.exports = {
     getAllUsuarios,
     getUsuarioById,
@@ -399,5 +433,6 @@ module.exports = {
     updateUsuario,
     deleteUsuario,
     updateEstadoActividad,
-    habilitarCliente
+    habilitarCliente,
+    getSaldoUltimaOrden
 };
