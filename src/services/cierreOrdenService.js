@@ -137,12 +137,6 @@ class CierreOrdenService {
                 if (saldo_actual > 0) {
                     estado_pago = 'en_gracia';
                     stats.clientes_con_deuda++;
-                    
-                    // Actualizar estado del cliente a deudor
-                    await useConnection.query(
-                        `UPDATE clientes SET estado_actividad = 'deudor' WHERE id = ?`,
-                        [id_cliente]
-                    );
                 } else {
                     stats.clientes_pagados++;
                 }
@@ -155,6 +149,9 @@ class CierreOrdenService {
                     fecha_limite_pago: fecha_limite_pago,
                     estado_pago: estado_pago
                 }, useConnection);
+
+                // Calcular y actualizar estado_actividad del cliente
+                await Cliente.calcularYActualizarEstadoActividad(id_cliente, useConnection);
             }
 
             stats.clientes_pendientes = stats.clientes_con_deuda;
@@ -196,11 +193,11 @@ class CierreOrdenService {
                  usuario_id]
             );
 
-            // Cambiar orden a periodo de gracia si hay clientes con deuda
+            // Cambiar orden a estado 'en_gracia' si hay clientes con deuda
             if (stats.clientes_con_deuda > 0) {
                 await useConnection.query(
                     `UPDATE ordenes 
-                     SET estado_orden = 'en_periodo_gracia'
+                     SET estado_orden = 'en_gracia'
                      WHERE id = ? AND estado_orden = 'cerrada'`,
                     [id_orden]
                 );
@@ -659,7 +656,7 @@ class CierreOrdenService {
                 throw new Error('Orden no encontrada');
             }
 
-            if (orden.estado_orden !== 'en_periodo_gracia') {
+            if (orden.estado_orden !== 'en_gracia') {
                 return {
                     success: false,
                     message: `La orden "${orden.nombre_orden}" no está en periodo de gracia. Estado actual: ${orden.estado_orden}`,

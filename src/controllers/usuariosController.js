@@ -359,11 +359,45 @@ const updateEstadoActividad = async (req, res) => {
     }
 };
 
+/**
+ * Habilitar cliente bloqueado o inactivo (Solo Admin/SuperAdmin)
+ */
+const habilitarCliente = async (req, res) => {
+    try {
+        const { id_cliente } = req.params;
+        
+        const Cliente = require('../models/Cliente');
+        await Cliente.habilitarCliente(id_cliente, req.user.id);
+
+        res.json({
+            success: true,
+            message: 'Cliente habilitado exitosamente. Ahora puede realizar compras.'
+        });
+
+    } catch (error) {
+        console.error('Error al habilitar cliente:', error);
+
+        if (error.message === 'CLIENTE_NO_REQUIERE_HABILITACION') {
+            return res.status(400).json({
+                success: false,
+                message: 'El cliente no requiere habilitación o no existe'
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Error al habilitar cliente',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
 module.exports = {
     getAllUsuarios,
     getUsuarioById,
     createUsuario,
     updateUsuario,
     deleteUsuario,
-    updateEstadoActividad
+    updateEstadoActividad,
+    habilitarCliente
 };

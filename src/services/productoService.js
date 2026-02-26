@@ -84,10 +84,14 @@ class ProductoService {
             throw new Error('CLIENT_NOT_FOUND');
         }
 
-        // Verificar que el cliente no esté bloqueado
+        // Verificar que el cliente no esté bloqueado o inactivo
         const cliente = await Cliente.findById(id_cliente);
         if (cliente.estado_actividad === 'bloqueado') {
             throw new Error('CLIENT_BLOCKED');
+        }
+        
+        if (cliente.estado_actividad === 'inactivo') {
+            throw new Error('CLIENT_INACTIVE');
         }
 
         // Validar cantidad de artículos

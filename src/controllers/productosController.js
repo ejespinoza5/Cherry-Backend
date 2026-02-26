@@ -133,6 +133,13 @@ const createProducto = async (req, res) => {
             });
         }
 
+        if (error.message === 'CLIENT_INACTIVE') {
+            return res.status(403).json({
+                success: false,
+                message: 'El cliente está inactivo por no tener actividad en los últimos 3 meses. Contacte al administrador para habilitarlo.'
+            });
+        }
+
         if (error.message === 'INVALID_QUANTITY') {
             return res.status(400).json({
                 success: false,

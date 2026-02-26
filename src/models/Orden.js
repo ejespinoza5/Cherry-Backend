@@ -138,13 +138,13 @@ class Orden {
     }
 
     /**
-     * Cambiar a periodo de gracia
+     * Cambiar orden a estado 'en_gracia'
      */
-    static async cambiarAPeriodoGracia(id) {
+    static async cambiarAEnGracia(id) {
         try {
             const [result] = await pool.query(
                 `UPDATE ordenes 
-                 SET estado_orden = 'en_periodo_gracia'
+                 SET estado_orden = 'en_gracia'
                  WHERE id = ? AND estado_orden = 'cerrada'`,
                 [id]
             );
@@ -167,7 +167,7 @@ class Orden {
                      tipo_cierre = NULL,
                      closed_by = NULL,
                      updated_by = ?
-                 WHERE id = ? AND estado_orden IN ('cerrada', 'en_periodo_gracia')`,
+                 WHERE id = ? AND estado_orden IN ('cerrada', 'en_gracia')`,
                 [updated_by, id]
             );
             
@@ -213,7 +213,7 @@ class Orden {
     }
 
     /**
-     * Obtener órdenes en periodo de gracia que vencieron
+     * Obtener órdenes en estado 'en_gracia' que vencieron
      */
     static async obtenerOrdenesConGraciaVencida() {
         try {
@@ -221,7 +221,7 @@ class Orden {
                 `SELECT o.* 
                  FROM ordenes o
                  INNER JOIN cierre_orden co ON o.id = co.id_orden
-                 WHERE o.estado_orden = 'en_periodo_gracia'
+                 WHERE o.estado_orden = 'en_gracia'
                    AND co.fecha_limite_pago <= NOW()`
             );
             return rows;
@@ -320,7 +320,7 @@ class Orden {
             let query = `SELECT o.id, o.nombre_orden, co.fecha_limite_pago 
                          FROM ordenes o
                          INNER JOIN cierre_orden co ON o.id = co.id_orden
-                         WHERE o.estado_orden = 'en_periodo_gracia' 
+                         WHERE o.estado_orden = 'en_gracia' 
                            AND o.estado = 'activo'`;
             let params = [];
             

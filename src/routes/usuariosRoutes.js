@@ -50,4 +50,11 @@ router.delete('/:id', usuariosController.deleteUsuario);
  */
 router.patch('/:id/estado-actividad', usuariosController.updateEstadoActividad);
 
+/**
+ * @route   PUT /api/usuarios/clientes/:id_cliente/habilitar
+ * @desc    Habilitar cliente bloqueado o inactivo para que pueda hacer compras
+ * @access  Private (Admin o SuperAdmin)
+ */
+router.put('/clientes/:id_cliente/habilitar', usuariosController.habilitarCliente);
+
 module.exports = router;

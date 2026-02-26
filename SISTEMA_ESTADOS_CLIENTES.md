@@ -2,53 +2,63 @@
 
 ## 📋 Descripción General
 
-Sistema automático de gestión de estados de clientes basado en su saldo, diseñado para controlar las compras según la deuda acumulada.
+Sistema automático de gestión de estados de clientes basado en su saldo y actividad de compras, diseñado para controlar las compras según la deuda acumulada y la actividad reciente.
 
 ## 🎯 Estados de Actividad
 
 ### 1. **Activo** ✅
-- **Condición**: Saldo >= $0.00
-- **Descripción**: Cliente sin deudas, puede realizar compras con normalidad
+- **Condición**: Saldo >= $0 Y ha comprado en los últimos 3 meses
+- **Descripción**: Cliente sin deudas y con actividad reciente
 - **Comportamiento**: Acceso completo al sistema de compras
 
 ### 2. **Deudor** ⚠️
-- **Condición**: Saldo < $0.00 y saldo > -$300.00
+- **Condición**: Deuda > $0 y deuda < $300
 - **Descripción**: Cliente con deuda pero dentro del límite permitido
 - **Comportamiento**: Puede seguir comprando pero se le marca como deudor
-- **Ejemplo**: Saldo = -$150.00
+- **Ejemplo**: Deuda = $150.00
 
 ### 3. **Bloqueado** 🚫
-- **Condición**: Saldo <= -$300.00
+- **Condición**: Deuda >= $300.00
 - **Descripción**: Cliente ha superado el límite de deuda permitido
-- **Comportamiento**: **NO puede realizar nuevas compras** hasta pagar
+- **Comportamiento**: **NO puede realizar nuevas compras** hasta pagar o ser habilitado por admin
 - **Mensaje**: "El cliente está bloqueado por exceder el límite de deuda permitido ($300)"
 
 ### 4. **Inactivo** 💤
-- **Condición**: Asignado manualmente
-- **Descripción**: Cuenta sin movimiento o desactivada administrativamente
-- **Comportamiento**: No se actualiza automáticamente
+- **Condición**: Sin compras en los últimos 3 meses
+- **Descripción**: Cliente sin actividad reciente
+- **Comportamiento**: **NO puede realizar nuevas compras** hasta ser habilitado por admin
+- **Mensaje**: "El cliente está inactivo por no tener actividad en los últimos 3 meses"
 
 ## ⚙️ Funcionamiento Automático
 
 ### Actualización Automática del Estado
 
-El estado se actualiza **automáticamente** cada vez que:
-- ✅ Se crea un producto (resta del saldo)
-- ✅ Se actualiza un producto (ajusta el saldo)
-- ✅ Se elimina un producto (devuelve al saldo)
-- ✅ Se registra un abono (suma al saldo)
+El estado se actualiza **automáticamente** en los siguientes casos:
+- ✅ Al cerrar una orden (se recalcula para todos los clientes de la orden)
+- ✅ Se puede llamar manualmente via función `Cliente.calcularYActualizarEstadoActividad(id_cliente)`
 
 ### Lógica de Negocio
 
 ```javascript
-const LIMITE_DEUDA = -300.00;
+const LIMITE_DEUDA = 300.00;
+const MESES_INACTIVIDAD = 3;
 
-if (saldo >= 0) {
-    estado = 'activo';      // Sin deuda
-} else if (saldo > LIMITE_DEUDA) {
-    estado = 'deudor';      // Con deuda pero permitido
+// Calcular deuda total en órdenes activas/en_gracia
+const deuda = calcularDeudaTotal(id_cliente);
+
+// Verificar fecha de última compra
+const ultimaCompra = obtenerFechaUltimaCompra(id_cliente);
+const tieneActividadReciente = (Date.now() - ultimaCompra) < (MESES_INACTIVIDAD * 30 * 24 * 60 * 60 * 1000);
+
+// Determinar estado
+if (!tieneActividadReciente) {
+    estado = 'inactivo';      // Sin compras en 3 meses
+} else if (deuda >= LIMITE_DEUDA) {
+    estado = 'bloqueado';     // Deuda excesiva
+} else if (deuda > 0) {
+    estado = 'deudor';        // Con deuda pero permitido
 } else {
-    estado = 'bloqueado';   // Deuda excesiva - BLOQUEADO
+    estado = 'activo';        // Sin deuda y activo
 }
 ```
 
@@ -78,6 +88,53 @@ POST /api/productos
 ```
 
 **Status Code:** `403 Forbidden`
+
+### Cliente Inactivo
+
+Cuando un cliente intenta crear un producto estando inactivo:
+
+**Request:**
+```http
+POST /api/productos
+{
+    "id_cliente": 8,
+    "id_orden": 2,
+    "valor_etiqueta": 100,
+    ...
+}
+```
+
+**Response:**
+```json
+{
+    "success": false,
+    "message": "El cliente está inactivo por no tener actividad en los últimos 3 meses. Contacte al administrador para habilitarlo."
+}
+```
+
+**Status Code:** `403 Forbidden`
+
+### Habilitar Cliente (Solo Admin/SuperAdmin)
+
+El administrador puede habilitar manualmente un cliente bloqueado o inactivo:
+
+**Request:**
+```http
+PUT /api/usuarios/clientes/:id_cliente/habilitar
+Authorization: Bearer {admin_token}
+```
+
+**Response:**
+```json
+{
+    "success": true,
+    "message": "Cliente habilitado exitosamente. Ahora puede realizar compras."
+}
+```
+
+**Status Code:** `200 OK`
+
+**Nota:** Esta acción cambia el `estado_actividad` del cliente a `'activo'` permitiéndole hacer compras nuevamente. El sistema volverá a calcular su estado automáticamente en el próximo cierre de orden.
 
 ## 📊 Flujo de Ejemplo
 

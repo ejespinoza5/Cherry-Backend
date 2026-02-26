@@ -17,7 +17,7 @@ class VerificarPagoOrdenService {
                  FROM cliente_orden co
                  INNER JOIN ordenes o ON co.id_orden = o.id
                  WHERE co.id_cliente = ? 
-                   AND o.estado_orden = 'en_periodo_gracia'
+                   AND o.estado_orden = 'en_gracia'
                    AND co.estado_pago = 'en_gracia'`,
                 [id_cliente]
             );
@@ -104,7 +104,7 @@ class VerificarPagoOrdenService {
                 await pool.query(
                     `UPDATE ordenes 
                      SET estado_orden = 'cerrada'
-                     WHERE id = ? AND estado_orden = 'en_periodo_gracia'`,
+                     WHERE id = ? AND estado_orden = 'en_gracia'`,
                     [id_orden]
                 );
 
@@ -158,7 +158,7 @@ class VerificarPagoOrdenService {
                     success: false,
                     mensaje: `Aún hay ${pendientes.length} cliente(s) con deuda pendiente`,
                     clientes_pendientes: pendientes,
-                    estado_actual: 'en_periodo_gracia'
+                    estado_actual: 'en_gracia'
                 };
             }
         } catch (error) {

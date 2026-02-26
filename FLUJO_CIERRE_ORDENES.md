@@ -55,15 +55,21 @@ Al cerrar:
 2. Se calcula saldo de cada cliente (compras - abonos)
 3. Se crea registro en cierre_orden con totales
 4. Se crea registro en cliente_orden para cada participante
-5. Si hay clientes con deuda → estado pasa a "en_periodo_gracia"
+5. Si hay clientes con deuda → estado_orden pasa a "en_gracia"
 6. Se establece fecha_limite_pago = fecha_cierre + 48 horas
+7. Se actualiza estado_actividad de cada cliente automáticamente:
+   - activo: saldo >= 0 Y compras en últimos 3 meses
+   - deudor: debe < $300
+   - bloqueado: debe >= $300
+   - inactivo: sin compras en 3 meses
 ```
 
-### 4️⃣ Periodo de Gracia (48 horas)
+### 4️⃣ Estado 'En Gracia' (48 horas)
 ```
 - Los clientes con deuda tienen 48h para pagar
 - Si pagan → estado_pago = 'pagado'
 - Si NO pagan → se ejecuta REMATE automático
+- La orden permanece en estado "en_gracia" hasta que todos paguen o sean rematados
 ```
 
 ### 5️⃣ Remate Automático
@@ -98,7 +104,7 @@ SI existe una orden con estado_orden = 'abierta' ENTONCES:
   → CERRAR la orden actual (POST /api/cierre-ordenes/:id/cerrar)
 
 VALIDACIÓN 2 - Periodo de Gracia:
-SI existe una orden con estado_orden = 'en_periodo_gracia' ENTONCES:
+SI existe una orden con estado_orden = 'en_gracia' ENTONCES:
   ❌ NO permite crear la nueva orden
   → Error 409: "No se puede crear una nueva orden mientras hay una orden en periodo de gracia"
   
@@ -170,7 +176,7 @@ Historial crediticio de cada cliente.
 #### `ordenes`
 **Nuevos campos:**
 - `fecha_cierre` - Cuándo se cerró
-- `estado_orden` - abierta, cerrada, en_periodo_gracia
+- `estado_orden` - abierta, cerrada, en_gracia
 - `tipo_cierre` - manual, automatico
 - `closed_by` - Quién la cerró
 
@@ -342,7 +348,7 @@ POST /api/cierre-ordenes/7/rematar?forzar=true
 }
 ```
 
-**💡 Importante:** Si se rematan TODOS los clientes morosos de la orden, el sistema automáticamente cambia `estado_orden` de `'en_periodo_gracia'` a `'cerrada'`, permitiéndote crear inmediatamente una nueva orden.
+**💡 Importante:** Si se rematan TODOS los clientes morosos de la orden, el sistema automáticamente cambia `estado_orden` de `'en_gracia'` a `'cerrada'`, permitiéndote crear inmediatamente una nueva orden.
 
 **Ejemplo de uso urgente:**
 ```javascript

@@ -390,6 +390,103 @@ class Cliente {
             throw error;
         }
     }
+
+    /**
+     * Calcular y actualizar estado_actividad automáticamente
+     * Reglas:
+     * - activo: saldo >= 0 Y ha comprado en los últimos 3 meses
+     * - deudor: debe < $300
+     * - bloqueado: debe >= $300
+     * - inactivo: sin compras en los últimos 3 meses
+     */
+    static async calcularYActualizarEstadoActividad(id_cliente, connection = null) {
+        const useConnection = connection || pool;
+        
+        try {
+            // Obtener saldo total del cliente (deuda total en todas las órdenes abiertas/en gracia)
+            const [saldoData] = await useConnection.query(
+                `SELECT COALESCE(SUM(co.total_compras - co.total_abonos), 0) as deuda_total
+                 FROM cliente_orden co
+                 INNER JOIN ordenes o ON co.id_orden = o.id
+                 WHERE co.id_cliente = ? 
+                   AND o.estado_orden IN ('abierta', 'en_gracia')
+                   AND (co.total_compras - co.total_abonos) > 0`,
+                [id_cliente]
+            );
+
+            const deuda = parseFloat(saldoData[0].deuda_total || 0);
+
+            // Obtener fecha de última compra
+            const [ultimaCompra] = await useConnection.query(
+                `SELECT MAX(p.created_at) as ultima_compra
+                 FROM productos p
+                 WHERE p.id_cliente = ? AND p.estado = 'activo'`,
+                [id_cliente]
+            );
+
+            const fechaUltimaCompra = ultimaCompra[0].ultima_compra;
+            
+            // Calcular si tiene actividad en los últimos 3 meses
+            let tieneActividadReciente = false;
+            if (fechaUltimaCompra) {
+                const tresMesesAtras = new Date();
+                tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
+                tieneActividadReciente = new Date(fechaUltimaCompra) >= tresMesesAtras;
+            }
+
+            // Determinar estado según reglas
+            let nuevoEstado;
+            
+            if (!tieneActividadReciente) {
+                // Sin compras en 3 meses = inactivo
+                nuevoEstado = 'inactivo';
+            } else if (deuda >= 300) {
+                // Debe $300 o más = bloqueado
+                nuevoEstado = 'bloqueado';
+            } else if (deuda > 0 && deuda < 300) {
+                // Debe menos de $300 = deudor
+                nuevoEstado = 'deudor';
+            } else {
+                // Saldo >= 0 y con actividad = activo
+                nuevoEstado = 'activo';
+            }
+
+            // Actualizar estado_actividad
+            await useConnection.query(
+                `UPDATE clientes 
+                 SET estado_actividad = ?
+                 WHERE id = ?`,
+                [nuevoEstado, id_cliente]
+            );
+
+            return nuevoEstado;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Habilitar cliente bloqueado/inactivo (solo admin)
+     * Cambia el estado a 'activo' manualmente
+     */
+    static async habilitarCliente(id_cliente, updated_by) {
+        try {
+            const [result] = await pool.query(
+                `UPDATE clientes 
+                 SET estado_actividad = 'activo', updated_by = ?
+                 WHERE id = ? AND estado_actividad IN ('bloqueado', 'inactivo')`,
+                [updated_by, id_cliente]
+            );
+            
+            if (result.affectedRows === 0) {
+                throw new Error('CLIENTE_NO_REQUIERE_HABILITACION');
+            }
+            
+            return true;
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = Cliente;
