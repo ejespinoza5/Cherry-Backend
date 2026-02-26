@@ -251,6 +251,10 @@ class ClienteOrden {
                 [total_abonos, id_cliente, id_orden]
             );
 
+            // Actualizar estado_actividad del cliente en tiempo real
+            const Cliente = require('./Cliente');
+            await Cliente.calcularYActualizarEstadoActividad(id_cliente, useConnection);
+
             return { total_abonos };
         } catch (error) {
             throw error;
@@ -331,6 +335,10 @@ class ClienteOrden {
                     );
                 }
             }
+
+            // Actualizar estado_actividad del cliente en tiempo real
+            const Cliente = require('./Cliente');
+            await Cliente.calcularYActualizarEstadoActividad(id_cliente);
 
             return true;
         } catch (error) {
