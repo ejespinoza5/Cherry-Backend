@@ -58,7 +58,7 @@ const getUsuarioById = async (req, res) => {
  */
 const createUsuario = async (req, res) => {
     try {
-        const { correo, contraseña, id_rol, nombre, apellido, codigo, direccion } = req.body;
+        const { correo, contraseña, id_rol, nombre, apellido, codigo, direccion, pais } = req.body;
 
         // Validar campos requeridos
         if (!correo || !contraseña || !id_rol) {
@@ -70,7 +70,7 @@ const createUsuario = async (req, res) => {
 
         // Crear usuario a través del servicio (pasando el rol del usuario que crea)
         const nuevoUsuario = await UsuarioService.createUsuario(
-            { correo, contraseña, id_rol, nombre, apellido, codigo, direccion },
+            { correo, contraseña, id_rol, nombre, apellido, codigo, direccion, pais },
             req.user.id,
             req.user.id_rol  // Pasar el rol del usuario autenticado
         );
@@ -162,7 +162,7 @@ const createUsuario = async (req, res) => {
 const updateUsuario = async (req, res) => {
     try {
         const { id } = req.params;
-        const { correo, id_rol, estado, contraseña, nombre, apellido, codigo, direccion, estado_actividad } = req.body;
+        const { correo, id_rol, estado, contraseña, nombre, apellido, codigo, direccion, pais, estado_actividad } = req.body;
 
         const usuarioActualizado = await UsuarioService.updateUsuario(
             id,
@@ -175,6 +175,7 @@ const updateUsuario = async (req, res) => {
                 apellido,
                 codigo,
                 direccion,
+                pais,
                 estado_actividad
             },
             req.user.id

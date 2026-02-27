@@ -6,12 +6,12 @@ class Cliente {
      */
     static async create(data) {
         try {
-            const { id_usuario, nombre, apellido, codigo, direccion, created_by } = data;
+            const { id_usuario, nombre, apellido, codigo, direccion, pais, created_by } = data;
             
             const [result] = await pool.query(
-                `INSERT INTO clientes (id_usuario, nombre, apellido, codigo, direccion, estado_actividad, estado, created_by) 
-                 VALUES (?, ?, ?, ?, ?, 'activo', 'activo', ?)`,
-                [id_usuario, nombre, apellido, codigo, direccion, created_by]
+                `INSERT INTO clientes (id_usuario, nombre, apellido, codigo, direccion, pais, estado_actividad, estado, created_by) 
+                 VALUES (?, ?, ?, ?, ?, ?, 'activo', 'activo', ?)`,
+                [id_usuario, nombre, apellido, codigo, direccion, pais, created_by]
             );
             
             return result.insertId;
@@ -72,13 +72,13 @@ class Cliente {
      */
     static async update(id, data, updated_by) {
         try {
-            const { nombre, apellido, codigo, direccion, estado_actividad, estado } = data;
+            const { nombre, apellido, codigo, direccion, pais, estado_actividad, estado } = data;
             
             const [result] = await pool.query(
                 `UPDATE clientes 
-                 SET nombre = ?, apellido = ?, codigo = ?, direccion = ?, estado_actividad = ?, estado = ?, updated_by = ? 
+                 SET nombre = ?, apellido = ?, codigo = ?, direccion = ?, pais = ?, estado_actividad = ?, estado = ?, updated_by = ? 
                  WHERE id = ?`,
-                [nombre, apellido, codigo, direccion, estado_actividad, estado, updated_by, id]
+                [nombre, apellido, codigo, direccion, pais, estado_actividad, estado, updated_by, id]
             );
             
             return result.affectedRows > 0;

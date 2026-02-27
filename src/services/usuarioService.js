@@ -26,6 +26,7 @@ class UsuarioService {
                 apellido: usuario.cliente_apellido,
                 codigo: usuario.cliente_codigo,
                 direccion: usuario.cliente_direccion,
+                pais: usuario.cliente_pais,
                 estado_actividad: usuario.cliente_estado_actividad
             };
         }
@@ -58,7 +59,7 @@ class UsuarioService {
      * Crear nuevo usuario
      */
     static async createUsuario(data, createdBy, createdByRol) {
-        const { correo, contraseña, id_rol, nombre, apellido, codigo, direccion } = data;
+        const { correo, contraseña, id_rol, nombre, apellido, codigo, direccion, pais } = data;
 
         // Validar formato de correo
         if (!isValidEmail(correo)) {
@@ -126,6 +127,7 @@ class UsuarioService {
                 apellido: apellido || '',
                 codigo,
                 direccion: direccion || '',
+                pais: pais || null,
                 created_by: createdBy
             });
         }
@@ -139,7 +141,7 @@ class UsuarioService {
      * Actualizar usuario
      */
     static async updateUsuario(id, data, updatedBy) {
-        const { correo, id_rol, estado, contraseña, nombre, apellido, codigo, direccion, estado_actividad } = data;
+        const { correo, id_rol, estado, contraseña, nombre, apellido, codigo, direccion, pais, estado_actividad } = data;
 
         // Verificar que el usuario existe
         const usuario = await Usuario.findById(id);
@@ -209,7 +211,7 @@ class UsuarioService {
         }
 
         // Si el usuario es cliente (id_rol = 2), actualizar datos de cliente
-        if (parseInt(rolFinal) === 2 && (nombre || apellido || codigo || direccion || estado_actividad)) {
+        if (parseInt(rolFinal) === 2 && (nombre || apellido || codigo || direccion || pais || estado_actividad)) {
             const cliente = await Cliente.findByUsuario(id);
             
             if (cliente) {
@@ -221,6 +223,7 @@ class UsuarioService {
                         apellido: apellido !== undefined ? apellido : cliente.apellido,
                         codigo: codigo || cliente.codigo,
                         direccion: direccion !== undefined ? direccion : cliente.direccion,
+                        pais: pais !== undefined ? pais : cliente.pais,
                         estado_actividad: estado_actividad || cliente.estado_actividad,
                         estado: estado || cliente.estado
                     },
