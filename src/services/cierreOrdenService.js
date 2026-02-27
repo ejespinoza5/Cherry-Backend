@@ -569,11 +569,11 @@ class CierreOrdenService {
                 created_by: usuario_id
             });
 
-            // Cambiar clientes deudores a activos (nueva oportunidad con la nueva orden)
+            // Cambiar clientes deudores a reestablecidos (nueva oportunidad con la nueva orden)
             // Los clientes bloqueados permanecen bloqueados
             await connection.query(
                 `UPDATE clientes 
-                 SET estado_actividad = 'activo'
+                 SET estado_actividad = 'reestablecido'
                  WHERE estado = 'activo' AND estado_actividad = 'deudor'`
             );
 

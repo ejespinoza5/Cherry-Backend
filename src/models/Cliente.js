@@ -489,10 +489,28 @@ class Cliente {
     }
 
     /**
-     * Obtener saldo del cliente en la última orden
+     * Obtener saldo del cliente en la última orden activa
+     * Si no ha participado en la orden actual, devuelve la orden con saldo 0
      */
     static async getSaldoUltimaOrden(id_cliente) {
         try {
+            // Primero verificar si hay orden activa
+            const [ordenActiva] = await pool.query(
+                `SELECT id, nombre_orden, estado_orden, fecha_inicio, fecha_cierre
+                 FROM ordenes 
+                 WHERE estado = 'activo' AND estado_orden = 'abierta'
+                 ORDER BY created_at DESC
+                 LIMIT 1`
+            );
+
+            // Si no hay orden activa, no hay saldo que mostrar
+            if (ordenActiva.length === 0) {
+                return null;
+            }
+
+            const orden = ordenActiva[0];
+
+            // Verificar si el cliente ha participado en esta orden
             const [result] = await pool.query(
                 `SELECT 
                     o.id as id_orden,
@@ -509,13 +527,30 @@ class Cliente {
                  FROM cliente_orden co
                  INNER JOIN ordenes o ON co.id_orden = o.id
                  WHERE co.id_cliente = ? 
-                   AND o.estado = 'activo'
-                 ORDER BY o.created_at DESC
+                   AND o.id = ?
                  LIMIT 1`,
-                [id_cliente]
+                [id_cliente, orden.id]
             );
             
-            return result.length > 0 ? result[0] : null;
+            // Si el cliente ha participado, devolver sus datos
+            if (result.length > 0) {
+                return result[0];
+            }
+
+            // Si el cliente NO ha participado, devolver la orden con saldo 0
+            return {
+                id_orden: orden.id,
+                nombre_orden: orden.nombre_orden,
+                estado_orden: orden.estado_orden,
+                fecha_inicio: orden.fecha_inicio,
+                fecha_cierre: orden.fecha_cierre,
+                valor_total: 0,
+                total_abonos: 0,
+                libras_acumuladas: 0,
+                saldo_pendiente: 0,
+                estado_pago: null,
+                fecha_limite_pago: null
+            };
         } catch (error) {
             throw error;
         }
