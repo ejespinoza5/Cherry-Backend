@@ -610,6 +610,37 @@ class CierreOrdenService {
     }
 
     /**
+     * Obtener clientes rematados de una orden específica
+     */
+    static async obtenerClientesRematadosPorOrden(id_orden) {
+        try {
+            const orden = await Orden.findById(id_orden);
+            
+            if (!orden) {
+                throw new Error('Orden no encontrada');
+            }
+
+            const clientesRematados = await ClienteRematado.findByOrden(id_orden);
+            
+            return {
+                success: true,
+                data: {
+                    orden: {
+                        id: orden.id,
+                        nombre_orden: orden.nombre_orden,
+                        estado_orden: orden.estado_orden,
+                        fecha_cierre: orden.fecha_cierre
+                    },
+                    clientes_rematados: clientesRematados,
+                    total: clientesRematados.length
+                }
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
      * Obtener clientes en riesgo de remate (durante periodo de gracia)
      */
     static async obtenerClientesEnRiesgo(id_orden) {

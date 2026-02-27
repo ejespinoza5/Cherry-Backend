@@ -283,6 +283,26 @@ class CierreOrdenController {
     }
 
     /**
+     * Obtener clientes rematados de una orden específica
+     */
+    static async obtenerClientesRematadosPorOrden(req, res) {
+        try {
+            const { id } = req.params;
+
+            const resultado = await CierreOrdenService.obtenerClientesRematadosPorOrden(id);
+
+            res.status(200).json(resultado);
+        } catch (error) {
+            console.error('Error al obtener clientes rematados de la orden:', error);
+            res.status(500).json({
+                success: false,
+                message: error.message || 'Error al obtener clientes rematados de la orden',
+                error: error.message
+            });
+        }
+    }
+
+    /**
      * Obtener clientes en riesgo de remate (durante periodo de gracia)
      */
     static async obtenerClientesEnRiesgo(req, res) {

@@ -50,6 +50,17 @@ router.get(
 );
 
 /**
+ * @route   GET /api/cierre-ordenes/:id/clientes-rematados
+ * @desc    Obtener clientes rematados de una orden específica
+ * @access  Private
+ */
+router.get(
+    '/:id/clientes-rematados',
+    verifyToken,
+    CierreOrdenController.obtenerClientesRematadosPorOrden
+);
+
+/**
  * @route   POST /api/cierre-ordenes/:id/rematar
  * @desc    Rematar clientes morosos manualmente
  * @access  Private (Admin, Superadmin)

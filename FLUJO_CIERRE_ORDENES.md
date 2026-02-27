@@ -307,6 +307,64 @@ Lista el estado de todos los clientes en una orden.
 
 **Acceso:** Autenticado
 
+#### `GET /api/cierre-ordenes/:id/clientes-rematados`
+Obtiene la lista de clientes que fueron rematados en una orden específica.
+
+**Acceso:** Autenticado
+
+**Parámetros:**
+- `id` (path): ID de la orden
+
+**Respuesta:**
+```json
+{
+  "success": true,
+  "data": {
+    "orden": {
+      "id": 7,
+      "nombre_orden": "Live Enero 2026",
+      "estado_orden": "cerrada",
+      "fecha_cierre": "2026-01-20T10:00:00.000Z"
+    },
+    "clientes_rematados": [
+      {
+        "id": 1,
+        "id_cliente": 5,
+        "id_orden": 7,
+        "valor_adeudado": "350.00",
+        "abonos_perdidos": "150.00",
+        "motivo": "incumplimiento_pago",
+        "fecha_remate": "2026-01-22T12:00:00.000Z",
+        "observaciones": "Remate automático por no pagar en periodo de gracia de 48 horas",
+        "cliente_nombre": "Juan",
+        "cliente_apellido": "Pérez",
+        "cliente_codigo": "CLI-001",
+        "estado_actividad": "bloqueado",
+        "rematado_por_correo": "admin@cherry.com",
+        "nombre_orden": "Live Enero 2026"
+      },
+      {
+        "id": 2,
+        "id_cliente": 8,
+        "id_orden": 7,
+        "valor_adeudado": "200.00",
+        "abonos_perdidos": "80.00",
+        "motivo": "incumplimiento_pago",
+        "fecha_remate": "2026-01-22T12:00:00.000Z",
+        "observaciones": "Remate automático por no pagar en periodo de gracia de 48 horas",
+        "cliente_nombre": "María",
+        "cliente_apellido": "García",
+        "cliente_codigo": "CLI-008",
+        "estado_actividad": "bloqueado",
+        "rematado_por_correo": "admin@cherry.com",
+        "nombre_orden": "Live Enero 2026"
+      }
+    ],
+    "total": 2
+  }
+}
+```
+
 #### `POST /api/cierre-ordenes/:id/rematar`
 Ejecuta el remate manual de clientes morosos.
 
