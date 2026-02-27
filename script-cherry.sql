@@ -183,28 +183,27 @@ CREATE TABLE cliente_orden (
 );
 
 -- =====================================
--- TABLA PRODUCTOS REMATADOS
+-- TABLA REMATES DE CLIENTES
 -- =====================================
-CREATE TABLE productos_rematados (
+-- NOTA: Ahora se remata al CLIENTE completo (ya no productos individuales)
+CREATE TABLE clientes_rematados (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  id_producto INT NOT NULL,
   id_cliente INT NOT NULL,
   id_orden INT NOT NULL,
-  valor_producto DECIMAL(10,2) NOT NULL,
+  valor_adeudado DECIMAL(10,2) NOT NULL COMMENT 'Valor total que debía el cliente',
   abonos_perdidos DECIMAL(10,2) NOT NULL COMMENT 'Monto de abonos que perdió el cliente',
   motivo ENUM('incumplimiento_pago','otros') DEFAULT 'incumplimiento_pago',
   fecha_remate DATETIME NOT NULL,
   observaciones TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   created_by INT NOT NULL,
-  CONSTRAINT fk_remate_producto
-    FOREIGN KEY (id_producto) REFERENCES productos(id),
   CONSTRAINT fk_remate_cliente
     FOREIGN KEY (id_cliente) REFERENCES clientes(id),
   CONSTRAINT fk_remate_orden
     FOREIGN KEY (id_orden) REFERENCES ordenes(id),
   CONSTRAINT fk_remate_created_by
-    FOREIGN KEY (created_by) REFERENCES usuarios(id)
+    FOREIGN KEY (created_by) REFERENCES usuarios(id),
+  UNIQUE KEY unique_cliente_orden_remate (id_cliente, id_orden)
 );
 
 -- =====================================
@@ -272,8 +271,11 @@ ON cliente_orden (id_cliente);
 CREATE INDEX idx_ordenes_estado
 ON ordenes (estado_orden, fecha_fin);
 
-CREATE INDEX idx_productos_rematados_cliente
-ON productos_rematados (id_cliente);
+CREATE INDEX idx_clientes_rematados_cliente
+ON clientes_rematados (id_cliente);
+
+CREATE INDEX idx_clientes_rematados_orden
+ON clientes_rematados (id_orden);
 
 CREATE INDEX idx_historial_incump_cliente
 ON historial_incumplimientos (id_cliente, afecta_credito);

@@ -21,7 +21,7 @@ El sistema de cierre de órdenes implementa un flujo completo para gestionar el 
 
 - ✅ Cierre automático y manual de órdenes
 - ✅ Periodo de gracia de 48 horas para pago
-- ✅ Remate automático de productos morosos
+- ✅ Remate automático de clientes morosos
 - ✅ Historial crediticio de clientes
 - ✅ Reinicio de saldos en nuevas órdenes
 - ✅ Restricciones de órdenes cerradas
@@ -75,11 +75,13 @@ Al cerrar:
 ### 5️⃣ Remate Automático
 Cuando pasan las 48 horas sin pagar:
 ```
-1. Se registra cada producto en productos_rematados
+1. Se registra el CLIENTE COMPLETO en clientes_rematados (ya no se rematan productos individuales)
 2. El cliente PIERDE todos sus abonos
 3. Se crea incumplimiento en historial_incumplimientos
 4. El cliente es BLOQUEADO (estado_actividad = 'bloqueado')
 5. Se actualiza su score crediticio
+
+NOTA: El sistema ya NO registra productos individuales, solo el valor_total que el cliente debía.
 ```
 
 ### 6️⃣ Nueva Orden
@@ -147,17 +149,18 @@ Registra la participación de cada cliente en cada orden.
 | fecha_limite_pago | DATETIME | Límite de 48h |
 | abonos_post_cierre | DECIMAL | Pagos después del cierre |
 
-#### `productos_rematados`
-Registro de productos que fueron rematados.
+#### `clientes_rematados`
+Registro de clientes que fueron rematados por incumplimiento.
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
-| id_producto | INT | Producto rematado |
 | id_cliente | INT | Cliente moroso |
 | id_orden | INT | Orden donde ocurrió |
-| valor_producto | DECIMAL | Valor del producto |
+| valor_adeudado | DECIMAL | Valor total que debía el cliente |
 | abonos_perdidos | DECIMAL | Abonos que perdió el cliente |
+| motivo | ENUM | incumplimiento_pago, otros |
 | fecha_remate | DATETIME | Cuándo se remató |
+| observaciones | TEXT | Notas adicionales |
 
 #### `historial_incumplimientos`
 Historial crediticio de cada cliente.
@@ -293,7 +296,7 @@ Obtiene el resumen completo del cierre de una orden.
   "data": {
     "cierre": { ... },
     "clientes": [ ... ],
-    "productos_rematados": [ ... ],
+    "clientes_rematados": [ ... ],
     "incumplimientos": [ ... ]
   }
 }
@@ -333,14 +336,13 @@ POST /api/cierre-ordenes/7/rematar?forzar=true
 ```json
 {
   "success": true,
-  "message": "Se remataron productos de 3 cliente(s) moroso(s). La orden ha sido cerrada completamente.",
+  "message": "Se remataron 3 cliente(s) moroso(s). La orden ha sido cerrada completamente.",
   "data": [
     {
       "cliente_id": 5,
       "nombre": "Juan Pérez",
       "codigo": "CLI-001",
-      "productos_rematados": 2,
-      "deuda_pendiente": 350.00,
+      "valor_adeudado": 350.00,
       "abonos_perdidos": 150.00
     }
   ],
@@ -932,9 +934,9 @@ Esto te dirá si todos pagaron o muestra quiénes siguen pecomienza la siguiente
 - Orden A: "Live Anterior" (en_periodo_gracia - tiene clientes con deuda)
 - Intentas crear Orden B: ❌ Bloqueado hasta que se resuelva la Orden A
 
-### ¿Qué pasa con los productos cuando se remata a un cliente?
+### ¿Qué pasa cuando se remata a un cliente?
 
-**R:** Los productos se registran en `productos_rematados` como historial. El cliente pierde TODOS sus abonos, no solo de esos productos específicos.
+**R:** El CLIENTE COMPLETO se registra en `clientes_rematados` con el valor total que debía (valor_adeudado) y los abonos que pierde (abonos_perdidos). El sistema ya NO maneja productos individuales - solo se ingresa un valor_total manual por cada cliente en cada orden.
 
 ### ¿Qué pasa si un cliente abonó de más en una orden?
 

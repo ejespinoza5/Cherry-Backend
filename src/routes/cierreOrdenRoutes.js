@@ -51,7 +51,7 @@ router.get(
 
 /**
  * @route   POST /api/cierre-ordenes/:id/rematar
- * @desc    Rematar productos de clientes morosos manualmente
+ * @desc    Rematar clientes morosos manualmente
  * @access  Private (Admin, Superadmin)
  */
 router.post(
@@ -108,27 +108,27 @@ router.post(
 );
 
 /**
- * @route   GET /api/cierre-ordenes/productos-rematados
- * @desc    Obtener todos los productos rematados (con filtros opcionales)
+ * @route   GET /api/cierre-ordenes/clientes-rematados
+ * @desc    Obtener todos los clientes rematados con paginación
  * @access  Private
- * @query   id_orden, id_cliente, fecha_desde, fecha_hasta, limit
+ * @query   page (opcional, default: 1), limit (opcional, default: 20)
  */
 router.get(
-    '/productos-rematados',
+    '/clientes-rematados',
     verifyToken,
-    CierreOrdenController.obtenerProductosRematados
+    CierreOrdenController.obtenerClientesRematados
 );
 
 /**
- * @route   GET /api/cierre-ordenes/productos-en-riesgo
- * @desc    Obtener productos en riesgo de remate (durante periodo de gracia)
+ * @route   GET /api/cierre-ordenes/clientes-en-riesgo
+ * @desc    Obtener clientes en riesgo de remate (durante periodo de gracia)
  * @access  Private
  * @query   id_orden (requerido)
  */
 router.get(
-    '/productos-en-riesgo',
+    '/clientes-en-riesgo',
     verifyToken,
-    CierreOrdenController.obtenerProductosEnRiesgo
+    CierreOrdenController.obtenerClientesEnRiesgo
 );
 
 module.exports = router;

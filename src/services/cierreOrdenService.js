@@ -1,6 +1,6 @@
 const Orden = require('../models/Orden');
 const ClienteOrden = require('../models/ClienteOrden');
-const ProductoRematado = require('../models/ProductoRematado');
+const ClienteRematado = require('../models/ClienteRematado');
 const HistorialIncumplimiento = require('../models/HistorialIncumplimiento');
 const Producto = require('../models/Producto');
 const Cliente = require('../models/Cliente');
@@ -213,7 +213,7 @@ class CierreOrdenService {
     }
 
     /**
-     * Rematar productos de clientes morosos
+     * Rematar clientes morosos (sin productos, usando valor_total manual)
      * @param {boolean} forzar - Si true, remata aunque no hayan pasado las 48h (remate manual)
      */
     static async rematarClientesMorosos(id_orden, usuario_id, forzar = false) {
@@ -230,54 +230,33 @@ class CierreOrdenService {
             const resultados = [];
 
             for (const clienteOrden of clientesMorosos) {
-                const deuda_pendiente = clienteOrden.deuda_pendiente;
-                const abonos_perdidos = clienteOrden.total_abonos;
-
-                // Obtener productos del cliente en esta orden
-                const [productos] = await connection.query(
-                    `SELECT * FROM productos 
-                     WHERE id_cliente = ? AND id_orden = ? AND estado = 'activo'`,
-                    [clienteOrden.id_cliente, id_orden]
-                );
-
-                // Rematar cada producto
-                for (const producto of productos) {
-                    // Verificar si este producto ya fue rematado antes (evitar duplicados)
-                    const [yaRematado] = await connection.query(
-                        `SELECT id FROM productos_rematados 
-                         WHERE id_producto = ? AND id_orden = ? AND id_cliente = ?`,
-                        [producto.id, id_orden, clienteOrden.id_cliente]
-                    );
-
-                    if (yaRematado.length > 0) {
-                        console.log(`Producto ${producto.id} ya fue rematado anteriormente, saltando...`);
-                        continue; // Saltar si ya fue rematado
-                    }
-
-                    // Convertir todo a números para evitar concatenación
-                    const valorEtiqueta = parseFloat(producto.valor_etiqueta);
-                    const cantidad = parseInt(producto.cantidad_articulos);
-                    const comision = parseFloat(producto.comision);
-                    
-                    const subtotal = valorEtiqueta * cantidad;
-                    const valor_producto = subtotal + comision;
-
-                    const observacion = forzar 
-                        ? `Remate manual por administrador antes de vencer el periodo de gracia (${clienteOrden.estado_plazo})`
-                        : `Remate automático por no pagar en periodo de gracia de 48 horas`;
-                    
-                    await ProductoRematado.create({
-                        id_producto: producto.id,
-                        id_cliente: clienteOrden.id_cliente,
-                        id_orden: id_orden,
-                        valor_producto: valor_producto,
-                        abonos_perdidos: abonos_perdidos / productos.length, // Distribuir abonos perdidos
-                        motivo: 'incumplimiento_pago',
-                        fecha_remate: new Date(),
-                        observaciones: observacion,
-                        created_by: usuario_id
-                    });
+                const ClienteRematado = require('../models/ClienteRematado');
+                
+                // Verificar si este cliente ya fue rematado antes (evitar duplicados)
+                const yaRematado = await ClienteRematado.existeRemate(clienteOrden.id_cliente, id_orden);
+                
+                if (yaRematado) {
+                    continue;
                 }
+
+                const deuda_pendiente = parseFloat(clienteOrden.deuda_pendiente || 0);
+                const abonos_perdidos = parseFloat(clienteOrden.total_abonos || 0);
+
+                const observacion = forzar 
+                    ? `Remate manual por administrador antes de vencer el periodo de gracia (${clienteOrden.estado_plazo})`
+                    : `Remate automático por no pagar en periodo de gracia de 48 horas`;
+                
+                // Rematar al cliente completo (no productos individuales)
+                await ClienteRematado.create({
+                    id_cliente: clienteOrden.id_cliente,
+                    id_orden: id_orden,
+                    valor_adeudado: deuda_pendiente,
+                    abonos_perdidos: abonos_perdidos,
+                    motivo: 'incumplimiento_pago',
+                    fecha_remate: new Date(),
+                    observaciones: observacion,
+                    created_by: usuario_id
+                });
 
                 // Registrar incumplimiento (solo si no existe)
                 const [incumpAnterior] = await connection.query(
@@ -307,15 +286,14 @@ class CierreOrdenService {
                 await ClienteOrden.marcarComoRematado(
                     clienteOrden.id_cliente,
                     id_orden,
-                    `Productos rematados por mora. Abonos perdidos: $${abonos_perdidos}`,
+                    `Cliente rematado por mora. Abonos perdidos: $${abonos_perdidos}`,
                     connection
                 );
 
-                // Actualizar estado del cliente a bloqueado y poner saldo en 0
+                // Actualizar estado del cliente a bloqueado
                 await connection.query(
                     `UPDATE clientes 
-                     SET estado_actividad = 'bloqueado',
-                         saldo = 0.00
+                     SET estado_actividad = 'bloqueado'
                      WHERE id = ?`,
                     [clienteOrden.id_cliente]
                 );
@@ -333,9 +311,8 @@ class CierreOrdenService {
                     cliente_id: clienteOrden.id_cliente,
                     nombre: `${clienteOrden.nombre} ${clienteOrden.apellido}`,
                     codigo: clienteOrden.codigo,
-                    productos_rematados: productos.length,
-                    deuda_pendiente,
-                    abonos_perdidos
+                    valor_adeudado: deuda_pendiente.toFixed(2),
+                    abonos_perdidos: abonos_perdidos.toFixed(2)
                 });
             }
 
@@ -355,15 +332,13 @@ class CierreOrdenService {
                      WHERE id = ?`,
                     [id_orden]
                 );
-                
-                console.log(`✅ Orden ${id_orden} cerrada completamente después del remate`);
             }
 
             await connection.commit();
 
             return {
                 success: true,
-                mensaje: `Se remataron productos de ${resultados.length} cliente(s) moroso(s)`,
+                mensaje: `Se remataron ${resultados.length} cliente(s) moroso(s)`,
                 clientes_rematados: resultados,
                 orden_cerrada: pendientes[0].total === 0
             };
@@ -456,13 +431,13 @@ class CierreOrdenService {
             
             // 1. Obtener IDs de clientes que fueron rematados en esta orden
             const [clientesRematados] = await connection.query(
-                `SELECT DISTINCT id_cliente FROM productos_rematados WHERE id_orden = ?`,
+                `SELECT DISTINCT id_cliente FROM clientes_rematados WHERE id_orden = ?`,
                 [id_orden]
             );
 
-            // 2. Eliminar productos rematados de esta orden
+            // 2. Eliminar clientes rematados de esta orden
             await connection.query(
-                `DELETE FROM productos_rematados WHERE id_orden = ?`,
+                `DELETE FROM clientes_rematados WHERE id_orden = ?`,
                 [id_orden]
             );
 
@@ -508,7 +483,7 @@ class CierreOrdenService {
                 success: true,
                 mensaje: 'Orden reabierta exitosamente. Se eliminaron todos los registros del cierre anterior.',
                 registros_eliminados: {
-                    productos_rematados: true,
+                    clientes_rematados: true,
                     cliente_orden: true,
                     historial_incumplimientos: true,
                     cierre_orden: true,
@@ -539,13 +514,13 @@ class CierreOrdenService {
 
             const cierre = cierreRows[0];
             const clientesOrden = await ClienteOrden.findByOrden(id_orden);
-            const productosRematados = await ProductoRematado.findByOrden(id_orden);
+            const clientesRematados = await ClienteRematado.findByOrden(id_orden);
             const incumplimientos = await HistorialIncumplimiento.findByOrden(id_orden);
 
             return {
                 cierre,
                 clientes: clientesOrden,
-                productos_rematados: productosRematados,
+                clientes_rematados: clientesRematados,
                 incumplimientos
             };
         } catch (error) {
@@ -618,16 +593,16 @@ class CierreOrdenService {
     }
 
     /**
-     * Obtener todos los productos rematados con filtros
+     * Obtener todos los clientes rematados con paginación
      */
-    static async obtenerProductosRematados(filters = {}) {
+    static async obtenerClientesRematados(page = 1, limit = 20) {
         try {
-            const productos = await ProductoRematado.findAll(filters);
+            const resultado = await ClienteRematado.findAll(page, limit);
             
             return {
                 success: true,
-                total: productos.length,
-                data: productos
+                data: resultado.data,
+                pagination: resultado.pagination
             };
         } catch (error) {
             throw error;
@@ -635,9 +610,9 @@ class CierreOrdenService {
     }
 
     /**
-     * Obtener productos en riesgo de remate (durante periodo de gracia)
+     * Obtener clientes en riesgo de remate (durante periodo de gracia)
      */
-    static async obtenerProductosEnRiesgo(id_orden) {
+    static async obtenerClientesEnRiesgo(id_orden) {
         try {
             const orden = await Orden.findById(id_orden);
             
@@ -650,67 +625,52 @@ class CierreOrdenService {
                     success: false,
                     message: `La orden "${orden.nombre_orden}" no está en periodo de gracia. Estado actual: ${orden.estado_orden}`,
                     total_clientes: 0,
-                    total_productos: 0,
                     data: []
                 };
             }
 
-            const productos = await Producto.obtenerProductosEnRiesgoRemate(id_orden);
+            // Obtener clientes con deuda en periodo de gracia
+            const [clientesEnRiesgo] = await pool.query(
+                `SELECT 
+                    co.id_cliente,
+                    co.id_orden,
+                    c.nombre,
+                    c.apellido,
+                    c.codigo,
+                    c.estado_actividad,
+                    co.valor_total,
+                    co.total_abonos,
+                    (co.valor_total - co.total_abonos) as deuda_pendiente,
+                    co.fecha_limite_pago,
+                    co.estado_pago,
+                    o.nombre_orden
+                FROM cliente_orden co
+                INNER JOIN clientes c ON co.id_cliente = c.id
+                INNER JOIN ordenes o ON co.id_orden = o.id
+                WHERE co.id_orden = ? 
+                    AND co.estado_pago = 'en_gracia'
+                    AND (co.valor_total - co.total_abonos) > 0
+                ORDER BY co.fecha_limite_pago ASC`,
+                [id_orden]
+            );
 
-            // Agrupar productos por cliente
-            const clientesConProductos = {};
-            let totalProductos = 0;
-
-            productos.forEach(producto => {
-                const clienteKey = producto.id_cliente;
-
-                if (!clientesConProductos[clienteKey]) {
-                    clientesConProductos[clienteKey] = {
-                        id_cliente: producto.id_cliente,
-                        nombre: producto.nombre_completo,
-                        codigo: producto.codigo,
-                        saldo_actual: (parseFloat(producto.total_compras) - parseFloat(producto.total_abonos)) || 0,
-                        deuda_pendiente: parseFloat(producto.deuda_pendiente) || 0,
-                        abonos_perdidos: parseFloat(producto.abonos_perdidos) || 0,
-                        fecha_limite_pago: producto.fecha_limite_pago,
-                        estado_plazo: 'vigente',
-                        nombre_orden: producto.nombre_orden,
-                        id_orden: parseInt(id_orden),
-                        productos: []
-                    };
-                }
-
-                const valorProducto = parseFloat(producto.valor_producto) || 0;
-                
-                clientesConProductos[clienteKey].productos.push({
-                    id: producto.id_producto,
-                    detalles: producto.detalles,
-                    cantidad_articulos: producto.cantidad_articulos,
-                    valor_etiqueta: parseFloat(producto.valor_etiqueta) || 0,
-                    comision: parseFloat(producto.comision) || 0,
-                    valor_total: valorProducto,
-                    imagen_producto: producto.imagen_producto
-                });
-
-                totalProductos++;
-            });
-
-            // Calcular totales por cliente
-            const clientesArray = Object.values(clientesConProductos).map(cliente => {
-                const valorTotalProductos = cliente.productos.reduce((sum, p) => sum + p.valor_total, 0);
-                
-                return {
-                    ...cliente,
-                    total_productos: cliente.productos.length,
-                    valor_total_productos: parseFloat(valorTotalProductos.toFixed(2))
-                };
-            });
+            const clientesFormateados = clientesEnRiesgo.map(cliente => ({
+                id_cliente: cliente.id_cliente,
+                nombre_completo: `${cliente.nombre} ${cliente.apellido || ''}`.trim(),
+                codigo: cliente.codigo,
+                estado_actividad: cliente.estado_actividad,
+                valor_total: parseFloat(cliente.valor_total || 0).toFixed(2),
+                total_abonos: parseFloat(cliente.total_abonos || 0).toFixed(2),
+                deuda_pendiente: parseFloat(cliente.deuda_pendiente || 0).toFixed(2),
+                fecha_limite_pago: cliente.fecha_limite_pago,
+                estado_pago: cliente.estado_pago,
+                nombre_orden: cliente.nombre_orden
+            }));
 
             return {
                 success: true,
-                total_clientes: clientesArray.length,
-                total_productos: totalProductos,
-                data: clientesArray
+                total_clientes: clientesFormateados.length,
+                data: clientesFormateados
             };
         } catch (error) {
             throw error;

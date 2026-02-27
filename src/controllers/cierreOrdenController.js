@@ -163,7 +163,7 @@ class CierreOrdenController {
     }
 
     /**
-     * Rematar productos de clientes morosos (manual)
+     * Rematar clientes morosos (manual)
      * Query params: ?forzar=true (permite rematar antes de las 48h)
      */
     static async rematarClientesMorosos(req, res) {
@@ -188,7 +188,7 @@ class CierreOrdenController {
             console.error('Error al rematar clientes morosos:', error);
             res.status(500).json({
                 success: false,
-                message: 'Error al rematar productos de clientes morosos',
+                message: 'Error al rematar clientes morosos',
                 error: error.message
             });
         }
@@ -262,35 +262,30 @@ class CierreOrdenController {
     }
 
     /**
-     * Obtener todos los productos rematados
+     * Obtener todos los clientes rematados con paginación
      */
-    static async obtenerProductosRematados(req, res) {
+    static async obtenerClientesRematados(req, res) {
         try {
-            const filters = {
-                id_orden: req.query.id_orden,
-                id_cliente: req.query.id_cliente,
-                fecha_desde: req.query.fecha_desde,
-                fecha_hasta: req.query.fecha_hasta,
-                limit: req.query.limit
-            };
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 20;
 
-            const resultado = await CierreOrdenService.obtenerProductosRematados(filters);
+            const resultado = await CierreOrdenService.obtenerClientesRematados(page, limit);
 
             res.status(200).json(resultado);
         } catch (error) {
-            console.error('Error al obtener productos rematados:', error);
+            console.error('Error al obtener clientes rematados:', error);
             res.status(500).json({
                 success: false,
-                message: 'Error al obtener productos rematados',
+                message: 'Error al obtener clientes rematados',
                 error: error.message
             });
         }
     }
 
     /**
-     * Obtener productos en riesgo de remate (durante periodo de gracia)
+     * Obtener clientes en riesgo de remate (durante periodo de gracia)
      */
-    static async obtenerProductosEnRiesgo(req, res) {
+    static async obtenerClientesEnRiesgo(req, res) {
         try {
             const { id_orden } = req.query;
 
@@ -301,14 +296,14 @@ class CierreOrdenController {
                 });
             }
 
-            const resultado = await CierreOrdenService.obtenerProductosEnRiesgo(id_orden);
+            const resultado = await CierreOrdenService.obtenerClientesEnRiesgo(id_orden);
 
             res.status(200).json(resultado);
         } catch (error) {
-            console.error('Error al obtener productos en riesgo:', error);
+            console.error('Error al obtener clientes en riesgo:', error);
             
             let statusCode = 500;
-            let message = 'Error al obtener productos en riesgo';
+            let message = 'Error al obtener clientes en riesgo';
 
             if (error.message === 'Orden no encontrada') {
                 statusCode = 404;
