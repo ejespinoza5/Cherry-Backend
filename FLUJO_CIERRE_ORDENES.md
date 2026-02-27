@@ -78,7 +78,9 @@ Cuando pasan las 48 horas sin pagar:
 1. Se registra el CLIENTE COMPLETO en clientes_rematados (ya no se rematan productos individuales)
 2. El cliente PIERDE todos sus abonos
 3. Se crea incumplimiento en historial_incumplimientos
-4. El cliente es BLOQUEADO (estado_actividad = 'bloqueado')
+4. Se actualiza el estado del cliente según el monto adeudado:
+   - Si debe >= $300 → estado_actividad = 'bloqueado'
+   - Si debe < $300 → estado_actividad = 'deudor'
 5. Se actualiza su score crediticio
 
 NOTA: El sistema ya NO registra productos individuales, solo el valor_total que el cliente debía.
@@ -401,12 +403,27 @@ POST /api/cierre-ordenes/7/rematar?forzar=true
       "nombre": "Juan Pérez",
       "codigo": "CLI-001",
       "valor_adeudado": 350.00,
-      "abonos_perdidos": 150.00
+      "abonos_perdidos": 150.00,
+      "estado_final": "bloqueado"
+    },
+    {
+      "cliente_id": 8,
+      "nombre": "María García",
+      "codigo": "CLI-008",
+      "valor_adeudado": 150.00,
+      "abonos_perdidos": 50.00,
+      "estado_final": "deudor"
     }
   ],
   "orden_cerrada": true
 }
 ```
+
+**⚠️ Importante - Estados después del remate:**
+- Cliente debe **>= $300** → Estado final: **"bloqueado"**
+- Cliente debe **< $300** → Estado final: **"deudor"**
+
+Solo los clientes que deben $300 o más son bloqueados automáticamente. Los demás quedan como deudores.
 
 **💡 Importante:** Si se rematan TODOS los clientes morosos de la orden, el sistema automáticamente cambia `estado_orden` de `'en_gracia'` a `'cerrada'`, permitiéndote crear inmediatamente una nueva orden.
 

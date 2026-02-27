@@ -290,12 +290,15 @@ class CierreOrdenService {
                     connection
                 );
 
-                // Actualizar estado del cliente a bloqueado
+                // Actualizar estado del cliente según el monto adeudado
+                // Solo bloquear si debe $300 o más
+                const nuevoEstado = deuda_pendiente >= 300 ? 'bloqueado' : 'deudor';
+                
                 await connection.query(
                     `UPDATE clientes 
-                     SET estado_actividad = 'bloqueado'
+                     SET estado_actividad = ?
                      WHERE id = ?`,
-                    [clienteOrden.id_cliente]
+                    [nuevoEstado, clienteOrden.id_cliente]
                 );
 
                 // Actualizar estadísticas en cierre_orden
@@ -312,7 +315,8 @@ class CierreOrdenService {
                     nombre: `${clienteOrden.nombre} ${clienteOrden.apellido}`,
                     codigo: clienteOrden.codigo,
                     valor_adeudado: deuda_pendiente.toFixed(2),
-                    abonos_perdidos: abonos_perdidos.toFixed(2)
+                    abonos_perdidos: abonos_perdidos.toFixed(2),
+                    estado_final: nuevoEstado
                 });
             }
 
@@ -331,6 +335,13 @@ class CierreOrdenService {
                      SET estado_orden = 'cerrada'
                      WHERE id = ?`,
                     [id_orden]
+                );
+
+                // Cambiar clientes deudores a reestablecidos (nueva oportunidad después de rematar la orden)
+                await connection.query(
+                    `UPDATE clientes 
+                     SET estado_actividad = 'reestablecido'
+                     WHERE estado = 'activo' AND estado_actividad = 'deudor'`
                 );
             }
 
@@ -569,11 +580,11 @@ class CierreOrdenService {
                 created_by: usuario_id
             });
 
-            // Cambiar clientes deudores a reestablecidos (nueva oportunidad con la nueva orden)
+            // Cambiar clientes deudores a activos (nueva oportunidad con la nueva orden)
             // Los clientes bloqueados permanecen bloqueados
             await connection.query(
                 `UPDATE clientes 
-                 SET estado_actividad = 'reestablecido'
+                 SET estado_actividad = 'activo'
                  WHERE estado = 'activo' AND estado_actividad = 'deudor'`
             );
 
