@@ -200,6 +200,36 @@ class Usuario {
             throw error;
         }
     }
+
+    /**
+     * Actualizar solo el correo del usuario
+     */
+    static async updateEmail(id, nuevoCorreo) {
+        try {
+            const [result] = await pool.query(
+                'UPDATE usuarios SET correo = ? WHERE id = ?',
+                [nuevoCorreo, id]
+            );
+            return result.affectedRows > 0;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Obtener contraseña hasheada del usuario (para verificación)
+     */
+    static async getPassword(id) {
+        try {
+            const [rows] = await pool.query(
+                'SELECT contraseña FROM usuarios WHERE id = ?',
+                [id]
+            );
+            return rows[0]?.contraseña;
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = Usuario;

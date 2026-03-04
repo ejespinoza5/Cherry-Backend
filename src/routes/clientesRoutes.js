@@ -60,4 +60,53 @@ router.get('/historial-libras', ClientesController.getHistorialLibras);
  */
 router.get('/saldo-ultima-orden', ClientesController.getSaldoUltimaOrden);
 
+/**
+ * @route   GET /api/cliente/historial-compras
+ * @desc    Obtener historial de compras (productos) del cliente en todas las órdenes
+ * @access  Cliente
+ */
+router.get('/historial-compras', ClientesController.getHistorialCompras);
+
+/**
+ * @route   GET /api/cliente/historial-abonos
+ * @desc    Obtener historial de abonos del cliente (aceptados y rechazados)
+ * @access  Cliente
+ */
+router.get('/historial-abonos', ClientesController.getHistorialAbonos);
+
+/**
+ * @route   GET /api/cliente/saldo
+ * @desc    Obtener saldo total del cliente (deuda o crédito a favor)
+ * @access  Cliente
+ */
+router.get('/saldo', ClientesController.getSaldo);
+
+/**
+ * @route   GET /api/cliente/datos-personales
+ * @desc    Obtener datos personales del cliente
+ * @access  Cliente
+ */
+router.get('/datos-personales', ClientesController.getDatosPersonales);
+
+/**
+ * @route   PUT /api/cliente/datos-personales
+ * @desc    Actualizar datos personales del cliente (excepto código de casillero)
+ * @access  Cliente
+ */
+router.put('/datos-personales', ClientesController.updateDatosPersonales);
+
+/**
+ * @route   PUT /api/cliente/correo
+ * @desc    Actualizar correo electrónico del cliente
+ * @access  Cliente
+ */
+router.put('/correo', ClientesController.updateCorreo);
+
+/**
+ * @route   PUT /api/cliente/contrasena
+ * @desc    Actualizar contraseña del cliente
+ * @access  Cliente
+ */
+router.put('/contrasena', ClientesController.updateContrasena);
+
 module.exports = router;

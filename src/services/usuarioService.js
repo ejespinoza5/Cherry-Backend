@@ -67,8 +67,9 @@ class UsuarioService {
         }
 
         // Validar contraseña
-        if (!isValidPassword(contraseña)) {
-            throw new Error('INVALID_PASSWORD');
+        const passwordValidation = isValidPassword(contraseña);
+        if (!passwordValidation.valid) {
+            throw new Error(passwordValidation.message);
         }
 
         // Validar que el rol sea válido
@@ -155,8 +156,11 @@ class UsuarioService {
         }
 
         // Validar contraseña si se proporciona
-        if (contraseña && !isValidPassword(contraseña)) {
-            throw new Error('INVALID_PASSWORD');
+        if (contraseña) {
+            const passwordValidation = isValidPassword(contraseña);
+            if (!passwordValidation.valid) {
+                throw new Error(passwordValidation.message);
+            }
         }
 
         // Validar estado si se proporciona

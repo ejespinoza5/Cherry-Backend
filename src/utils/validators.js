@@ -7,10 +7,58 @@ const isValidEmail = (email) => {
 };
 
 /**
- * Validar contraseña (mínimo 6 caracteres)
+ * Validar contraseña con requisitos de seguridad:
+ * - Mínimo 6 caracteres
+ * - Al menos 1 letra mayúscula
+ * - Al menos 1 letra minúscula
+ * - Al menos 1 número
+ * - Al menos 1 símbolo especial
  */
 const isValidPassword = (password) => {
-    return password && password.length >= 6;
+    if (!password || password.length < 6) {
+        return {
+            valid: false,
+            message: 'La contraseña debe tener al menos 6 caracteres'
+        };
+    }
+
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>_\-+=\[\]\\/;'~`]/.test(password);
+
+    if (!hasUpperCase) {
+        return {
+            valid: false,
+            message: 'La contraseña debe contener al menos una letra mayúscula'
+        };
+    }
+
+    if (!hasLowerCase) {
+        return {
+            valid: false,
+            message: 'La contraseña debe contener al menos una letra minúscula'
+        };
+    }
+
+    if (!hasNumber) {
+        return {
+            valid: false,
+            message: 'La contraseña debe contener al menos un número'
+        };
+    }
+
+    if (!hasSpecialChar) {
+        return {
+            valid: false,
+            message: 'La contraseña debe contener al menos un símbolo especial (!@#$%^&*...)'
+        };
+    }
+
+    return {
+        valid: true,
+        message: 'Contraseña válida'
+    };
 };
 
 /**

@@ -555,6 +555,137 @@ class Cliente {
             throw error;
         }
     }
+
+    /**
+     * Obtener historial de compras del cliente en todas las órdenes
+     * Ahora obtiene los datos desde cliente_orden ya que no se registran productos individuales
+     */
+    static async getHistorialCompras(id_cliente) {
+        try {
+            const [compras] = await pool.query(
+                `SELECT 
+                    co.id_orden,
+                    o.nombre_orden,
+                    o.estado_orden,
+                    o.fecha_inicio,
+                    o.fecha_fin,
+                    co.total_compras,
+                    co.total_abonos,
+                    co.saldo_al_cierre,
+                    co.valor_total,
+                    co.libras_acumuladas,
+                    (co.valor_total - co.total_abonos) as saldo_pendiente,
+                    co.estado_pago,
+                    co.fecha_limite_pago,
+                    co.created_at,
+                    co.updated_at
+                FROM cliente_orden co
+                INNER JOIN ordenes o ON co.id_orden = o.id
+                WHERE co.id_cliente = ? AND co.valor_total > 0
+                ORDER BY co.created_at DESC`,
+                [id_cliente]
+            );
+
+            return compras.map(c => ({
+                orden: {
+                    id: c.id_orden,
+                    nombre: c.nombre_orden,
+                    estado: c.estado_orden,
+                    fecha_inicio: c.fecha_inicio,
+                    fecha_fin: c.fecha_fin
+                },
+                total_compras: parseFloat(c.total_compras || 0),
+                valor_total: parseFloat(c.valor_total || 0),
+                total_abonos: parseFloat(c.total_abonos || 0),
+                saldo_pendiente: parseFloat(c.saldo_pendiente || 0),
+                saldo_al_cierre: parseFloat(c.saldo_al_cierre || 0),
+                libras_acumuladas: parseFloat(c.libras_acumuladas || 0),
+                estado_pago: c.estado_pago,
+                fecha_limite_pago: c.fecha_limite_pago,
+                created_at: c.created_at,
+                updated_at: c.updated_at
+            }));
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Obtener saldo total del cliente (todas las órdenes)
+     */
+    static async getSaldoTotal(id_cliente) {
+        try {
+            const [result] = await pool.query(
+                `SELECT 
+                    COALESCE(SUM(co.valor_total), 0) as total_compras,
+                    COALESCE(SUM(co.total_abonos), 0) as total_abonos,
+                    COALESCE(SUM(co.valor_total - co.total_abonos), 0) as saldo_pendiente
+                FROM cliente_orden co
+                INNER JOIN ordenes o ON co.id_orden = o.id
+                WHERE co.id_cliente = ?`,
+                [id_cliente]
+            );
+
+            const saldoPendiente = parseFloat(result[0].saldo_pendiente || 0);
+
+            return {
+                total_compras: parseFloat(result[0].total_compras || 0),
+                total_abonos: parseFloat(result[0].total_abonos || 0),
+                saldo_pendiente: saldoPendiente,
+                estado: saldoPendiente > 0 ? 'debe' : saldoPendiente < 0 ? 'a_favor' : 'al_dia'
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Obtener datos personales del cliente para perfil
+     */
+    static async getDatosPersonales(id_cliente) {
+        try {
+            const [rows] = await pool.query(
+                `SELECT 
+                    c.id,
+                    c.nombre,
+                    c.apellido,
+                    c.codigo,
+                    c.direccion,
+                    c.pais,
+                    c.estado_actividad,
+                    c.created_at,
+                    u.correo
+                FROM clientes c
+                INNER JOIN usuarios u ON c.id_usuario = u.id
+                WHERE c.id = ?`,
+                [id_cliente]
+            );
+
+            return rows[0];
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Actualizar datos personales del cliente (sin modificar código de casillero)
+     */
+    static async updateDatosPersonales(id_cliente, data) {
+        try {
+            const { nombre, apellido, direccion, pais } = data;
+            
+            const [result] = await pool.query(
+                `UPDATE clientes 
+                 SET nombre = ?, apellido = ?, direccion = ?, pais = ?
+                 WHERE id = ?`,
+                [nombre, apellido, direccion, pais, id_cliente]
+            );
+            
+            return result.affectedRows > 0;
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = Cliente;

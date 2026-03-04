@@ -44,7 +44,8 @@ node init-database.js
 
 #### Administrador (si se ejecutó init-database.js)
 - **Correo:** admin@cherry.com
-- **Contraseña:** admin123
+- **Contraseña:** Admin123!
+- ⚠️ Cambiar después del primer login
 
 ---
 
@@ -59,7 +60,7 @@ Iniciar sesión en el sistema.
 ```json
 {
   "correo": "admin@cherry.com",
-  "contraseña": "admin123"
+  "contraseña": "Admin123!"
 }
 ```
 
@@ -203,7 +204,7 @@ Crear nuevo usuario.
 ```json
 {
   "correo": "admin2@cherry.com",
-  "contraseña": "admin456",
+  "contraseña": "Admin456!",
   "id_rol": 1
 }
 ```
@@ -212,13 +213,35 @@ Crear nuevo usuario.
 ```json
 {
   "correo": "cliente@gmail.com",
-  "contraseña": "cliente123",
+  "contraseña": "Cliente123!",
   "id_rol": 2,
   "nombre": "Juan",
   "apellido": "Pérez",
   "direccion": "Calle 123, Ciudad",
   "codigo": "sol 12"
 }
+```
+
+**Requisitos de Contraseña:**
+Todas las contraseñas deben cumplir con los siguientes requisitos de seguridad:
+- ✅ Mínimo 6 caracteres
+- ✅ Al menos 1 letra mayúscula (A-Z)
+- ✅ Al menos 1 letra minúscula (a-z)
+- ✅ Al menos 1 número (0-9)
+- ✅ Al menos 1 símbolo especial (!@#$%^&*(),.?":{}|<>_-+=[];'/~`)
+
+**Ejemplos de contraseñas válidas:**
+- `Super@2026` ✅
+- `Admin123!` ✅
+- `Cliente456#` ✅
+- `Pass123$` ✅
+
+**Ejemplos de contraseñas NO válidas:**
+- `123456` ❌ (falta mayúscula, minúscula y símbolo)
+- `password` ❌ (falta mayúscula, número y símbolo)
+- `Password` ❌ (falta número y símbolo)
+- `Password123` ❌ (falta símbolo especial)
+- `Pass!` ❌ (menos de 6 caracteres)
 ```
 
 **Response (201):**
@@ -273,7 +296,7 @@ Actualizar usuario.
   "correo": "nuevoemail@cherry.com",
   "id_rol": 2,
   "estado": "activo",
-  "contraseña": "nuevacontraseña123"
+  "contraseña": "NuevaPass123!"
 }
 **Si es cliente**
 {
@@ -751,15 +774,18 @@ Eliminar abono (cambia estado a inactivo y ajusta el saldo del cliente).
 
 #### Administrador
 - **Correo:** admin@cherry.com
-- **Contraseña:** admin123
+- **Contraseña:** Admin123!
 - **Rol:** Administrador (id_rol = 1)
+- ⚠️ **IMPORTANTE:** Cambiar la contraseña después del primer login
 
 ---
 
 ## Notas Importantes
 
 1. **Tokens JWT**: Los tokens expiran en 24 horas (configurable)
-2. **Contraseñas**: Se hashean con bcrypt antes de guardarse
+2. **Contraseñas**: Se hashean con bcrypt antes de guardarse. Deben cumplir con los requisitos de seguridad:
+   - Mínimo 6 caracteres
+   - Al menos 1 mayúscula, 1 minúscula, 1 número y 1 símbolo especial
 3. **Clientes**: Al crear un usuario con rol Cliente (id_rol=2), automáticamente se crea un registro en la tabla `clientes` con código único
 4. **Seguridad**: 
    - Solo administradores y superAdministradores pueden gestionar usuarios
@@ -776,7 +802,7 @@ Eliminar abono (cambia estado a inactivo y ajusta el saldo del cliente).
 ```bash
 curl -X POST http://localhost:3000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"correo":"admin@cherry.com","contraseña":"admin123"}'
+  -d '{"correo":"admin@cherry.com","contraseña":"Admin123!"}'
 ```
 
 ### Crear Cliente

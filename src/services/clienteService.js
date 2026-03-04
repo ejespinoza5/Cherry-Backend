@@ -99,6 +99,181 @@ class ClienteService {
             throw error;
         }
     }
+
+    /**
+     * Obtener historial de compras del cliente
+     */
+    static async getHistorialCompras(id_usuario) {
+        try {
+            const cliente = await Cliente.findByUsuario(id_usuario);
+            
+            if (!cliente) {
+                throw new Error('Cliente no encontrado');
+            }
+
+            const historial = await Cliente.getHistorialCompras(cliente.id);
+            
+            return historial;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Obtener historial de abonos del cliente (tanto aceptados como rechazados)
+     */
+    static async getHistorialAbonos(id_usuario) {
+        try {
+            const cliente = await Cliente.findByUsuario(id_usuario);
+            
+            if (!cliente) {
+                throw new Error('Cliente no encontrado');
+            }
+
+            const Abono = require('../models/Abono');
+            const abonos = await Abono.findByClienteId(cliente.id);
+            
+            return abonos.map(abono => ({
+                id: abono.id,
+                orden: {
+                    id: abono.id_orden,
+                    nombre: abono.nombre_orden,
+                    estado: abono.estado_orden
+                },
+                cantidad: parseFloat(abono.cantidad),
+                comprobante: abono.comprobante_pago,
+                estado_verificacion: abono.estado_verificacion,
+                fecha_verificacion: abono.fecha_verificacion,
+                observaciones: abono.observaciones_verificacion,
+                verificado_por: abono.creado_por_correo,
+                fecha_creacion: abono.created_at
+            }));
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Obtener saldo total del cliente
+     */
+    static async getSaldo(id_usuario) {
+        try {
+            const cliente = await Cliente.findByUsuario(id_usuario);
+            
+            if (!cliente) {
+                throw new Error('Cliente no encontrado');
+            }
+
+            const saldo = await Cliente.getSaldoTotal(cliente.id);
+            return saldo;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Obtener datos personales del cliente
+     */
+    static async getDatosPersonales(id_usuario) {
+        try {
+            const cliente = await Cliente.findByUsuario(id_usuario);
+            
+            if (!cliente) {
+                throw new Error('Cliente no encontrado');
+            }
+
+            const datos = await Cliente.getDatosPersonales(cliente.id);
+            return datos;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Actualizar datos personales del cliente
+     */
+    static async updateDatosPersonales(id_usuario, data) {
+        try {
+            const cliente = await Cliente.findByUsuario(id_usuario);
+            
+            if (!cliente) {
+                throw new Error('Cliente no encontrado');
+            }
+
+            const actualizado = await Cliente.updateDatosPersonales(cliente.id, data);
+            
+            if (!actualizado) {
+                throw new Error('No se pudo actualizar los datos personales');
+            }
+
+            return true;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Actualizar correo del cliente
+     */
+    static async updateCorreo(id_usuario, nuevoCorreo) {
+        try {
+            const Usuario = require('../models/Usuario');
+            
+            // Verificar que el correo no esté en uso por otro usuario
+            const correoExiste = await Usuario.emailExists(nuevoCorreo, id_usuario);
+            if (correoExiste) {
+                throw new Error('El correo ya está registrado por otro usuario');
+            }
+
+            const actualizado = await Usuario.updateEmail(id_usuario, nuevoCorreo);
+            
+            if (!actualizado) {
+                throw new Error('No se pudo actualizar el correo');
+            }
+
+            return true;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Actualizar contraseña del cliente
+     */
+    static async updateContrasena(id_usuario, contrasenaActual, nuevaContrasena) {
+        try {
+            const Usuario = require('../models/Usuario');
+            const bcrypt = require('bcryptjs');
+            
+            // Obtener contraseña actual hasheada
+            const contrasenaHasheada = await Usuario.getPassword(id_usuario);
+            
+            if (!contrasenaHasheada) {
+                throw new Error('Usuario no encontrado');
+            }
+
+            // Verificar que la contraseña actual sea correcta
+            const contrasenaValida = await bcrypt.compare(contrasenaActual, contrasenaHasheada);
+            
+            if (!contrasenaValida) {
+                throw new Error('La contraseña actual es incorrecta');
+            }
+
+            // Hashear la nueva contraseña
+            const nuevaContrasenaHasheada = await bcrypt.hash(nuevaContrasena, 10);
+            
+            // Actualizar contraseña
+            const actualizado = await Usuario.updatePassword(id_usuario, nuevaContrasenaHasheada);
+            
+            if (!actualizado) {
+                throw new Error('No se pudo actualizar la contraseña');
+            }
+
+            return true;
+        } catch (error) {
+            throw error;
+        }
+    }
 }
 
 module.exports = ClienteService;
