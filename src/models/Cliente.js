@@ -578,6 +578,32 @@ class Cliente {
                 [id_cliente]
             );
 
+            // Obtener todo el historial de libras del cliente en una sola query
+            const [historialLibras] = await pool.query(
+                `SELECT 
+                    hal.id_orden,
+                    hal.libras_anterior,
+                    hal.libras_nueva,
+                    hal.fecha_actualizacion,
+                    hal.observaciones
+                FROM historial_actualizacion_libras hal
+                WHERE hal.id_cliente = ?
+                ORDER BY hal.fecha_actualizacion ASC`,
+                [id_cliente]
+            );
+
+            // Agrupar el historial de libras por id_orden
+            const librasPorOrden = {};
+            for (const h of historialLibras) {
+                if (!librasPorOrden[h.id_orden]) librasPorOrden[h.id_orden] = [];
+                librasPorOrden[h.id_orden].push({
+                    libras_anterior: parseFloat(h.libras_anterior || 0),
+                    libras_nueva: parseFloat(h.libras_nueva || 0),
+                    fecha_actualizacion: h.fecha_actualizacion,
+                    observaciones: h.observaciones || null
+                });
+            }
+
             return compras.map(c => ({
                 orden: {
                     id: c.id_orden,
@@ -592,6 +618,7 @@ class Cliente {
                 saldo_pendiente: parseFloat(c.saldo_pendiente || 0),
                 saldo_al_cierre: parseFloat(c.saldo_al_cierre || 0),
                 libras_acumuladas: parseFloat(c.libras_acumuladas || 0),
+                historial_libras: librasPorOrden[c.id_orden] || [],
                 estado_pago: c.estado_pago,
                 fecha_limite_pago: c.fecha_limite_pago,
                 link_excel: c.link_excel || null,
