@@ -140,6 +140,37 @@ class ClientesController {
     }
 
     /**
+     * Obtener saldo del cliente en una orden específica
+     * GET /api/cliente/ordenes/:id/saldo
+     */
+    static async getSaldoOrden(req, res) {
+        try {
+            const { id } = req.params;
+
+            if (!id || isNaN(id)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'El ID de la orden es inválido'
+                });
+            }
+
+            const saldo = await ClienteService.getSaldoOrden(req.user.id, id);
+
+            res.json({
+                success: true,
+                data: saldo
+            });
+        } catch (error) {
+            console.error('Error al obtener saldo de orden:', error);
+            const statusCode = error.message === 'No tienes registro en esta orden' ? 404 : 500;
+            res.status(statusCode).json({
+                success: false,
+                message: error.message || 'Error al obtener saldo de la orden'
+            });
+        }
+    }
+
+    /**
      * Obtener historial de compras del cliente
      * GET /api/cliente/historial-compras
      */

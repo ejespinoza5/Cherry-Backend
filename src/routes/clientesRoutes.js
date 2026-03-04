@@ -26,6 +26,13 @@ router.use(verifyToken, isCliente);
 router.get('/perfil', ClientesController.getPerfil);
 
 /**
+ * @route   GET /api/cliente/ordenes/:id/saldo
+ * @desc    Obtener saldo del cliente en una orden específica
+ * @access  Cliente
+ */
+router.get('/ordenes/:id/saldo', ClientesController.getSaldoOrden);
+
+/**
  * @route   GET /api/cliente/ordenes
  * @desc    Obtener todas las órdenes del cliente
  * @access  Cliente

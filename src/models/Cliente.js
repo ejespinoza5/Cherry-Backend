@@ -108,59 +108,49 @@ class Cliente {
     }
 
     /**
-     * Obtener órdenes con productos del cliente
+     * Obtener órdenes en las que el cliente ha participado (desde cliente_orden)
      */
     static async getOrdenesConProductos(id_cliente) {
         try {
             const [ordenes] = await pool.query(
-                `SELECT DISTINCT
+                `SELECT 
                     o.id,
                     o.nombre_orden,
+                    o.estado_orden,
                     o.fecha_inicio,
                     o.fecha_fin,
                     o.estado,
-                    o.created_at
-                FROM ordenes o
-                INNER JOIN productos p ON o.id = p.id_orden
-                WHERE p.id_cliente = ?
+                    o.created_at,
+                    co.valor_total,
+                    co.total_abonos,
+                    co.saldo_al_cierre,
+                    co.libras_acumuladas,
+                    (co.valor_total - co.total_abonos) as saldo_pendiente,
+                    co.estado_pago,
+                    co.fecha_limite_pago
+                FROM cliente_orden co
+                INNER JOIN ordenes o ON co.id_orden = o.id
+                WHERE co.id_cliente = ?
                 ORDER BY o.created_at DESC`,
                 [id_cliente]
             );
 
-            // Para cada orden, calcular sus totales (sin impuestos automáticos)
-            const ordenesConTotales = await Promise.all(ordenes.map(async (orden) => {
-                // Obtener productos de esta orden específica
-                const [productos] = await pool.query(
-                    `SELECT 
-                        COUNT(*) as total_productos,
-                        SUM(cantidad_articulos) as total_articulos,
-                        SUM(valor_etiqueta) as subtotal,
-                        SUM(comision) as total_comisiones
-                    FROM productos
-                    WHERE id_orden = ? AND id_cliente = ?`,
-                    [orden.id, id_cliente]
-                );
-
-                const subtotal = parseFloat(productos[0].subtotal || 0);
-                const comisiones = parseFloat(productos[0].total_comisiones || 0);
-                const total = subtotal + comisiones;
-
-                return {
-                    id: orden.id,
-                    nombre_orden: orden.nombre_orden,
-                    fecha_inicio: orden.fecha_inicio,
-                    fecha_fin: orden.fecha_fin,
-                    estado: orden.estado,
-                    total_productos: parseInt(productos[0].total_productos || 0),
-                    total_articulos: parseInt(productos[0].total_articulos || 0),
-                    subtotal: parseFloat(subtotal.toFixed(2)),
-                    comisiones: parseFloat(comisiones.toFixed(2)),
-                    total: parseFloat(total.toFixed(2)),
-                    created_at: orden.created_at
-                };
+            return ordenes.map(o => ({
+                id:               o.id,
+                nombre_orden:     o.nombre_orden,
+                estado_orden:     o.estado_orden,
+                fecha_inicio:     o.fecha_inicio,
+                fecha_fin:        o.fecha_fin,
+                estado:           o.estado,
+                valor_total:      parseFloat(o.valor_total      || 0),
+                total_abonos:     parseFloat(o.total_abonos     || 0),
+                saldo_pendiente:  parseFloat(o.saldo_pendiente  || 0),
+                saldo_al_cierre:  parseFloat(o.saldo_al_cierre  || 0),
+                libras_acumuladas: parseFloat(o.libras_acumuladas || 0),
+                estado_pago:      o.estado_pago,
+                fecha_limite_pago: o.fecha_limite_pago,
+                created_at:       o.created_at
             }));
-
-            return ordenesConTotales;
         } catch (error) {
             throw error;
         }
@@ -578,9 +568,11 @@ class Cliente {
                     co.estado_pago,
                     co.fecha_limite_pago,
                     co.created_at,
-                    co.updated_at
+                    co.updated_at,
+                    c.link_excel
                 FROM cliente_orden co
                 INNER JOIN ordenes o ON co.id_orden = o.id
+                INNER JOIN clientes c ON co.id_cliente = c.id
                 WHERE co.id_cliente = ? AND co.valor_total > 0
                 ORDER BY co.created_at DESC`,
                 [id_cliente]
@@ -602,6 +594,7 @@ class Cliente {
                 libras_acumuladas: parseFloat(c.libras_acumuladas || 0),
                 estado_pago: c.estado_pago,
                 fecha_limite_pago: c.fecha_limite_pago,
+                link_excel: c.link_excel || null,
                 created_at: c.created_at,
                 updated_at: c.updated_at
             }));

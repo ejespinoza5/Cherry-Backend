@@ -101,6 +101,49 @@ class ClienteService {
     }
 
     /**
+     * Obtener saldo del cliente en una orden específica
+     */
+    static async getSaldoOrden(id_usuario, id_orden) {
+        try {
+            const cliente = await Cliente.findByUsuario(id_usuario);
+
+            if (!cliente) {
+                throw new Error('Cliente no encontrado');
+            }
+
+            const ClienteOrden = require('../models/ClienteOrden');
+            const registro = await ClienteOrden.findByClienteAndOrden(cliente.id, id_orden);
+
+            if (!registro) {
+                throw new Error('No tienes registro en esta orden');
+            }
+
+            const valorTotal    = parseFloat(registro.valor_total   || 0);
+            const totalAbonos   = parseFloat(registro.total_abonos  || 0);
+            const saldoPendiente = parseFloat((valorTotal - totalAbonos).toFixed(2));
+
+            return {
+                orden: {
+                    id:           registro.id_orden,
+                    nombre:       registro.nombre_orden,
+                },
+                valor_total:      valorTotal,
+                total_abonos:     totalAbonos,
+                saldo_pendiente:  saldoPendiente,
+                saldo_al_cierre:  parseFloat(registro.saldo_al_cierre  || 0),
+                libras_acumuladas: parseFloat(registro.libras_acumuladas || 0),
+                estado_pago:      registro.estado_pago,
+                fecha_limite_pago: registro.fecha_limite_pago,
+                estado: saldoPendiente > 0 ? 'debe'
+                      : saldoPendiente < 0 ? 'a_favor'
+                      : 'al_dia'
+            };
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
      * Obtener historial de compras del cliente
      */
     static async getHistorialCompras(id_usuario) {
