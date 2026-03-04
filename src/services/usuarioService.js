@@ -59,7 +59,10 @@ class UsuarioService {
      * Crear nuevo usuario
      */
     static async createUsuario(data, createdBy, createdByRol) {
-        const { correo, contraseña, id_rol, nombre, apellido, codigo, direccion, pais } = data;
+        const { correo, contraseña, id_rol, nombre, apellido, direccion, pais } = data;
+
+        // Normalizar código: mayúsculas y sin espacios
+        const codigo = data.codigo ? data.codigo.trim().replace(/\s+/g, '').toUpperCase() : data.codigo;
 
         // Validar formato de correo
         if (!isValidEmail(correo)) {
@@ -142,7 +145,10 @@ class UsuarioService {
      * Actualizar usuario
      */
     static async updateUsuario(id, data, updatedBy) {
-        const { correo, id_rol, estado, contraseña, nombre, apellido, codigo, direccion, pais, estado_actividad } = data;
+        const { correo, id_rol, estado, contraseña, nombre, apellido, direccion, pais, estado_actividad } = data;
+
+        // Normalizar código: mayúsculas y sin espacios
+        const codigo = data.codigo ? data.codigo.trim().replace(/\s+/g, '').toUpperCase() : data.codigo;
 
         // Verificar que el usuario existe
         const usuario = await Usuario.findById(id);
