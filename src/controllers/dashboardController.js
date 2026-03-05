@@ -163,10 +163,50 @@ const getTop3Libras = async (req, res) => {
     }
 };
 
+/**
+ * Salud de la orden: porcentaje cubierto de abonos vs total compras
+ * GET /api/dashboard/salud-orden/:id_orden
+ */
+const getSaludOrden = async (req, res) => {
+    try {
+        const { id_orden } = req.params;
+
+        if (!id_orden || isNaN(id_orden)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Debe proporcionar un id_orden válido'
+            });
+        }
+
+        const data = await DashboardService.getSaludOrden(Number(id_orden));
+
+        if (!data) {
+            return res.status(404).json({
+                success: false,
+                message: 'Orden no encontrada'
+            });
+        }
+
+        res.json({
+            success: true,
+            data
+        });
+
+    } catch (error) {
+        console.error('Error al obtener salud de la orden:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener salud de la orden',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
 module.exports = {
     getEstadisticas,
     getTop3,
     getClientesPorPais,
     getComparativoOrdenes,
-    getTop3Libras
+    getTop3Libras,
+    getSaludOrden
 };

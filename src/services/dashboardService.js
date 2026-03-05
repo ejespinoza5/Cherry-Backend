@@ -244,6 +244,54 @@ class DashboardService {
     }
 
     /**
+     * Salud de la orden: porcentaje de abonos verificados vs total de compras
+     */
+    static async getSaludOrden(id_orden) {
+        const orden = await DashboardService.getOrdenById(id_orden);
+
+        if (!orden) return null;
+
+        const [[compras], [abonado]] = await Promise.all([
+            pool.query(
+                `SELECT COALESCE(SUM(valor_total), 0) AS total
+                 FROM cliente_orden
+                 WHERE id_orden = ?`,
+                [id_orden]
+            ),
+            pool.query(
+                `SELECT COALESCE(SUM(cantidad), 0) AS total
+                 FROM historial_abono
+                 WHERE id_orden = ?
+                   AND estado_verificacion = 'verificado'
+                   AND estado = 'activo'`,
+                [id_orden]
+            )
+        ]);
+
+        const total_compras  = Number(compras[0].total);
+        const total_abonado  = Number(abonado[0].total);
+        const saldo_pendiente = Math.max(total_compras - total_abonado, 0);
+        const porcentaje     = total_compras > 0
+            ? Math.min(Math.round((total_abonado / total_compras) * 100), 100)
+            : 0;
+
+        let estado;
+        if (porcentaje >= 90)      estado = 'excelente';
+        else if (porcentaje >= 70) estado = 'bueno';
+        else if (porcentaje >= 40) estado = 'regular';
+        else                       estado = 'critico';
+
+        return {
+            orden:            orden.nombre_orden,
+            total_compras,
+            total_abonado,
+            saldo_pendiente,
+            porcentaje,
+            estado
+        };
+    }
+
+    /**
      * Top 3 clientes con más libras acumuladas en una orden específica
      */
     static async getTop3Libras(id_orden) {

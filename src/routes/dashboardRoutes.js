@@ -43,4 +43,11 @@ router.get('/comparativo-ordenes', dashboardController.getComparativoOrdenes);
  */
 router.get('/top3-libras/:id_orden', dashboardController.getTop3Libras);
 
+/**
+ * @route   GET /api/dashboard/salud-orden/:id_orden
+ * @desc    Porcentaje de salud de la orden (abonos verificados vs total compras)
+ * @access  Private (Admin o SuperAdmin)
+ */
+router.get('/salud-orden/:id_orden', dashboardController.getSaludOrden);
+
 module.exports = router;
