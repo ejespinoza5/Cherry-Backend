@@ -46,6 +46,7 @@ class DashboardService {
             usuariosBloqueados,
             usuariosInactivos,
             usuariosDeudores,
+            usuariosRestablecidos,
             administradoresActivos
         ] = await Promise.all([
 
@@ -117,6 +118,13 @@ class DashboardService {
                  WHERE estado_actividad = 'deudor'`
             ),
 
+            // Clientes con estado_actividad reestablecido
+            pool.query(
+                `SELECT COUNT(*) AS total
+                 FROM clientes
+                 WHERE estado_actividad = 'reestablecido'`
+            ),
+
             // Administradores activos (rol admin = 1, superAdmin = 3)
             pool.query(
                 `SELECT COUNT(*) AS total
@@ -137,6 +145,7 @@ class DashboardService {
             usuarios_bloqueados: Number(usuariosBloqueados[0][0].total),
             usuarios_inactivos: Number(usuariosInactivos[0][0].total),
             usuarios_deudores: Number(usuariosDeudores[0][0].total),
+            usuarios_restablecidos: Number(usuariosRestablecidos[0][0].total),
             administradores_activos: Number(administradoresActivos[0][0].total)
         };
     }
