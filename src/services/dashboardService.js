@@ -194,6 +194,25 @@ class DashboardService {
             }))
         };
     }
+    /**
+     * Clientes activos agrupados por país (para gráfico de pastel)
+     */
+    static async getClientesPorPais() {
+        const [rows] = await pool.query(
+            `SELECT 
+                c.pais,
+                COUNT(*) AS total
+             FROM clientes c
+             INNER JOIN usuarios u ON c.id_usuario = u.id
+             WHERE u.estado = 'activo'
+             GROUP BY c.pais
+             ORDER BY total DESC`
+        );
+        return rows.map(r => ({
+            pais: r.pais || 'Sin especificar',
+            total: Number(r.total)
+        }));
+    }
 }
 
 module.exports = DashboardService;

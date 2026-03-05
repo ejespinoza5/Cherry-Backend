@@ -78,7 +78,31 @@ const getTop3 = async (req, res) => {
     }
 };
 
+/**
+ * Clientes activos agrupados por país (para gráfico de pastel)
+ * GET /api/dashboard/clientes-por-pais
+ */
+const getClientesPorPais = async (req, res) => {
+    try {
+        const data = await DashboardService.getClientesPorPais();
+
+        res.json({
+            success: true,
+            data
+        });
+
+    } catch (error) {
+        console.error('Error al obtener clientes por país:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener clientes por país',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
 module.exports = {
     getEstadisticas,
-    getTop3
+    getTop3,
+    getClientesPorPais
 };

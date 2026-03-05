@@ -22,4 +22,11 @@ router.get('/estadisticas/:id_orden', dashboardController.getEstadisticas);
  */
 router.get('/top3/:id_orden', dashboardController.getTop3);
 
+/**
+ * @route   GET /api/dashboard/clientes-por-pais
+ * @desc    Clientes activos agrupados por país para gráfico de pastel
+ * @access  Private (Admin o SuperAdmin)
+ */
+router.get('/clientes-por-pais', dashboardController.getClientesPorPais);
+
 module.exports = router;
