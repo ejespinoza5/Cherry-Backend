@@ -17,14 +17,25 @@ class DashboardService {
     }
 
     /**
-     * Obtener todas las estadísticas del dashboard basadas en la última orden
+     * Obtener una orden por ID
      */
-    static async getEstadisticas() {
-        // 1. Obtener la última orden creada
-        const ultimaOrden = await DashboardService.getUltimaOrden();
+    static async getOrdenById(id_orden) {
+        const [rows] = await pool.query(
+            `SELECT id, nombre_orden 
+             FROM ordenes 
+             WHERE id = ? AND estado != 'inactivo'`,
+            [id_orden]
+        );
+        return rows[0] || null;
+    }
 
-        const id_orden = ultimaOrden ? ultimaOrden.id : null;
+    /**
+     * Obtener todas las estadísticas del dashboard para una orden específica
+     */
+    static async getEstadisticas(id_orden) {
+        const orden = await DashboardService.getOrdenById(id_orden);
 
+        if (!orden) return null;
         // Ejecutar todas las consultas en paralelo
         const [
             ingresosMes,
@@ -106,7 +117,7 @@ class DashboardService {
         ]);
 
         return {
-            ultima_orden: ultimaOrden ? ultimaOrden.nombre_orden : null,
+            orden: orden.nombre_orden,
             ingresos_orden: Number(ingresosMes[0][0].total),
             usuarios_activos: Number(usuariosActivos[0][0].total),
             abonos_pendientes: Number(abonosPendientes[0][0].total),
@@ -118,12 +129,12 @@ class DashboardService {
         };
     }
     /**
-     * Top 3 clientes que más han abonado y top 3 que más deben en la orden actual
+     * Top 3 clientes que más han abonado y top 3 que más deben en una orden específica
      */
-    static async getTop3() {
-        const ultimaOrden = await DashboardService.getUltimaOrden();
-        const id_orden = ultimaOrden ? ultimaOrden.id : null;
+    static async getTop3(id_orden) {
+        const orden = await DashboardService.getOrdenById(id_orden);
 
+        if (!orden) return null;
         const [topAbonadores, topDeudores] = await Promise.all([
 
             // Top 3 que más han abonado (abonos verificados)
@@ -166,7 +177,7 @@ class DashboardService {
         ]);
 
         return {
-            orden_actual: ultimaOrden ? ultimaOrden.nombre_orden : null,
+            orden: orden.nombre_orden,
             top3_mas_abonaron: topAbonadores[0].map(r => ({
                 id: r.id,
                 nombre: `${r.nombre} ${r.apellido}`,

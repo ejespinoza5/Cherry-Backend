@@ -9,17 +9,17 @@ const { verifyToken, isAdminOrSuperAdmin } = require('../middlewares/auth');
 router.use(verifyToken, isAdminOrSuperAdmin);
 
 /**
- * @route   GET /api/dashboard/estadisticas
- * @desc    Obtener estadísticas generales del sistema basadas en la última orden creada
+ * @route   GET /api/dashboard/estadisticas/:id_orden
+ * @desc    Obtener estadísticas del sistema para una orden específica
  * @access  Private (Admin o SuperAdmin)
  */
-router.get('/estadisticas', dashboardController.getEstadisticas);
+router.get('/estadisticas/:id_orden', dashboardController.getEstadisticas);
 
 /**
- * @route   GET /api/dashboard/top3
- * @desc    Top 3 clientes que más abonaron y top 3 que más deben en la orden actual
+ * @route   GET /api/dashboard/top3/:id_orden
+ * @desc    Top 3 clientes que más abonaron y top 3 que más deben en una orden específica
  * @access  Private (Admin o SuperAdmin)
  */
-router.get('/top3', dashboardController.getTop3);
+router.get('/top3/:id_orden', dashboardController.getTop3);
 
 module.exports = router;

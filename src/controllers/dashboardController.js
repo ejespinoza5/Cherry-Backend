@@ -6,7 +6,23 @@ const DashboardService = require('../services/dashboardService');
  */
 const getEstadisticas = async (req, res) => {
     try {
-        const estadisticas = await DashboardService.getEstadisticas();
+        const { id_orden } = req.params;
+
+        if (!id_orden || isNaN(id_orden)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Debe proporcionar un id_orden válido'
+            });
+        }
+
+        const estadisticas = await DashboardService.getEstadisticas(Number(id_orden));
+
+        if (!estadisticas) {
+            return res.status(404).json({
+                success: false,
+                message: 'Orden no encontrada'
+            });
+        }
 
         res.json({
             success: true,
@@ -29,7 +45,23 @@ const getEstadisticas = async (req, res) => {
  */
 const getTop3 = async (req, res) => {
     try {
-        const data = await DashboardService.getTop3();
+        const { id_orden } = req.params;
+
+        if (!id_orden || isNaN(id_orden)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Debe proporcionar un id_orden válido'
+            });
+        }
+
+        const data = await DashboardService.getTop3(Number(id_orden));
+
+        if (!data) {
+            return res.status(404).json({
+                success: false,
+                message: 'Orden no encontrada'
+            });
+        }
 
         res.json({
             success: true,
