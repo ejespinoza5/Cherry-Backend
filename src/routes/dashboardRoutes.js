@@ -36,4 +36,11 @@ router.get('/clientes-por-pais', dashboardController.getClientesPorPais);
  */
 router.get('/comparativo-ordenes', dashboardController.getComparativoOrdenes);
 
+/**
+ * @route   GET /api/dashboard/top3-libras/:id_orden
+ * @desc    Top 3 clientes con más libras acumuladas en una orden
+ * @access  Private (Admin o SuperAdmin)
+ */
+router.get('/top3-libras/:id_orden', dashboardController.getTop3Libras);
+
 module.exports = router;

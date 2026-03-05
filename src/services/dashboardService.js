@@ -42,6 +42,7 @@ class DashboardService {
             usuariosActivos,
             abonosPendientes,
             abonosVerificados,
+            abonosRechazados,
             usuariosBloqueados,
             usuariosInactivos,
             usuariosDeudores,
@@ -85,6 +86,16 @@ class DashboardService {
                 [id_orden]
             ),
 
+            // Abonos rechazados de la última orden
+            pool.query(
+                `SELECT COUNT(*) AS total
+                 FROM historial_abono
+                 WHERE estado_verificacion = 'rechazado'
+                   AND estado = 'activo'
+                   AND id_orden = ?`,
+                [id_orden]
+            ),
+
             // Clientes con estado_actividad bloqueado
             pool.query(
                 `SELECT COUNT(*) AS total
@@ -122,6 +133,7 @@ class DashboardService {
             usuarios_activos: Number(usuariosActivos[0][0].total),
             abonos_pendientes: Number(abonosPendientes[0][0].total),
             abonos_verificados: Number(abonosVerificados[0][0].total),
+            abonos_rechazados: Number(abonosRechazados[0][0].total),
             usuarios_bloqueados: Number(usuariosBloqueados[0][0].total),
             usuarios_inactivos: Number(usuariosInactivos[0][0].total),
             usuarios_deudores: Number(usuariosDeudores[0][0].total),
@@ -220,6 +232,41 @@ class DashboardService {
             nombre_orden:  r.nombre_orden,
             total_compras: Number(r.total_compras)
         }));
+    }
+
+    /**
+     * Top 3 clientes con más libras acumuladas en una orden específica
+     */
+    static async getTop3Libras(id_orden) {
+        const orden = await DashboardService.getOrdenById(id_orden);
+
+        if (!orden) return null;
+
+        const [rows] = await pool.query(
+            `SELECT 
+                c.id,
+                c.nombre,
+                c.apellido,
+                c.codigo,
+                co.libras_acumuladas
+             FROM cliente_orden co
+             INNER JOIN clientes c ON co.id_cliente = c.id
+             WHERE co.id_orden = ?
+               AND co.libras_acumuladas > 0
+             ORDER BY co.libras_acumuladas DESC
+             LIMIT 3`,
+            [id_orden]
+        );
+
+        return {
+            orden: orden.nombre_orden,
+            top3_libras: rows.map(r => ({
+                id:                r.id,
+                nombre:            `${r.nombre} ${r.apellido}`,
+                codigo:            r.codigo,
+                libras_acumuladas: Number(r.libras_acumuladas)
+            }))
+        };
     }
 
     /**

@@ -124,9 +124,49 @@ const getComparativoOrdenes = async (req, res) => {
     }
 };
 
+/**
+ * Top 3 clientes con más libras acumuladas en una orden
+ * GET /api/dashboard/top3-libras/:id_orden
+ */
+const getTop3Libras = async (req, res) => {
+    try {
+        const { id_orden } = req.params;
+
+        if (!id_orden || isNaN(id_orden)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Debe proporcionar un id_orden válido'
+            });
+        }
+
+        const data = await DashboardService.getTop3Libras(Number(id_orden));
+
+        if (!data) {
+            return res.status(404).json({
+                success: false,
+                message: 'Orden no encontrada'
+            });
+        }
+
+        res.json({
+            success: true,
+            data
+        });
+
+    } catch (error) {
+        console.error('Error al obtener top 3 libras:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener top 3 libras',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
 module.exports = {
     getEstadisticas,
     getTop3,
     getClientesPorPais,
-    getComparativoOrdenes
+    getComparativoOrdenes,
+    getTop3Libras
 };
