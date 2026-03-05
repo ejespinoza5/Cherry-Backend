@@ -29,4 +29,11 @@ router.get('/top3/:id_orden', dashboardController.getTop3);
  */
 router.get('/clientes-por-pais', dashboardController.getClientesPorPais);
 
+/**
+ * @route   GET /api/dashboard/comparativo-ordenes
+ * @desc    Métricas por orden para gráfico de puntos/línea comparativo
+ * @access  Private (Admin o SuperAdmin)
+ */
+router.get('/comparativo-ordenes', dashboardController.getComparativoOrdenes);
+
 module.exports = router;

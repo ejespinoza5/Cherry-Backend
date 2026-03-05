@@ -101,8 +101,32 @@ const getClientesPorPais = async (req, res) => {
     }
 };
 
+/**
+ * Comparativo de métricas por orden para gráfico de puntos/línea
+ * GET /api/dashboard/comparativo-ordenes
+ */
+const getComparativoOrdenes = async (req, res) => {
+    try {
+        const data = await DashboardService.getComparativoOrdenes();
+
+        res.json({
+            success: true,
+            data
+        });
+
+    } catch (error) {
+        console.error('Error al obtener comparativo de órdenes:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener comparativo de órdenes',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
 module.exports = {
     getEstadisticas,
     getTop3,
-    getClientesPorPais
+    getClientesPorPais,
+    getComparativoOrdenes
 };

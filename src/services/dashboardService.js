@@ -195,6 +195,34 @@ class DashboardService {
         };
     }
     /**
+     * Comparativo por orden para gráfico de puntos/línea
+     * Cada punto = una orden con sus métricas
+     */
+    static async getComparativoOrdenes() {
+        const [rows] = await pool.query(
+            `SELECT 
+                o.id,
+                o.nombre_orden,
+                COALESCE(SUM(ha.cantidad), 0) AS total_compras
+             FROM ordenes o
+             LEFT JOIN historial_abono ha
+                    ON ha.id_orden = o.id
+                   AND ha.estado_verificacion = 'verificado'
+                   AND ha.estado = 'activo'
+             WHERE o.estado != 'inactivo'
+             GROUP BY o.id, o.nombre_orden
+             ORDER BY o.fecha_inicio DESC
+             LIMIT 10`
+        );
+
+        return rows.reverse().map(r => ({
+            id:            r.id,
+            nombre_orden:  r.nombre_orden,
+            total_compras: Number(r.total_compras)
+        }));
+    }
+
+    /**
      * Clientes activos agrupados por país (para gráfico de pastel)
      */
     static async getClientesPorPais() {
