@@ -3,6 +3,32 @@ const { isPositiveInteger } = require('../utils/validators');
 
 class AbonoService {
     /**
+     * Normaliza la fecha de abono en formato YYYY-MM-DD.
+     * Si no se envia, usa la fecha actual.
+     */
+    static resolveFechaAbono(fecha_abono) {
+        if (!fecha_abono) {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        if (typeof fecha_abono !== 'string') {
+            throw new Error('INVALID_ABONO_DATE');
+        }
+
+        const normalizedDate = fecha_abono.trim();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)) {
+            throw new Error('INVALID_ABONO_DATE');
+        }
+
+        const parsedDate = new Date(`${normalizedDate}T00:00:00Z`);
+        if (isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== normalizedDate) {
+            throw new Error('INVALID_ABONO_DATE');
+        }
+
+        return normalizedDate;
+    }
+
+    /**
      * Formatear datos de abono
      */
     static formatAbonoData(abono) {
@@ -11,6 +37,7 @@ class AbonoService {
             id_cliente: abono.id_cliente,
             id_orden: abono.id_orden,
             cantidad: parseFloat(abono.cantidad),
+            fecha_abono: abono.fecha_abono,
             comprobante_pago: abono.comprobante_pago,
             estado_verificacion: abono.estado_verificacion,
             fecha_verificacion: abono.fecha_verificacion,
@@ -80,6 +107,7 @@ class AbonoService {
             id: abono.id,
             id_cliente: abono.id_cliente,
             cantidad: parseFloat(abono.cantidad),
+            fecha_abono: abono.fecha_abono,
             comprobante_pago: abono.comprobante_pago,
             estado_verificacion: abono.estado_verificacion,
             fecha_verificacion: abono.fecha_verificacion,
@@ -104,6 +132,7 @@ class AbonoService {
             id_cliente: abono.id_cliente,
             id_orden: abono.id_orden,
             cantidad: parseFloat(abono.cantidad),
+            fecha_abono: abono.fecha_abono,
             comprobante_pago: abono.comprobante_pago,
             estado_verificacion: abono.estado_verificacion,
             created_at: abono.created_at,
@@ -141,7 +170,7 @@ class AbonoService {
      * Crear nuevo abono con comprobante
      */
     static async createAbono(data, comprobante_pago, created_by) {
-        const { id_cliente, id_orden, cantidad } = data;
+        const { id_cliente, id_orden, cantidad, fecha_abono } = data;
 
         // Validar campos requeridos
         if (!id_cliente || !id_orden || !cantidad) {
@@ -169,6 +198,8 @@ class AbonoService {
             throw new Error('INVALID_AMOUNT');
         }
 
+        const fechaAbonoNormalizada = this.resolveFechaAbono(fecha_abono);
+
         // Verificar que el cliente existe
         const clienteExists = await Abono.clienteExists(id_cliente);
         if (!clienteExists) {
@@ -182,7 +213,14 @@ class AbonoService {
         }
 
         // Crear abono con comprobante (estado pendiente por defecto)
-        const abonoId = await Abono.create(id_cliente, id_orden, cantidadNum, comprobante_pago, created_by);
+        const abonoId = await Abono.create(
+            id_cliente,
+            id_orden,
+            cantidadNum,
+            fechaAbonoNormalizada,
+            comprobante_pago,
+            created_by
+        );
 
         // NO verificar pago aquí, se hará cuando se verifique el comprobante
 

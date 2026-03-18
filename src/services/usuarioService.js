@@ -26,7 +26,10 @@ class UsuarioService {
                 apellido: usuario.cliente_apellido,
                 codigo: usuario.cliente_codigo,
                 direccion: usuario.cliente_direccion,
+                ciudad: usuario.cliente_ciudad,
+                provincia: usuario.cliente_provincia,
                 pais: usuario.cliente_pais,
+                informacion_adicional: usuario.cliente_informacion_adicional,
                 estado_actividad: usuario.cliente_estado_actividad
             };
         }
@@ -59,7 +62,18 @@ class UsuarioService {
      * Crear nuevo usuario
      */
     static async createUsuario(data, createdBy, createdByRol) {
-        const { correo, contraseña, id_rol, nombre, apellido, direccion, pais } = data;
+        const {
+            correo,
+            contraseña,
+            id_rol,
+            nombre,
+            apellido,
+            direccion,
+            ciudad,
+            provincia,
+            pais,
+            informacion_adicional
+        } = data;
 
         // Normalizar código: mayúsculas y sin espacios
         const codigo = data.codigo ? data.codigo.trim().replace(/\s+/g, '').toUpperCase() : data.codigo;
@@ -100,6 +114,10 @@ class UsuarioService {
             if (!codigo) {
                 throw new Error('CODIGO_REQUIRED_FOR_CLIENT');
             }
+
+            if (informacion_adicional && informacion_adicional.length > 255) {
+                throw new Error('INFO_ADICIONAL_TOO_LONG');
+            }
         }
 
         // Verificar si el correo ya existe
@@ -131,7 +149,10 @@ class UsuarioService {
                 apellido: apellido || '',
                 codigo,
                 direccion: direccion || '',
+                ciudad: ciudad || null,
+                provincia: provincia || null,
                 pais: pais || null,
+                informacion_adicional: informacion_adicional || null,
                 created_by: createdBy
             });
         }
@@ -145,7 +166,20 @@ class UsuarioService {
      * Actualizar usuario
      */
     static async updateUsuario(id, data, updatedBy) {
-        const { correo, id_rol, estado, contraseña, nombre, apellido, direccion, pais, estado_actividad } = data;
+        const {
+            correo,
+            id_rol,
+            estado,
+            contraseña,
+            nombre,
+            apellido,
+            direccion,
+            ciudad,
+            provincia,
+            pais,
+            informacion_adicional,
+            estado_actividad
+        } = data;
 
         // Normalizar código: mayúsculas y sin espacios
         const codigo = data.codigo ? data.codigo.trim().replace(/\s+/g, '').toUpperCase() : data.codigo;
@@ -177,6 +211,11 @@ class UsuarioService {
         // Validar estado_actividad si se proporciona
         if (estado_actividad && !isValidEstado(estado_actividad)) {
             throw new Error('INVALID_ESTADO_ACTIVIDAD');
+        }
+
+        // Validar longitud de informacion adicional si se proporciona
+        if (informacion_adicional !== undefined && informacion_adicional !== null && informacion_adicional.length > 255) {
+            throw new Error('INFO_ADICIONAL_TOO_LONG');
         }
 
         // Validar rol si se proporciona
@@ -221,7 +260,20 @@ class UsuarioService {
         }
 
         // Si el usuario es cliente (id_rol = 2), actualizar datos de cliente
-        if (parseInt(rolFinal) === 2 && (nombre || apellido || codigo || direccion || pais || estado_actividad)) {
+        if (
+            parseInt(rolFinal) === 2 &&
+            (
+                nombre ||
+                apellido ||
+                codigo ||
+                direccion ||
+                ciudad ||
+                provincia ||
+                pais ||
+                informacion_adicional !== undefined ||
+                estado_actividad
+            )
+        ) {
             const cliente = await Cliente.findByUsuario(id);
             
             if (cliente) {
@@ -233,7 +285,10 @@ class UsuarioService {
                         apellido: apellido !== undefined ? apellido : cliente.apellido,
                         codigo: codigo || cliente.codigo,
                         direccion: direccion !== undefined ? direccion : cliente.direccion,
+                        ciudad: ciudad !== undefined ? ciudad : cliente.ciudad,
+                        provincia: provincia !== undefined ? provincia : cliente.provincia,
                         pais: pais !== undefined ? pais : cliente.pais,
+                        informacion_adicional: informacion_adicional !== undefined ? informacion_adicional : cliente.informacion_adicional,
                         estado_actividad: estado_actividad || cliente.estado_actividad,
                         estado: estado || cliente.estado
                     },

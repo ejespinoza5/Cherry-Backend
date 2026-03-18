@@ -163,7 +163,7 @@ const getAbonoById = async (req, res) => {
  */
 const createAbono = async (req, res) => {
     try {
-        const { id_cliente, id_orden, cantidad } = req.body;
+        const { id_cliente, id_orden, cantidad, fecha_abono } = req.body;
 
         // Validar campos requeridos
         if (!id_cliente || !id_orden || !cantidad) {
@@ -178,7 +178,7 @@ const createAbono = async (req, res) => {
 
         // Crear abono
         const nuevoAbono = await AbonoService.createAbono(
-            { id_cliente, id_orden, cantidad },
+            { id_cliente, id_orden, cantidad, fecha_abono },
             comprobante_pago,
             req.user.id
         );
@@ -217,6 +217,13 @@ const createAbono = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'La cantidad debe ser un número positivo'
+            });
+        }
+
+        if (error.message === 'INVALID_ABONO_DATE') {
+            return res.status(400).json({
+                success: false,
+                message: 'La fecha_abono debe tener formato YYYY-MM-DD'
             });
         }
 

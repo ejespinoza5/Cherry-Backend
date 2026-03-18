@@ -13,6 +13,7 @@ class Abono {
                     ha.id_cliente,
                     ha.id_orden,
                     ha.cantidad, 
+                    ha.fecha_abono,
                     ha.comprobante_pago,
                     ha.estado_verificacion,
                     ha.fecha_verificacion,
@@ -55,6 +56,7 @@ class Abono {
                     ha.id_cliente,
                     ha.id_orden,
                     ha.cantidad,
+                    ha.fecha_abono,
                     ha.comprobante_pago,
                     ha.estado_verificacion,
                     ha.fecha_verificacion,
@@ -98,6 +100,7 @@ class Abono {
                     ha.id_cliente,
                     ha.id_orden,
                     ha.cantidad,
+                    ha.fecha_abono,
                     ha.comprobante_pago,
                     ha.estado_verificacion,
                     ha.fecha_verificacion,
@@ -128,7 +131,7 @@ class Abono {
     /**
      * Crear nuevo abono con comprobante (actualiza saldo en cliente_orden por orden)
      */
-    static async create(id_cliente, id_orden, cantidad, comprobante_pago, created_by) {
+    static async create(id_cliente, id_orden, cantidad, fecha_abono, comprobante_pago, created_by) {
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
@@ -136,9 +139,9 @@ class Abono {
             // Insertar abono en historial (estado_verificacion por defecto es 'pendiente')
             const [result] = await connection.query(
                 `INSERT INTO historial_abono 
-                 (id_cliente, id_orden, cantidad, comprobante_pago, created_by) 
-                 VALUES (?, ?, ?, ?, ?)`,
-                [id_cliente, id_orden, cantidad, comprobante_pago, created_by]
+                 (id_cliente, id_orden, cantidad, fecha_abono, comprobante_pago, created_by) 
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [id_cliente, id_orden, cantidad, fecha_abono, comprobante_pago, created_by]
             );
 
             // NO actualizamos el saldo del cliente hasta que se verifique
@@ -310,6 +313,7 @@ class Abono {
                     ha.id_cliente,
                     ha.id_orden,
                     ha.cantidad,
+                    ha.fecha_abono,
                     ha.comprobante_pago,
                     ha.estado_verificacion,
                     ha.fecha_verificacion,
@@ -344,6 +348,7 @@ class Abono {
                     ha.id_cliente,
                     ha.id_orden,
                     ha.cantidad,
+                    ha.fecha_abono,
                     ha.comprobante_pago,
                     ha.estado_verificacion,
                     ha.created_at,
@@ -539,12 +544,12 @@ class Abono {
                     c.link_excel,
                     ha.id as id_abono,
                     ha.cantidad,
+                    ha.fecha_abono,
                     ha.comprobante_pago,
                     ha.estado_verificacion,
                     ha.fecha_verificacion,
                     ha.verificado_by,
                     ha.observaciones_verificacion,
-                    ha.created_at as fecha_abono,
                     co.total_compras,
                     co.total_abonos,
                     co.valor_total,

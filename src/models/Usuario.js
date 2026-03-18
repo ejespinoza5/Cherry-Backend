@@ -89,7 +89,10 @@ class Usuario {
                     c.apellido as cliente_apellido,
                     c.codigo as cliente_codigo,
                     c.direccion as cliente_direccion,
+                    c.ciudad as cliente_ciudad,
+                    c.provincia as cliente_provincia,
                     c.pais as cliente_pais,
+                    c.informacion_adicional as cliente_informacion_adicional,
                     c.estado_actividad as cliente_estado_actividad
                  FROM usuarios u 
                  INNER JOIN rol r ON u.id_rol = r.id 
@@ -122,7 +125,10 @@ class Usuario {
                     c.apellido as cliente_apellido,
                     c.codigo as cliente_codigo,
                     c.direccion as cliente_direccion,
+                    c.ciudad as cliente_ciudad,
+                    c.provincia as cliente_provincia,
                     c.pais as cliente_pais,
+                    c.informacion_adicional as cliente_informacion_adicional,
                     c.estado_actividad as cliente_estado_actividad
                  FROM usuarios u 
                  INNER JOIN rol r ON u.id_rol = r.id 

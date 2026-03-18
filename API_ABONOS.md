@@ -44,6 +44,7 @@ Registra un nuevo abono con comprobante de pago. El abono queda en estado `pendi
 id_cliente: 1
 id_orden: 5
 cantidad: 150.50
+fecha_abono: 2026-03-18
 comprobante: [archivo imagen o PDF]
 ```
 
@@ -51,6 +52,7 @@ comprobante: [archivo imagen o PDF]
 - `id_cliente` (requerido): ID del cliente que realiza el abono
 - `id_orden` (requerido): ID de la orden a la que pertenece el abono
 - `cantidad` (requerido): Monto del abono (debe ser positivo)
+- `fecha_abono` (opcional): Fecha del abono en formato `YYYY-MM-DD` (si no se envía, se usa la fecha actual)
 - `comprobante` (opcional): Archivo del comprobante de pago
   - Formatos aceptados: JPEG, JPG, PNG, WEBP, PDF
   - Tamaño máximo: 10MB
@@ -63,6 +65,7 @@ curl -X POST http://localhost:3000/api/abonos \
   -F "id_cliente=1" \
   -F "id_orden=5" \
   -F "cantidad=150.50" \
+  -F "fecha_abono=2026-03-18" \
   -F "comprobante=@ruta/al/comprobante.jpg"
 ```
 
@@ -76,6 +79,7 @@ curl -X POST http://localhost:3000/api/abonos \
     "id_cliente": 1,
     "id_orden": 5,
     "cantidad": 150.50,
+    "fecha_abono": "2026-03-18",
     "comprobante_pago": "/uploads/comprobantes/comprobante-1234567890-123456789.jpg",
     "estado_verificacion": "pendiente",
     "fecha_verificacion": null,

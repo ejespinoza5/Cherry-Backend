@@ -218,7 +218,11 @@ Crear nuevo usuario.
   "nombre": "Juan",
   "apellido": "Pérez",
   "direccion": "Calle 123, Ciudad",
-  "codigo": "sol 12"
+  "ciudad": "Quito",
+  "provincia": "Pichincha",
+  "codigo": "sol 12",
+  "pais": "Ecuador",
+  "informacion_adicional": "Prefiere contacto por WhatsApp en horario de tarde"
 }
 ```
 
@@ -263,6 +267,10 @@ Todas las contraseñas deben cumplir con los siguientes requisitos de seguridad:
       "apellido": "Pérez",
       "codigo": "sol 12",
       "direccion": "Calle 123, Ciudad",
+      "ciudad": "Quito",
+      "provincia": "Pichincha",
+      "pais": "Ecuador",
+      "informacion_adicional": "Prefiere contacto por WhatsApp en horario de tarde",
       "saldo": 0.00,
       "estado_actividad": "activo"
     }
