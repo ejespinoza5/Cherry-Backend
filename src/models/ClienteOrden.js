@@ -69,7 +69,7 @@ class ClienteOrden {
         try {
             const [rows] = await pool.query(
                 `SELECT co.*, 
-                        c.nombre, c.apellido, c.codigo, c.estado_actividad,
+                        c.nombre, c.apellido, c.codigo, c.link_excel, c.estado_actividad,
                         (co.total_compras - co.total_abonos) as saldo_actual
                  FROM cliente_orden co
                  INNER JOIN clientes c ON co.id_cliente = c.id
