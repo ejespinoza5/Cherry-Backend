@@ -47,6 +47,13 @@ router.get('/:id_orden/clientes/:id_cliente', ordenesController.getClienteOrdenD
 router.get('/:id_orden/clientes/:id_cliente/historial-libras', ordenesController.getHistorialLibrasByClienteOrden);
 
 /**
+ * @route   GET /api/ordenes/:id_orden/clientes/:id_cliente/historial-compra-manual
+ * @desc    Obtener historial manual de compra por cliente y orden
+ * @access  Privado
+ */
+router.get('/:id_orden/clientes/:id_cliente/historial-compra-manual', ordenesController.getHistorialCompraManualByClienteOrden);
+
+/**
  * @route   GET /api/ordenes/:id_orden/historial-libras
  * @desc    Obtener historial de actualizaciones de libras de todos los clientes en una orden
  * @access  Privado
@@ -76,6 +83,13 @@ router.put('/:id', ordenesController.updateOrden);
  * @body    valor_total (opcional), libras_acumuladas (opcional), link_excel (opcional)
  */
 router.put('/:id_orden/clientes/:id_cliente/datos-manuales', ordenesController.updateClienteOrdenDatosManuales);
+
+/**
+ * @route   GET /api/ordenes/:id_orden/usuarios/:id_usuario/historial-compra-manual
+ * @desc    Obtener historial manual de compra por usuario y orden
+ * @access  Privado
+ */
+router.get('/:id_orden/usuarios/:id_usuario/historial-compra-manual', ordenesController.getHistorialCompraManualByUsuarioOrden);
 
 /**
  * @route   DELETE /api/ordenes/:id

@@ -411,6 +411,58 @@ const getHistorialLibrasByOrden = async (req, res) => {
     }
 };
 
+/**
+ * Obtener historial de cambios manuales de compra por usuario y orden
+ * GET /api/ordenes/:id_orden/usuarios/:id_usuario/historial-compra-manual
+ */
+const getHistorialCompraManualByUsuarioOrden = async (req, res) => {
+    try {
+        const { id_orden, id_usuario } = req.params;
+
+        const historial = await OrdenService.getHistorialCompraManualByUsuarioOrden(id_usuario, id_orden);
+
+        res.json({
+            success: true,
+            data: historial,
+            count: historial.length
+        });
+    } catch (error) {
+        console.error('Error al obtener historial manual de compra por usuario y orden:', error);
+
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener historial manual de compra',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
+/**
+ * Obtener historial de cambios manuales de compra por cliente y orden
+ * GET /api/ordenes/:id_orden/clientes/:id_cliente/historial-compra-manual
+ */
+const getHistorialCompraManualByClienteOrden = async (req, res) => {
+    try {
+        const { id_orden, id_cliente } = req.params;
+
+        const historial = await OrdenService.getHistorialCompraManualByClienteOrden(id_cliente, id_orden);
+
+        res.json({
+            success: true,
+            data: historial,
+            count: historial.length
+        });
+    } catch (error) {
+        console.error('Error al obtener historial manual de compra por cliente y orden:', error);
+
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener historial manual de compra',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
 module.exports = {
     getAllOrdenes,
     getOrdenById,
@@ -421,5 +473,7 @@ module.exports = {
     updateClienteOrdenDatosManuales,
     getClienteOrdenDatos,
     getHistorialLibrasByClienteOrden,
-    getHistorialLibrasByOrden
+    getHistorialLibrasByOrden,
+    getHistorialCompraManualByUsuarioOrden,
+    getHistorialCompraManualByClienteOrden
 };

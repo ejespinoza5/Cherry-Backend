@@ -1,5 +1,6 @@
 const Orden = require('../models/Orden');
 const CierreOrdenService = require('./cierreOrdenService');
+const HistorialActualizacionCompraManual = require('../models/HistorialActualizacionCompraManual');
 
 class OrdenService {
     /**
@@ -208,10 +209,35 @@ class OrdenService {
         try {
             // Separar campos por orden y del cliente
             const { valor_total, libras_acumuladas, link_excel } = data;
+            const registroActual = await ClienteOrden.findByClienteAndOrden(id_cliente, id_orden);
+            const clienteActual = await Cliente.findById(id_cliente);
+            const valorTotalAnterior = registroActual ? parseFloat(registroActual.valor_total || 0) : 0;
+            const librasAnterior = registroActual ? parseFloat(registroActual.libras_acumuladas || 0) : 0;
+            const linkExcelAnterior = clienteActual ? (clienteActual.link_excel || null) : null;
+
+            // Historial manual: valor_total, libras (peso) y link_excel
+            const valorCambio = valor_total !== undefined && parseFloat(valor_total) !== valorTotalAnterior;
+            const librasNueva = libras_acumuladas !== undefined ? parseFloat(libras_acumuladas) : librasAnterior;
+            const librasCambio = libras_acumuladas !== undefined && librasNueva !== librasAnterior;
+            const linkExcelNuevo = link_excel !== undefined ? (link_excel || null) : linkExcelAnterior;
+            const linkExcelCambio = link_excel !== undefined && linkExcelNuevo !== linkExcelAnterior;
+
+            if (valorCambio || librasCambio || linkExcelCambio) {
+                await HistorialActualizacionCompraManual.create({
+                    id_cliente,
+                    id_orden,
+                    valor_total_anterior: valorTotalAnterior,
+                    valor_total_nuevo: valor_total !== undefined ? parseFloat(valor_total) : valorTotalAnterior,
+                    libras_anterior: librasAnterior,
+                    libras_nueva: librasNueva,
+                    link_excel_anterior: linkExcelAnterior,
+                    link_excel_nuevo: linkExcelNuevo,
+                    actualizado_por
+                });
+            }
             
             // Si se va a actualizar libras_acumuladas, obtener valor anterior para el historial
             if (libras_acumuladas !== undefined) {
-                const registroActual = await ClienteOrden.findByClienteAndOrden(id_cliente, id_orden);
                 const libras_anterior = registroActual ? parseFloat(registroActual.libras_acumuladas || 0) : 0;
                 const libras_nueva = parseFloat(libras_acumuladas);
 
@@ -285,6 +311,20 @@ class OrdenService {
             link_excel: registro.link_excel,
             estado_pago: registro.estado_pago
         };
+    }
+
+    /**
+     * Obtener historial de cambios manuales de compra por usuario y orden
+     */
+    static async getHistorialCompraManualByUsuarioOrden(id_usuario, id_orden) {
+        return await HistorialActualizacionCompraManual.findByUsuarioAndOrden(id_usuario, id_orden);
+    }
+
+    /**
+     * Obtener historial de cambios manuales de compra por cliente y orden
+     */
+    static async getHistorialCompraManualByClienteOrden(id_cliente, id_orden) {
+        return await HistorialActualizacionCompraManual.findByClienteAndOrden(id_cliente, id_orden);
     }
 }
 

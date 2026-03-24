@@ -1,6 +1,5 @@
 const Producto = require('../models/Producto');
 const Orden = require('../models/Orden');
-const Cliente = require('../models/Cliente');
 
 class ProductoService {
     /**
@@ -72,26 +71,10 @@ class ProductoService {
             throw new Error('ORDER_NOT_FOUND');
         }
 
-        // Validar que la orden esté abierta
-        const ordenCerrada = await Orden.estaCerrada(id_orden);
-        if (ordenCerrada) {
-            throw new Error('ORDER_CLOSED');
-        }
-
         // Validar que el cliente existe
         const clienteExists = await Producto.clienteExists(id_cliente);
         if (!clienteExists) {
             throw new Error('CLIENT_NOT_FOUND');
-        }
-
-        // Verificar que el cliente no esté bloqueado o inactivo
-        const cliente = await Cliente.findById(id_cliente);
-        if (cliente.estado_actividad === 'bloqueado') {
-            throw new Error('CLIENT_BLOCKED');
-        }
-        
-        if (cliente.estado_actividad === 'inactivo') {
-            throw new Error('CLIENT_INACTIVE');
         }
 
         // Validar cantidad de artículos
@@ -128,10 +111,6 @@ class ProductoService {
             created_by: createdBy
         });
 
-        // Actualizar totales de compras en cliente_orden
-        const ClienteOrden = require('../models/ClienteOrden');
-        await ClienteOrden.actualizarTotales(id_cliente, id_orden);
-
         // Obtener y devolver el producto creado
         const producto = await Producto.findById(productoId);
         return this.formatProductoData(producto);
@@ -159,21 +138,11 @@ class ProductoService {
             throw new Error('PRODUCT_NOT_FOUND');
         }
 
-        // Validar que la orden actual del producto esté abierta
-        const ordenCerrada = await Orden.estaCerrada(producto.id_orden);
-        if (ordenCerrada) {
-            throw new Error('ORDER_CLOSED');
-        }
-
-        // Si se actualiza la orden, validar que existe y esté abierta
+        // Si se actualiza la orden, validar que existe
         if (id_orden !== undefined) {
             const ordenExists = await Producto.ordenExists(id_orden);
             if (!ordenExists) {
                 throw new Error('ORDER_NOT_FOUND');
-            }
-            const nuevaOrdenCerrada = await Orden.estaCerrada(id_orden);
-            if (nuevaOrdenCerrada) {
-                throw new Error('ORDER_CLOSED');
             }
         }
 
@@ -221,24 +190,6 @@ class ProductoService {
         // Actualizar el producto
         await Producto.update(id, updateData, updatedBy);
 
-        // Actualizar totales de compras en cliente_orden
-        const ClienteOrden = require('../models/ClienteOrden');
-        // Si el cliente cambió, actualizar ambas órdenes
-        const clienteAnterior = producto.id_cliente;
-        const clienteNuevo = updateData.id_cliente;
-        const idOrdenAnterior = producto.id_orden;
-        const idOrdenNueva = updateData.id_orden;
-
-        if (clienteAnterior !== clienteNuevo || idOrdenAnterior !== idOrdenNueva) {
-            // Actualizar totales del cliente/orden anterior
-            await ClienteOrden.actualizarTotales(clienteAnterior, idOrdenAnterior);
-            // Actualizar totales del nuevo cliente/orden
-            await ClienteOrden.actualizarTotales(clienteNuevo, idOrdenNueva);
-        } else {
-            // Mismo cliente y orden, solo actualizar totales
-            await ClienteOrden.actualizarTotales(clienteNuevo, idOrdenNueva);
-        }
-
         // Obtener y devolver el producto actualizado
         const productoActualizado = await Producto.findById(id);
         return this.formatProductoData(productoActualizado);
@@ -254,20 +205,8 @@ class ProductoService {
             throw new Error('PRODUCT_NOT_FOUND');
         }
 
-        // Validar que la orden esté abierta
-        const ordenCerrada = await Orden.estaCerrada(producto.id_orden);
-        if (ordenCerrada) {
-            throw new Error('ORDER_CLOSED');
-        }
-
-        // Eliminar el producto (soft delete)
         await Producto.delete(id, deletedBy);
-
-        // Actualizar totales de compras en cliente_orden
-        const ClienteOrden = require('../models/ClienteOrden');
-        await ClienteOrden.actualizarTotales(producto.id_cliente, producto.id_orden);
-
-        return { message: 'Producto eliminado correctamente y totales actualizados' };
+        return { message: 'Producto eliminado correctamente' };
     }
 
     /**
@@ -323,7 +262,7 @@ class ProductoService {
                     apellido: row.cliente_apellido,
                     codigo: row.cliente_codigo,
                     direccion: row.cliente_direccion,
-                    estado_actividad: row.cliente_estado_actividad,
+                    saldo: parseFloat(row.cliente_saldo || 0).toFixed(2),
                     productos: []
                 });
             }
@@ -392,8 +331,7 @@ class ProductoService {
             apellido: rows[0].cliente_apellido,
             codigo: rows[0].cliente_codigo,
             direccion: rows[0].cliente_direccion,
-            correo: rows[0].cliente_correo,
-            estado_actividad: rows[0].cliente_estado_actividad
+            saldo: parseFloat(rows[0].cliente_saldo || 0).toFixed(2)
         };
 
         // Agrupar productos por orden
@@ -423,7 +361,7 @@ class ProductoService {
             });
         });
 
-        // Convertir Map a array
+        // Convertir Map a array (sin calcular totales por orden)
         const ordenes = Array.from(ordenesMap.values()).map(orden => {
             return {
                 id: orden.id,
@@ -432,11 +370,16 @@ class ProductoService {
             };
         });
 
-        // Calcular totales generales (sin impuestos)
+        // Obtener el impuesto de la orden (viene en todos los registros, usamos el primero)
+        const impuesto_orden = parseFloat(rows[0].orden_impuesto || 0);
+
+        // Calcular totales generales
         const total_productos_general = rows.length;
         const total_articulos_general = rows.reduce((sum, r) => sum + r.cantidad_articulos, 0);
         const subtotal_general = rows.reduce((sum, r) => 
             sum + (parseFloat(r.valor_etiqueta) * r.cantidad_articulos), 0);
+        const impuesto_aplicado = subtotal_general * impuesto_orden;
+        const total_con_impuestos = subtotal_general + impuesto_aplicado;
         const total_comisiones_general = rows.reduce((sum, r) => sum + parseFloat(r.comision), 0);
 
         return {
@@ -445,8 +388,11 @@ class ProductoService {
             total_productos: total_productos_general,
             total_articulos: total_articulos_general,
             subtotal_general: subtotal_general.toFixed(2),
+            impuesto: (impuesto_orden * 100).toFixed(0) + '%',
+            impuesto_aplicado: impuesto_aplicado.toFixed(2),
+            total_con_impuestos: total_con_impuestos.toFixed(2),
             total_comisiones_general: total_comisiones_general.toFixed(2),
-            total_general: (subtotal_general + total_comisiones_general).toFixed(2),
+            total_general: (total_con_impuestos + total_comisiones_general).toFixed(2),
             ordenes: ordenes
         };
     }
