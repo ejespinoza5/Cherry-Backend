@@ -140,7 +140,14 @@ const createUsuario = async (req, res) => {
         if (error.message === 'INVALID_ROLE') {
             return res.status(400).json({
                 success: false,
-                message: 'Rol inválido. Debe ser 1 (Administrador) o 2 (Cliente)'
+                message: 'Rol inválido. Debe ser 1 (Administrador), 2 (Cliente) o 3 (SuperAdministrador)'
+            });
+        }
+
+        if (error.message === 'NAME_REQUIRED_FOR_ADMIN') {
+            return res.status(400).json({
+                success: false,
+                message: 'El nombre es requerido para usuarios tipo administrador'
             });
         }
 
@@ -277,7 +284,7 @@ const updateUsuario = async (req, res) => {
         if (error.message === 'INVALID_ROLE') {
             return res.status(400).json({
                 success: false,
-                message: 'Rol inválido. Debe ser 1 (Administrador) o 2 (Cliente)'
+                message: 'Rol inválido. Debe ser 1 (Administrador), 2 (Cliente) o 3 (SuperAdministrador)'
             });
         }
 

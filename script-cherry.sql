@@ -25,6 +25,27 @@ CREATE TABLE usuarios (
 );
 
 -- =====================================
+-- TABLA ADMINS
+-- =====================================
+CREATE TABLE admins (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  id_usuario INT NOT NULL UNIQUE,
+  nombre VARCHAR(100) NOT NULL,
+  apellido VARCHAR(100),
+  estado ENUM('activo','inactivo') DEFAULT 'activo',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_by INT NOT NULL,
+  updated_by INT,
+  CONSTRAINT fk_admin_usuario
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id),
+  CONSTRAINT fk_admin_created_by
+    FOREIGN KEY (created_by) REFERENCES usuarios(id),
+  CONSTRAINT fk_admin_updated_by
+    FOREIGN KEY (updated_by) REFERENCES usuarios(id)
+);
+
+-- =====================================
 -- TABLA CLIENTES
 -- =====================================
 CREATE TABLE clientes (
@@ -302,6 +323,9 @@ ON cliente_orden (id_cliente);
 
 CREATE INDEX idx_ordenes_estado
 ON ordenes (estado_orden, fecha_fin);
+
+CREATE INDEX idx_admins_usuario
+ON admins (id_usuario);
 
 CREATE INDEX idx_clientes_rematados_cliente
 ON clientes_rematados (id_cliente);

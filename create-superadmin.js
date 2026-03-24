@@ -36,6 +36,11 @@ async function createSuperAdmin() {
             [correo, hashedPassword, id_rol, 'activo']
         );
 
+        await pool.query(
+            'INSERT INTO admins (id_usuario, nombre, apellido, estado, created_by) VALUES (?, ?, ?, ?, ?)',
+            [result.insertId, 'Super', 'Admin', 'activo', result.insertId]
+        );
+
         console.log('✅ SuperAdministrador creado exitosamente!');
         console.log(`📧 Correo: ${correo}`);
         console.log(`🔑 Contraseña: ${contraseña}`);

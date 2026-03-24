@@ -41,7 +41,7 @@ const initDatabase = async () => {
         
         // CONFIGURA AQUÍ LA CONTRASEÑA DEL ADMINISTRADOR
         const adminEmail = 'admin@cherry.com';
-        const adminPassword = 'admin123'; // ⬅️ CAMBIA ESTA CONTRASEÑA
+        const adminPassword = 'admin123'; 
         
         // Verificar si el admin ya existe
         const [adminExists] = await connection.query(
@@ -55,10 +55,16 @@ const initDatabase = async () => {
             const hashedPassword = await bcrypt.hash(adminPassword, salt);
             
             // Insertar usuario
-            await connection.query(`
+            const [adminResult] = await connection.query(`
                 INSERT INTO usuarios (correo, contraseña, id_rol, estado) 
                 VALUES (?, ?, 3, 'activo')
             `, [adminEmail, hashedPassword]);
+
+            await connection.query(
+                `INSERT INTO admins (id_usuario, nombre, apellido, estado, created_by)
+                 VALUES (?, ?, ?, 'activo', ?)`,
+                [adminResult.insertId, 'Super', 'Admin', adminResult.insertId]
+            );
             
             console.log('✅ Usuario administrador creado:');
             console.log(`   📧 Correo: ${adminEmail}`);

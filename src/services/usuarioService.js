@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const Usuario = require('../models/Usuario');
 const Cliente = require('../models/Cliente');
+const Admin = require('../models/Admin');
 const { isValidEmail, isValidPassword, isValidEstado } = require('../utils/validators');
 
 class UsuarioService {
@@ -31,6 +32,14 @@ class UsuarioService {
                 pais: usuario.cliente_pais,
                 informacion_adicional: usuario.cliente_informacion_adicional,
                 estado_actividad: usuario.cliente_estado_actividad
+            };
+        }
+
+        if ((usuario.id_rol === 1 || usuario.id_rol === 3) && usuario.admin_id) {
+            baseData.admin = {
+                id: usuario.admin_id,
+                nombre: usuario.admin_nombre,
+                apellido: usuario.admin_apellido
             };
         }
 
@@ -120,6 +129,11 @@ class UsuarioService {
             }
         }
 
+        // Si es administrador o superAdministrador, el nombre es obligatorio
+        if ((parseInt(id_rol) === 1 || parseInt(id_rol) === 3) && !nombre) {
+            throw new Error('NAME_REQUIRED_FOR_ADMIN');
+        }
+
         // Verificar si el correo ya existe
         const emailExists = await Usuario.emailExists(correo);
         if (emailExists) {
@@ -153,6 +167,15 @@ class UsuarioService {
                 provincia: provincia || null,
                 pais: pais || null,
                 informacion_adicional: informacion_adicional || null,
+                created_by: createdBy
+            });
+        }
+
+        if (parseInt(id_rol) === 1 || parseInt(id_rol) === 3) {
+            await Admin.create({
+                id_usuario: usuarioId,
+                nombre,
+                apellido: apellido || '',
                 created_by: createdBy
             });
         }
@@ -219,7 +242,7 @@ class UsuarioService {
         }
 
         // Validar rol si se proporciona
-        if (id_rol && ![1, 2].includes(parseInt(id_rol))) {
+        if (id_rol && ![1, 2, 3].includes(parseInt(id_rol))) {
             throw new Error('INVALID_ROLE');
         }
 
@@ -294,6 +317,30 @@ class UsuarioService {
                     },
                     updatedBy
                 );
+            }
+        }
+
+        // Si el usuario es admin/superadmin, actualizar o crear perfil admin
+        if (parseInt(rolFinal) === 1 || parseInt(rolFinal) === 3) {
+            const admin = await Admin.findByUsuario(id);
+
+            if (admin) {
+                await Admin.update(
+                    admin.id,
+                    {
+                        nombre: nombre || admin.nombre,
+                        apellido: apellido !== undefined ? apellido : admin.apellido,
+                        estado: estado || admin.estado
+                    },
+                    updatedBy
+                );
+            } else if (nombre) {
+                await Admin.create({
+                    id_usuario: id,
+                    nombre,
+                    apellido: apellido || '',
+                    created_by: updatedBy
+                });
             }
         }
 

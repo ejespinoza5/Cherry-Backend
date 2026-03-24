@@ -93,10 +93,14 @@ class Usuario {
                     c.provincia as cliente_provincia,
                     c.pais as cliente_pais,
                     c.informacion_adicional as cliente_informacion_adicional,
-                    c.estado_actividad as cliente_estado_actividad
+                          c.estado_actividad as cliente_estado_actividad,
+                          a.id as admin_id,
+                          a.nombre as admin_nombre,
+                          a.apellido as admin_apellido
                  FROM usuarios u 
                  INNER JOIN rol r ON u.id_rol = r.id 
                  LEFT JOIN clientes c ON u.id = c.id_usuario AND u.id_rol = 2
+                      LEFT JOIN admins a ON u.id = a.id_usuario AND u.id_rol IN (1, 3)
                  WHERE u.estado = 'activo'
                  ORDER BY u.created_at DESC`
             );
@@ -129,10 +133,14 @@ class Usuario {
                     c.provincia as cliente_provincia,
                     c.pais as cliente_pais,
                     c.informacion_adicional as cliente_informacion_adicional,
-                    c.estado_actividad as cliente_estado_actividad
+                          c.estado_actividad as cliente_estado_actividad,
+                          a.id as admin_id,
+                          a.nombre as admin_nombre,
+                          a.apellido as admin_apellido
                  FROM usuarios u 
                  INNER JOIN rol r ON u.id_rol = r.id 
                  LEFT JOIN clientes c ON u.id = c.id_usuario AND u.id_rol = 2
+                      LEFT JOIN admins a ON u.id = a.id_usuario AND u.id_rol IN (1, 3)
                  WHERE u.id = ?`,
                 [id]
             );
