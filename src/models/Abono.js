@@ -30,12 +30,25 @@ class Abono {
                     o.nombre_orden,
                     o.estado_orden,
                     u_created.correo as creado_por_correo,
-                    u_updated.correo as actualizado_por_correo
+                    COALESCE(a_created.nombre, c_created.nombre) as creado_por_nombre,
+                    COALESCE(a_created.apellido, c_created.apellido) as creado_por_apellido,
+                    u_updated.correo as actualizado_por_correo,
+                    COALESCE(a_updated.nombre, c_updated.nombre) as actualizado_por_nombre,
+                    COALESCE(a_updated.apellido, c_updated.apellido) as actualizado_por_apellido,
+                    COALESCE(a_verified.nombre, c_verified.nombre) as verificado_por_nombre,
+                    COALESCE(a_verified.apellido, c_verified.apellido) as verificado_por_apellido
                 FROM historial_abono ha
                 INNER JOIN clientes c ON ha.id_cliente = c.id
                 INNER JOIN ordenes o ON ha.id_orden = o.id
                 LEFT JOIN usuarios u_created ON ha.created_by = u_created.id
+                LEFT JOIN admins a_created ON u_created.id = a_created.id_usuario
+                LEFT JOIN clientes c_created ON u_created.id = c_created.id_usuario
                 LEFT JOIN usuarios u_updated ON ha.updated_by = u_updated.id
+                LEFT JOIN admins a_updated ON u_updated.id = a_updated.id_usuario
+                LEFT JOIN clientes c_updated ON u_updated.id = c_updated.id_usuario
+                LEFT JOIN usuarios u_verified ON ha.verificado_by = u_verified.correo
+                LEFT JOIN admins a_verified ON u_verified.id = a_verified.id_usuario
+                LEFT JOIN clientes c_verified ON u_verified.id = c_verified.id_usuario
                 WHERE ha.estado = 'activo'
                 ORDER BY ha.created_at DESC`
             );
@@ -73,12 +86,25 @@ class Abono {
                     o.nombre_orden,
                     o.estado_orden,
                     u_created.correo as creado_por_correo,
-                    u_updated.correo as actualizado_por_correo
+                    COALESCE(a_created.nombre, c_created.nombre) as creado_por_nombre,
+                    COALESCE(a_created.apellido, c_created.apellido) as creado_por_apellido,
+                    u_updated.correo as actualizado_por_correo,
+                    COALESCE(a_updated.nombre, c_updated.nombre) as actualizado_por_nombre,
+                    COALESCE(a_updated.apellido, c_updated.apellido) as actualizado_por_apellido,
+                    COALESCE(a_verified.nombre, c_verified.nombre) as verificado_por_nombre,
+                    COALESCE(a_verified.apellido, c_verified.apellido) as verificado_por_apellido
                 FROM historial_abono ha
                 INNER JOIN clientes c ON ha.id_cliente = c.id
                 INNER JOIN ordenes o ON ha.id_orden = o.id
                 LEFT JOIN usuarios u_created ON ha.created_by = u_created.id
+                LEFT JOIN admins a_created ON u_created.id = a_created.id_usuario
+                LEFT JOIN clientes c_created ON u_created.id = c_created.id_usuario
                 LEFT JOIN usuarios u_updated ON ha.updated_by = u_updated.id
+                LEFT JOIN admins a_updated ON u_updated.id = a_updated.id_usuario
+                LEFT JOIN clientes c_updated ON u_updated.id = c_updated.id_usuario
+                LEFT JOIN usuarios u_verified ON ha.verificado_by = u_verified.correo
+                LEFT JOIN admins a_verified ON u_verified.id = a_verified.id_usuario
+                LEFT JOIN clientes c_verified ON u_verified.id = c_verified.id_usuario
                 WHERE ha.id_cliente = ? AND ha.estado = 'activo'
                 ORDER BY ha.created_at DESC`,
                 [id_cliente]
@@ -322,11 +348,30 @@ class Abono {
                     ha.estado, 
                     ha.created_at, 
                     ha.updated_at,
+                    ha.created_by,
+                    ha.updated_by,
                     c.nombre as cliente_nombre,
                     c.apellido as cliente_apellido,
-                    c.codigo as cliente_codigo
+                    c.codigo as cliente_codigo,
+                    u_created.correo as creado_por_correo,
+                    COALESCE(a_created.nombre, c_created.nombre) as creado_por_nombre,
+                    COALESCE(a_created.apellido, c_created.apellido) as creado_por_apellido,
+                    u_updated.correo as actualizado_por_correo,
+                    COALESCE(a_updated.nombre, c_updated.nombre) as actualizado_por_nombre,
+                    COALESCE(a_updated.apellido, c_updated.apellido) as actualizado_por_apellido,
+                    COALESCE(a_verified.nombre, c_verified.nombre) as verificado_por_nombre,
+                    COALESCE(a_verified.apellido, c_verified.apellido) as verificado_por_apellido
                 FROM historial_abono ha
                 INNER JOIN clientes c ON ha.id_cliente = c.id
+                LEFT JOIN usuarios u_created ON ha.created_by = u_created.id
+                LEFT JOIN admins a_created ON u_created.id = a_created.id_usuario
+                LEFT JOIN clientes c_created ON u_created.id = c_created.id_usuario
+                LEFT JOIN usuarios u_updated ON ha.updated_by = u_updated.id
+                LEFT JOIN admins a_updated ON u_updated.id = a_updated.id_usuario
+                LEFT JOIN clientes c_updated ON u_updated.id = c_updated.id_usuario
+                LEFT JOIN usuarios u_verified ON ha.verificado_by = u_verified.correo
+                LEFT JOIN admins a_verified ON u_verified.id = a_verified.id_usuario
+                LEFT JOIN clientes c_verified ON u_verified.id = c_verified.id_usuario
                 WHERE ha.id_orden = ? AND ha.estado = 'activo'
                 ORDER BY ha.created_at DESC`,
                 [id_orden]

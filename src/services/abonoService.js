@@ -42,6 +42,8 @@ class AbonoService {
             estado_verificacion: abono.estado_verificacion,
             fecha_verificacion: abono.fecha_verificacion,
             verificado_by: abono.verificado_by,
+            verificado_by_nombre: abono.verificado_por_nombre || null,
+            verificado_by_apellido: abono.verificado_por_apellido || null,
             observaciones_verificacion: abono.observaciones_verificacion,
             estado: abono.estado,
             created_at: abono.created_at,
@@ -56,7 +58,11 @@ class AbonoService {
                 estado: abono.estado_orden
             },
             creado_por: abono.creado_por_correo,
-            actualizado_por: abono.actualizado_por_correo
+            creado_por_nombre: abono.creado_por_nombre || null,
+            creado_por_apellido: abono.creado_por_apellido || null,
+            actualizado_por: abono.actualizado_por_correo,
+            actualizado_por_nombre: abono.actualizado_por_nombre || null,
+            actualizado_por_apellido: abono.actualizado_por_apellido || null
         };
     }
 
@@ -106,19 +112,30 @@ class AbonoService {
         return abonos.map(abono => ({
             id: abono.id,
             id_cliente: abono.id_cliente,
+            id_orden: abono.id_orden,
             cantidad: parseFloat(abono.cantidad),
             fecha_abono: abono.fecha_abono,
             comprobante_pago: abono.comprobante_pago,
             estado_verificacion: abono.estado_verificacion,
             fecha_verificacion: abono.fecha_verificacion,
             verificado_by: abono.verificado_by,
+            verificado_by_nombre: abono.verificado_por_nombre || null,
+            verificado_by_apellido: abono.verificado_por_apellido || null,
             observaciones_verificacion: abono.observaciones_verificacion,
+            estado: abono.estado,
             created_at: abono.created_at,
+            updated_at: abono.updated_at,
             cliente: {
                 nombre: abono.cliente_nombre,
                 apellido: abono.cliente_apellido,
                 codigo: abono.cliente_codigo
-            }
+            },
+            creado_por: abono.creado_por_correo,
+            creado_por_nombre: abono.creado_por_nombre || null,
+            creado_por_apellido: abono.creado_por_apellido || null,
+            actualizado_por: abono.actualizado_por_correo,
+            actualizado_por_nombre: abono.actualizado_por_nombre || null,
+            actualizado_por_apellido: abono.actualizado_por_apellido || null
         }));
     }
 

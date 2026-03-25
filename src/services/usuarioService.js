@@ -172,12 +172,28 @@ class UsuarioService {
         }
 
         if (parseInt(id_rol) === 1 || parseInt(id_rol) === 3) {
-            await Admin.create({
-                id_usuario: usuarioId,
-                nombre,
-                apellido: apellido || '',
-                created_by: createdBy
-            });
+            const adminExistente = await Admin.findByUsuarioAny(usuarioId);
+            const nombreAdmin = nombre || correo.split('@')[0];
+            const apellidoAdmin = apellido || '';
+
+            if (adminExistente) {
+                await Admin.update(
+                    adminExistente.id,
+                    {
+                        nombre: nombreAdmin,
+                        apellido: apellidoAdmin,
+                        estado: 'activo'
+                    },
+                    createdBy
+                );
+            } else {
+                await Admin.create({
+                    id_usuario: usuarioId,
+                    nombre: nombreAdmin,
+                    apellido: apellidoAdmin,
+                    created_by: createdBy
+                });
+            }
         }
 
         // Retornar el usuario creado con información completa
@@ -322,23 +338,25 @@ class UsuarioService {
 
         // Si el usuario es admin/superadmin, actualizar o crear perfil admin
         if (parseInt(rolFinal) === 1 || parseInt(rolFinal) === 3) {
-            const admin = await Admin.findByUsuario(id);
+            const admin = await Admin.findByUsuarioAny(id);
+            const nombreAdmin = nombre || (admin ? admin.nombre : usuario.correo.split('@')[0]);
+            const apellidoAdmin = apellido !== undefined ? apellido : (admin ? admin.apellido : '');
 
             if (admin) {
                 await Admin.update(
                     admin.id,
                     {
-                        nombre: nombre || admin.nombre,
-                        apellido: apellido !== undefined ? apellido : admin.apellido,
+                        nombre: nombreAdmin,
+                        apellido: apellidoAdmin,
                         estado: estado || admin.estado
                     },
                     updatedBy
                 );
-            } else if (nombre) {
+            } else {
                 await Admin.create({
                     id_usuario: id,
-                    nombre,
-                    apellido: apellido || '',
+                    nombre: nombreAdmin,
+                    apellido: apellidoAdmin,
                     created_by: updatedBy
                 });
             }

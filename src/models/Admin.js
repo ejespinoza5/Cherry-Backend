@@ -29,6 +29,18 @@ class Admin {
     }
 
     /**
+     * Buscar admin por id_usuario sin filtrar estado
+     */
+    static async findByUsuarioAny(id_usuario) {
+        const [rows] = await pool.query(
+            'SELECT * FROM admins WHERE id_usuario = ?',
+            [id_usuario]
+        );
+
+        return rows[0] || null;
+    }
+
+    /**
      * Actualizar datos del admin
      */
     static async update(id, data, updated_by) {
