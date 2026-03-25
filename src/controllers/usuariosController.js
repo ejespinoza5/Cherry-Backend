@@ -109,6 +109,13 @@ const createUsuario = async (req, res) => {
         console.error('Error al crear usuario:', error);
 
         // Manejo de errores específicos
+        if (error.message && error.message.startsWith('La contraseña debe')) {
+            return res.status(400).json({
+                success: false,
+                message: error.message
+            });
+        }
+
         if (error.message === 'INVALID_EMAIL_FORMAT') {
             return res.status(400).json({
                 success: false,
@@ -186,9 +193,28 @@ const createUsuario = async (req, res) => {
             });
         }
 
+        // Manejo de errores SQL frecuentes
+        if (error.code === 'ER_DUP_ENTRY') {
+            const duplicatedField = error.sqlMessage || '';
+
+            if (duplicatedField.includes('usuarios.correo')) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'El correo ya está registrado'
+                });
+            }
+
+            if (duplicatedField.includes('clientes.codigo')) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'El código de cliente ya está en uso'
+                });
+            }
+        }
+
         res.status(500).json({
             success: false,
-            message: 'Error al crear usuario',
+            message: process.env.NODE_ENV === 'development' ? error.message : 'Error interno al crear usuario',
             error: process.env.NODE_ENV === 'development' ? error.message : {}
         });
     }
