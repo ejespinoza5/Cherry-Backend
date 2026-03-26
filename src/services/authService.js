@@ -76,15 +76,12 @@ class AuthService {
 
     /**
      * Solicitar codigo de recuperacion.
-     * Siempre retorna un mensaje generico para evitar enumeracion de cuentas.
      */
     static async forgotPassword(correo) {
         const usuario = await Usuario.findByEmail(correo);
 
         if (!usuario) {
-            return {
-                message: 'Si el correo existe, se envio un codigo de recuperacion.'
-            };
+            throw new Error('EMAIL_NOT_FOUND');
         }
 
         await PasswordReset.expireActiveCodesByUser(usuario.id);
@@ -97,7 +94,7 @@ class AuthService {
         await EmailService.sendRecoveryCode(usuario.correo, codigo);
 
         return {
-            message: 'Si el correo existe, se envio un codigo de recuperacion.'
+            message: 'Se envió un código de recuperación.'
         };
     }
 

@@ -98,6 +98,13 @@ const forgotPassword = async (req, res) => {
     } catch (error) {
         console.error('Error en forgotPassword:', error);
 
+        if (error.message === 'EMAIL_NOT_FOUND') {
+            return res.status(404).json({
+                success: false,
+                message: 'El correo no está registrado'
+            });
+        }
+
         return res.status(500).json({
             success: false,
             message: 'No se pudo procesar la solicitud',

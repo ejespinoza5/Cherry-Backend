@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const Usuario = require('../models/Usuario');
 const Cliente = require('../models/Cliente');
 const Admin = require('../models/Admin');
+const EmailService = require('../utils/emailService');
 const { isValidEmail, isValidPassword, isValidEstado } = require('../utils/validators');
 
 class UsuarioService {
@@ -194,6 +195,30 @@ class UsuarioService {
                     created_by: createdBy
                 });
             }
+        }
+
+        // Enviar correo de bienvenida sin bloquear la creacion del usuario.
+        try {
+            if (parseInt(id_rol) === 2) {
+                await EmailService.sendWelcomeClient({
+                    correo,
+                    contraseña,
+                    nombre,
+                    codigo
+                });
+            }
+
+            if (parseInt(id_rol) === 1 || parseInt(id_rol) === 3) {
+                await EmailService.sendWelcomeAdmin({
+                    correo,
+                    contraseña,
+                    nombre,
+                    apellido,
+                    rolNombre: parseInt(id_rol) === 3 ? 'SuperAdministrador' : 'Administrador'
+                });
+            }
+        } catch (emailError) {
+            console.error('Error enviando correo de bienvenida:', emailError.message);
         }
 
         // Retornar el usuario creado con información completa
