@@ -3,8 +3,9 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const Usuario = require('../models/Usuario');
 const PasswordReset = require('../models/PasswordReset');
+const EmailChangeRequest = require('../models/EmailChangeRequest');
 const EmailService = require('../utils/emailService');
-const { isValidPassword } = require('../utils/validators');
+const { isValidPassword, isValidEmail } = require('../utils/validators');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRATION;
@@ -119,6 +120,108 @@ class AuthService {
 
         return {
             message: 'Contraseña actualizada correctamente. Ya puedes usar el sistema con normalidad.'
+        };
+    }
+
+    /**
+     * Solicitar cambio de correo con codigo de verificacion enviado al nuevo correo.
+     */
+    static async requestEmailChange(userId, nuevoCorreo) {
+        const usuario = await Usuario.findById(userId);
+
+        if (!usuario) {
+            throw new Error('USER_NOT_FOUND');
+        }
+
+        if (!isValidEmail(nuevoCorreo)) {
+            throw new Error('INVALID_EMAIL_FORMAT');
+        }
+
+        if (usuario.correo.toLowerCase() === nuevoCorreo.toLowerCase()) {
+            throw new Error('SAME_EMAIL');
+        }
+
+        const emailExists = await Usuario.emailExists(nuevoCorreo, userId);
+        if (emailExists) {
+            throw new Error('EMAIL_ALREADY_EXISTS');
+        }
+
+        await EmailChangeRequest.expireActiveByUser(userId);
+
+        const codigo = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+        const codigoHash = await bcrypt.hash(codigo, 10);
+        const expiraEn = new Date(Date.now() + 15 * 60 * 1000);
+
+        await EmailChangeRequest.create(userId, nuevoCorreo, codigoHash, expiraEn);
+        await EmailService.sendEmailChangeVerificationCode(nuevoCorreo, codigo);
+
+        return {
+            message: 'Se envió un código de verificación al nuevo correo.'
+        };
+    }
+
+    /**
+     * Verificar codigo de cambio de correo y aplicar el cambio.
+     */
+    static async verifyEmailChange(userId, nuevoCorreo, codigo) {
+        const usuario = await Usuario.findById(userId);
+
+        if (!usuario) {
+            throw new Error('USER_NOT_FOUND');
+        }
+
+        if (!isValidEmail(nuevoCorreo)) {
+            throw new Error('INVALID_EMAIL_FORMAT');
+        }
+
+        const request = await EmailChangeRequest.findLatestPendingByUserAndEmail(userId, nuevoCorreo);
+
+        if (!request) {
+            throw new Error('INVALID_OR_EXPIRED_CODE');
+        }
+
+        if (new Date(request.expira_en) < new Date()) {
+            await EmailChangeRequest.markExpired(request.id);
+            throw new Error('INVALID_OR_EXPIRED_CODE');
+        }
+
+        if (request.intentos >= request.max_intentos) {
+            await EmailChangeRequest.markBlocked(request.id);
+            throw new Error('CODE_BLOCKED');
+        }
+
+        const isMatch = await bcrypt.compare(codigo, request.codigo_hash);
+
+        if (!isMatch) {
+            await EmailChangeRequest.incrementAttempts(request.id);
+            const updated = await EmailChangeRequest.findById(request.id);
+
+            if (updated && updated.intentos >= updated.max_intentos) {
+                await EmailChangeRequest.markBlocked(request.id);
+                throw new Error('CODE_BLOCKED');
+            }
+
+            throw new Error('INVALID_OR_EXPIRED_CODE');
+        }
+
+        const emailExists = await Usuario.emailExists(nuevoCorreo, userId);
+        if (emailExists) {
+            throw new Error('EMAIL_ALREADY_EXISTS');
+        }
+
+        await EmailChangeRequest.markVerified(request.id);
+
+        const updated = await Usuario.updateEmail(userId, nuevoCorreo);
+
+        if (!updated) {
+            throw new Error('EMAIL_UPDATE_FAILED');
+        }
+
+        await EmailChangeRequest.markUsed(request.id);
+
+        return {
+            message: 'Correo actualizado correctamente.',
+            correo: nuevoCorreo
         };
     }
 

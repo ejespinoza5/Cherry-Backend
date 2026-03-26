@@ -39,6 +39,20 @@ router.post('/reset-password', authController.resetPassword);
 router.post('/change-initial-password', verifyToken, authController.changeInitialPassword);
 
 /**
+ * @route   POST /api/auth/request-email-change
+ * @desc    Solicitar cambio de correo y enviar codigo de verificacion al nuevo correo
+ * @access  Private
+ */
+router.post('/request-email-change', verifyToken, authController.requestEmailChange);
+
+/**
+ * @route   POST /api/auth/verify-email-change
+ * @desc    Verificar codigo OTP y confirmar cambio de correo
+ * @access  Private
+ */
+router.post('/verify-email-change', verifyToken, authController.verifyEmailChange);
+
+/**
  * @route   GET /api/auth/me
  * @desc    Obtener información del usuario autenticado
  * @access  Private

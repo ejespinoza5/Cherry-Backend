@@ -288,11 +288,148 @@ const changeInitialPassword = async (req, res) => {
     }
 };
 
+/**
+ * Solicitar cambio de correo con codigo OTP.
+ */
+const requestEmailChange = async (req, res) => {
+    try {
+        const { nuevoCorreo } = req.body;
+
+        if (!nuevoCorreo) {
+            return res.status(400).json({
+                success: false,
+                message: 'nuevoCorreo es requerido'
+            });
+        }
+
+        const result = await AuthService.requestEmailChange(req.user.id, nuevoCorreo);
+
+        return res.json({
+            success: true,
+            message: result.message
+        });
+    } catch (error) {
+        console.error('Error en requestEmailChange:', error);
+
+        if (error.message === 'USER_NOT_FOUND') {
+            return res.status(404).json({
+                success: false,
+                message: 'Usuario no encontrado'
+            });
+        }
+
+        if (error.message === 'INVALID_EMAIL_FORMAT') {
+            return res.status(400).json({
+                success: false,
+                message: 'El formato del correo es inválido'
+            });
+        }
+
+        if (error.message === 'SAME_EMAIL') {
+            return res.status(400).json({
+                success: false,
+                message: 'El nuevo correo debe ser diferente al actual'
+            });
+        }
+
+        if (error.message === 'EMAIL_ALREADY_EXISTS') {
+            return res.status(400).json({
+                success: false,
+                message: 'El correo ya está registrado por otro usuario'
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: 'No se pudo solicitar el cambio de correo',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
+/**
+ * Verificar codigo OTP de cambio de correo.
+ */
+const verifyEmailChange = async (req, res) => {
+    try {
+        const { nuevoCorreo, codigo } = req.body;
+
+        if (!nuevoCorreo || !codigo) {
+            return res.status(400).json({
+                success: false,
+                message: 'nuevoCorreo y codigo son requeridos'
+            });
+        }
+
+        if (!/^\d{6}$/.test(String(codigo))) {
+            return res.status(400).json({
+                success: false,
+                message: 'El codigo debe tener 6 dígitos numéricos'
+            });
+        }
+
+        const result = await AuthService.verifyEmailChange(req.user.id, nuevoCorreo, String(codigo));
+
+        return res.json({
+            success: true,
+            message: result.message,
+            data: {
+                correo: result.correo
+            }
+        });
+    } catch (error) {
+        console.error('Error en verifyEmailChange:', error);
+
+        if (error.message === 'USER_NOT_FOUND') {
+            return res.status(404).json({
+                success: false,
+                message: 'Usuario no encontrado'
+            });
+        }
+
+        if (error.message === 'INVALID_EMAIL_FORMAT') {
+            return res.status(400).json({
+                success: false,
+                message: 'El formato del correo es inválido'
+            });
+        }
+
+        if (error.message === 'EMAIL_ALREADY_EXISTS') {
+            return res.status(400).json({
+                success: false,
+                message: 'El correo ya está registrado por otro usuario'
+            });
+        }
+
+        if (error.message === 'CODE_BLOCKED') {
+            return res.status(429).json({
+                success: false,
+                message: 'Código bloqueado por demasiados intentos'
+            });
+        }
+
+        if (error.message === 'INVALID_OR_EXPIRED_CODE') {
+            return res.status(400).json({
+                success: false,
+                message: 'Código inválido o expirado'
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: 'No se pudo verificar el cambio de correo',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
 module.exports = {
     login,
     me,
     forgotPassword,
     verifyRecoveryCode,
     resetPassword,
-    changeInitialPassword
+    changeInitialPassword,
+    requestEmailChange,
+    verifyEmailChange
 };
