@@ -32,6 +32,13 @@ router.post('/verify-recovery-code', authController.verifyRecoveryCode);
 router.post('/reset-password', authController.resetPassword);
 
 /**
+ * @route   POST /api/auth/change-initial-password
+ * @desc    Cambiar contrasena en primer inicio de sesion
+ * @access  Private
+ */
+router.post('/change-initial-password', verifyToken, authController.changeInitialPassword);
+
+/**
  * @route   GET /api/auth/me
  * @desc    Obtener información del usuario autenticado
  * @access  Private

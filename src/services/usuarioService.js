@@ -16,6 +16,7 @@ class UsuarioService {
             id_rol: usuario.id_rol,
             rol_nombre: usuario.rol_nombre,
             estado: usuario.estado,
+            requiere_cambio_password: Boolean(usuario.requiere_cambio_password),
             created_at: usuario.created_at,
             updated_at: usuario.updated_at
         };
@@ -153,8 +154,11 @@ class UsuarioService {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(contraseña, salt);
 
+        // Cliente y administrador se crean con contraseña temporal y deben cambiarla en primer login.
+        const requiereCambioPassword = [1, 2].includes(parseInt(id_rol));
+
         // Crear usuario
-        const usuarioId = await Usuario.create(correo, hashedPassword, id_rol);
+        const usuarioId = await Usuario.create(correo, hashedPassword, id_rol, requiereCambioPassword);
 
         // Si el rol es cliente (2), crear registro en la tabla clientes
         if (parseInt(id_rol) === 2) {

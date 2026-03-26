@@ -218,10 +218,81 @@ const resetPassword = async (req, res) => {
     }
 };
 
+/**
+ * Cambiar contrasena en primer inicio de sesion.
+ */
+const changeInitialPassword = async (req, res) => {
+    try {
+        const { contraseñaActual, nuevaContrasena } = req.body;
+
+        if (!contraseñaActual || !nuevaContrasena) {
+            return res.status(400).json({
+                success: false,
+                message: 'contraseñaActual y nuevaContrasena son requeridos'
+            });
+        }
+
+        const result = await AuthService.changeInitialPassword(
+            req.user.id,
+            contraseñaActual,
+            nuevaContrasena
+        );
+
+        return res.json({
+            success: true,
+            message: result.message
+        });
+    } catch (error) {
+        console.error('Error en changeInitialPassword:', error);
+
+        if (error.message === 'USER_NOT_FOUND') {
+            return res.status(404).json({
+                success: false,
+                message: 'Usuario no encontrado'
+            });
+        }
+
+        if (error.message === 'INITIAL_CHANGE_NOT_REQUIRED') {
+            return res.status(400).json({
+                success: false,
+                message: 'Este usuario no requiere cambio de contraseña inicial'
+            });
+        }
+
+        if (error.message === 'INVALID_CURRENT_PASSWORD') {
+            return res.status(401).json({
+                success: false,
+                message: 'La contraseña actual es incorrecta'
+            });
+        }
+
+        if (error.message === 'PASSWORD_MUST_BE_DIFFERENT') {
+            return res.status(400).json({
+                success: false,
+                message: 'La nueva contraseña debe ser diferente a la actual'
+            });
+        }
+
+        if (error.message === 'INVALID_PASSWORD') {
+            return res.status(400).json({
+                success: false,
+                message: error.details || 'La nueva contraseña no cumple los requisitos de seguridad'
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: 'No se pudo cambiar la contraseña inicial',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
 module.exports = {
     login,
     me,
     forgotPassword,
     verifyRecoveryCode,
-    resetPassword
+    resetPassword,
+    changeInitialPassword
 };

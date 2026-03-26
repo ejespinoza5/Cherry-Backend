@@ -49,7 +49,8 @@ class AuthService {
                 correo: usuario.correo,
                 id_rol: usuario.id_rol,
                 rol_nombre: usuario.rol_nombre,
-                estado: usuario.estado
+                estado: usuario.estado,
+                requiere_cambio_password: Boolean(usuario.requiere_cambio_password)
             }
         };
     }
@@ -70,7 +71,54 @@ class AuthService {
             id_rol: usuario.id_rol,
             rol_nombre: usuario.rol_nombre,
             estado: usuario.estado,
+            requiere_cambio_password: Boolean(usuario.requiere_cambio_password),
             created_at: usuario.created_at
+        };
+    }
+
+    /**
+     * Cambiar contrasena en primer inicio de sesion.
+     */
+    static async changeInitialPassword(userId, contraseñaActual, nuevaContrasena) {
+        const usuario = await Usuario.findById(userId);
+
+        if (!usuario) {
+            throw new Error('USER_NOT_FOUND');
+        }
+
+        if (!usuario.requiere_cambio_password) {
+            throw new Error('INITIAL_CHANGE_NOT_REQUIRED');
+        }
+
+        const currentPasswordHash = await Usuario.getPassword(userId);
+        const isCurrentPasswordValid = await bcrypt.compare(contraseñaActual, currentPasswordHash);
+
+        if (!isCurrentPasswordValid) {
+            throw new Error('INVALID_CURRENT_PASSWORD');
+        }
+
+        const passwordValidation = isValidPassword(nuevaContrasena);
+        if (!passwordValidation.valid) {
+            const validationError = new Error('INVALID_PASSWORD');
+            validationError.details = passwordValidation.message;
+            throw validationError;
+        }
+
+        if (contraseñaActual === nuevaContrasena) {
+            throw new Error('PASSWORD_MUST_BE_DIFFERENT');
+        }
+
+        const hashedPassword = await bcrypt.hash(nuevaContrasena, 10);
+        const updatedPassword = await Usuario.updatePassword(userId, hashedPassword);
+
+        if (!updatedPassword) {
+            throw new Error('PASSWORD_UPDATE_FAILED');
+        }
+
+        await Usuario.updateRequiereCambioPassword(userId, false);
+
+        return {
+            message: 'Contraseña actualizada correctamente. Ya puedes usar el sistema con normalidad.'
         };
     }
 
@@ -202,6 +250,7 @@ class AuthService {
         }
 
         await PasswordReset.markUsed(recovery.id);
+        await Usuario.updateRequiereCambioPassword(payload.id, false);
 
         return {
             message: 'Contrasena actualizada correctamente.'

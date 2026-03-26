@@ -18,6 +18,7 @@ CREATE TABLE usuarios (
   contraseña VARCHAR(255) NOT NULL,
   id_rol INT NOT NULL,
   estado ENUM('activo','inactivo') DEFAULT 'activo',
+  requiere_cambio_password TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 = usuario debe cambiar su contrasena en el primer inicio de sesion',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_usuario_rol

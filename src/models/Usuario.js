@@ -25,7 +25,7 @@ class Usuario {
     static async findById(id) {
         try {
             const [rows] = await pool.query(
-                `SELECT u.id, u.correo, u.id_rol, u.estado, u.created_at, u.updated_at, r.nombre as rol_nombre 
+                `SELECT u.id, u.correo, u.id_rol, u.estado, u.requiere_cambio_password, u.created_at, u.updated_at, r.nombre as rol_nombre 
                  FROM usuarios u 
                  INNER JOIN rol r ON u.id_rol = r.id 
                  WHERE u.id = ?`,
@@ -40,11 +40,11 @@ class Usuario {
     /**
      * Crear nuevo usuario
      */
-    static async create(correo, hashedPassword, id_rol) {
+    static async create(correo, hashedPassword, id_rol, requiereCambioPassword = false) {
         try {
             const [result] = await pool.query(
-                'INSERT INTO usuarios (correo, contraseña, id_rol, estado) VALUES (?, ?, ?, ?)',
-                [correo, hashedPassword, id_rol, 'activo']
+                'INSERT INTO usuarios (correo, contraseña, id_rol, estado, requiere_cambio_password) VALUES (?, ?, ?, ?, ?)',
+                [correo, hashedPassword, id_rol, 'activo', requiereCambioPassword ? 1 : 0]
             );
             return result.insertId;
         } catch (error) {
@@ -58,7 +58,7 @@ class Usuario {
     static async findAll() {
         try {
             const [rows] = await pool.query(
-                `SELECT u.id, u.correo, u.id_rol, u.estado, u.created_at, u.updated_at, r.nombre as rol_nombre 
+                `SELECT u.id, u.correo, u.id_rol, u.estado, u.requiere_cambio_password, u.created_at, u.updated_at, r.nombre as rol_nombre 
                  FROM usuarios u 
                  INNER JOIN rol r ON u.id_rol = r.id 
                  WHERE u.estado = 'activo'
@@ -81,6 +81,7 @@ class Usuario {
                     u.correo, 
                     u.id_rol, 
                     u.estado, 
+                    u.requiere_cambio_password,
                     u.created_at, 
                     u.updated_at, 
                     r.nombre as rol_nombre,
@@ -121,6 +122,7 @@ class Usuario {
                     u.correo, 
                     u.id_rol, 
                     u.estado, 
+                    u.requiere_cambio_password,
                     u.created_at, 
                     u.updated_at, 
                     r.nombre as rol_nombre,
@@ -173,6 +175,21 @@ class Usuario {
             const [result] = await pool.query(
                 'UPDATE usuarios SET contraseña = ? WHERE id = ?',
                 [hashedPassword, id]
+            );
+            return result.affectedRows > 0;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Actualizar bandera de cambio obligatorio de contrasena
+     */
+    static async updateRequiereCambioPassword(id, requiereCambioPassword) {
+        try {
+            const [result] = await pool.query(
+                'UPDATE usuarios SET requiere_cambio_password = ? WHERE id = ?',
+                [requiereCambioPassword ? 1 : 0, id]
             );
             return result.affectedRows > 0;
         } catch (error) {
