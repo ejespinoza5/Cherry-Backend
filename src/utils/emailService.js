@@ -60,16 +60,16 @@ class EmailService {
                     </tr>
                     <tr>
                         <td style="padding:24px;font-family:'Trebuchet MS',Verdana,Arial,sans-serif;color:#68473D;">
-                            <h2 style="margin:0 0 10px 0;font-size:24px;line-height:1.25;color:#D92525;">Recuperacion de contrasena</h2>
-                            <p style="margin:0 0 14px 0;font-size:15px;line-height:1.6;">Recibimos una solicitud para restablecer tu contrasena en Sistema Cherry.</p>
-                            <p style="margin:0 0 10px 0;font-size:15px;line-height:1.6;">Ingresa este codigo de verificacion:</p>
+                            <h2 style="margin:0 0 10px 0;font-size:24px;line-height:1.25;color:#D92525;">Recuperación de contraseña</h2>
+                            <p style="margin:0 0 14px 0;font-size:15px;line-height:1.6;">Recibimos una solicitud para restablecer tu contraseña en Sistema Cherry.</p>
+                            <p style="margin:0 0 10px 0;font-size:15px;line-height:1.6;">Ingresa este código de verificación:</p>
 
                             <div style="margin:14px 0 16px 0;padding:14px 18px;text-align:center;background:#FEF2F2;border:1px dashed #D92525;border-radius:10px;">
                                 <span style="display:inline-block;font-size:34px;font-weight:700;letter-spacing:8px;color:#D92525;">${codigo}</span>
                             </div>
 
-                            <p style="margin:0 0 12px 0;font-size:14px;line-height:1.6;color:#497413;font-weight:600;">Este codigo expira en 15 minutos.</p>
-                            <p style="margin:0;font-size:14px;line-height:1.6;color:#68473D;">Si no solicitaste este cambio, ignora este correo. Tu cuenta seguira protegida.</p>
+                            <p style="margin:0 0 12px 0;font-size:14px;line-height:1.6;color:#497413;font-weight:600;">Este código expira en 15 minutos.</p>
+                            <p style="margin:0;font-size:14px;line-height:1.6;color:#68473D;">Si no solicitaste este cambio, ignora este correo. Tu cuenta seguirá protegida.</p>
                         </td>
                     </tr>
                     <tr>
@@ -82,16 +82,16 @@ class EmailService {
         `;
 
         const text = [
-            'Recuperacion de contrasena - Sistema Cherry',
-            `Codigo de verificacion: ${codigo}`,
-            'Este codigo expira en 15 minutos.',
+            'Recuperación de contraseña - Sistema Cherry',
+            `Código de verificación: ${codigo}`,
+            'Este código expira en 15 minutos.',
             'Si no solicitaste este cambio, ignora este correo.'
         ].join('\n');
 
         await transporter.sendMail({
             from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
             to: correoDestino,
-            subject: 'Codigo de recuperacion - Sistema Cherry',
+            subject: 'Código de recuperación - Sistema Cherry',
             text,
             html,
             attachments: [
