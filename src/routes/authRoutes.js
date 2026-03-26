@@ -11,6 +11,27 @@ const { verifyToken } = require('../middlewares/auth');
 router.post('/login', authController.login);
 
 /**
+ * @route   POST /api/auth/forgot-password
+ * @desc    Solicitar codigo OTP para recuperar contrasena
+ * @access  Public
+ */
+router.post('/forgot-password', authController.forgotPassword);
+
+/**
+ * @route   POST /api/auth/verify-recovery-code
+ * @desc    Verificar codigo OTP de recuperacion
+ * @access  Public
+ */
+router.post('/verify-recovery-code', authController.verifyRecoveryCode);
+
+/**
+ * @route   POST /api/auth/reset-password
+ * @desc    Cambiar contrasena con token temporal
+ * @access  Public
+ */
+router.post('/reset-password', authController.resetPassword);
+
+/**
  * @route   GET /api/auth/me
  * @desc    Obtener información del usuario autenticado
  * @access  Private

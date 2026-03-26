@@ -12,6 +12,13 @@ DB_PASSWORD=tu_contraseña
 DB_NAME=cherry_db
 JWT_SECRET=cherry_secret_key_2026
 JWT_EXPIRES_IN=24h
+JWT_RESET_SECRET=cherry_reset_secret_2026
+JWT_RESET_EXPIRATION=15m
+
+EMAIL_SERVICE=gmail
+EMAIL_USER=tu_correo@gmail.com
+EMAIL_PASSWORD=tu_app_password
+EMAIL_FROM="Sistema Cherry <no-reply@cherry.local>"
 NODE_ENV=development
 ```
 
@@ -104,6 +111,82 @@ Authorization: Bearer {token}
   }
 }
 ```
+
+#### POST /api/auth/forgot-password
+Solicitar código de recuperación de contraseña.
+
+Nota de seguridad: la respuesta es genérica para no revelar si el correo existe o no.
+
+**Request Body:**
+```json
+{
+  "correo": "admin@cherry.com"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Si el correo existe, se envio un codigo de recuperacion."
+}
+```
+
+#### POST /api/auth/verify-recovery-code
+Verificar código OTP de recuperación (6 dígitos).
+
+**Request Body:**
+```json
+{
+  "correo": "admin@cherry.com",
+  "codigo": "123456"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Codigo verificado correctamente",
+  "data": {
+    "resetToken": "<JWT_TEMPORAL>",
+    "expiresIn": "15m"
+  }
+}
+```
+
+**Errores comunes:**
+- `400`: Código inválido o expirado
+- `429`: Código bloqueado por demasiados intentos
+
+#### POST /api/auth/reset-password
+Cambiar contraseña después de verificar el OTP.
+
+**Request Body:**
+```json
+{
+  "resetToken": "<JWT_TEMPORAL>",
+  "nuevaContrasena": "Nueva123!"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Contrasena actualizada correctamente."
+}
+```
+
+**Errores comunes:**
+- `401`: Token de recuperación inválido o expirado
+- `400`: Contraseña inválida o sesión de recuperación no válida
+
+#### Duración y estado del código
+- El código OTP expira en 15 minutos.
+- Máximo 3 intentos por código.
+- Estados en base de datos: `pendiente`, `verificado`, `usado`, `expirado`, `bloqueado`.
+- El estado `usado` permite saber si ya fue utilizado.
 
 ---
 
