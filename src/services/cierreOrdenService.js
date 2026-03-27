@@ -214,6 +214,7 @@ class CierreOrdenService {
                         nombreOrden: orden.nombre_orden,
                         estadoPago: estado_pago,
                         saldoPendiente: saldo_actual > 0 ? saldo_actual : 0,
+                        totalAbonado: parseFloat(total_abonos) || 0,
                         fechaCierre: fecha_cierre,
                         fechaLimitePago: estado_pago === 'en_gracia' ? fecha_limite_pago : null
                     });
