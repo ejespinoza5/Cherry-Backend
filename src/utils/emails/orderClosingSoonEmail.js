@@ -27,7 +27,7 @@ const sendOrderClosingSoonEmail = async ({
 
     const detailsHtml = `
         <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#0A2A66;">
-            Hola ${fullName}, estamos llegando a la recta final. Tienes aproximadamente <strong style="color:#B54708;">3 días</strong> para realizar tus últimas compras o completar tus pagos antes del cierre oficial de la ${orden}.
+            Hola ${fullName}, estamos llegando a la recta final. Tienes aproximadamente <strong style="color:#B54708;">3 días</strong> para realizar tus últimas compras o completar tus pagos antes del cierre oficial de la orden: ${orden}.
         </p>
         <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#0A2A66;font-weight:700;">
             No te pierdas los últimos lives en TikTok para asegurar tus productos favoritos.
@@ -47,7 +47,7 @@ const sendOrderClosingSoonEmail = async ({
 
     const text = [
         `⏳ ¡Solo quedan 3 días! El cierre de ${orden} se acerca.`,
-        `Hola ${fullName}, estamos llegando a la recta final. Tienes aproximadamente 3 días para realizar tus últimas compras o completar tus pagos antes del cierre oficial de la ${orden}.`,
+        `Hola ${fullName}, estamos llegando a la recta final. Tienes aproximadamente 3 días para realizar tus últimas compras o completar tus pagos antes del cierre oficial de la orden: ${orden}.`,
         'No te pierdas los últimos lives en TikTok para asegurar tus productos favoritos.',
         `Orden: ${orden}`,
         `Fecha de Cierre Programado: ${cierreTexto}`,
