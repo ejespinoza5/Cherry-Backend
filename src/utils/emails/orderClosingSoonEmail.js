@@ -64,8 +64,8 @@ const sendOrderClosingSoonEmail = async ({
             `Cierre programado: ${cierreTexto}`,
             `TikTok: ${tiktokUrl}`
         ],
-        highlightText: 'Mantente pendiente de los lives de TikTok para realizar tus compras antes del cierre.',
-        closingText: 'Si ya completaste tus compras, ignora este aviso.',
+        highlightText: 'Tienes pocos dias para completar tus compras antes del cierre.',
+        closingText: 'Mantente pendiente de los lives de TikTok para realizar tus compras. Si ya completaste tus compras, ignora este aviso.',
         footerText: 'Sistema Cherry · Aviso de cierre',
         text
     });

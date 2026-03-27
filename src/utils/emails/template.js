@@ -25,8 +25,8 @@ const buildDataRows = (rows) => {
         .filter((row) => row && row.label && row.value !== undefined && row.value !== null && String(row.value).trim() !== '')
         .map((row) => `
             <tr>
-                <td style="padding:10px 12px;font-size:13px;color:#68473D;background:#fff7f7;border:1px solid #f0dddd;font-weight:700;width:38%;">${row.label}</td>
-                <td style="padding:10px 12px;font-size:13px;color:#68473D;background:#ffffff;border:1px solid #f0dddd;">${row.value}</td>
+                <td style="padding:10px 12px;font-size:15px;color:#68473D;background:#fff7f7;border:1px solid #f0dddd;font-weight:700;width:38%;">${row.label}</td>
+                    <td style="padding:10px 12px;font-size:15px;color:#68473D;background:#ffffff;border:1px solid #f0dddd;">${row.value}</td>
             </tr>
         `)
         .join('');
@@ -64,8 +64,8 @@ const sendBrandedEmail = async ({
                         <h2 style="margin:0 0 10px 0;font-size:24px;line-height:1.25;color:#D92525;">${title}</h2>
                         <p style="margin:0 0 14px 0;font-size:15px;line-height:1.6;">${introText}</p>
                         ${detailsHtml || ''}
-                        <p style="margin:0 0 12px 0;font-size:14px;line-height:1.6;color:#497413;font-weight:600;">${highlightText || ''}</p>
-                        <p style="margin:0;font-size:14px;line-height:1.6;color:#68473D;">${closingText || ''}</p>
+                            <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#497413;font-weight:600;">${highlightText || ''}</p>
+                            <p style="margin:0;font-size:15px;line-height:1.6;color:#68473D;">${closingText || ''}</p>
                     </td>
                 </tr>
                 <tr>

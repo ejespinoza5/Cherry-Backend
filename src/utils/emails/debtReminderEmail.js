@@ -32,7 +32,7 @@ const sendDebtReminderEmail = async ({
 
     const warningText = isBlocked
         ? 'Tu cuenta esta bloqueada y no puedes hacer compras hasta que tu estado baje al menos a deudor.'
-        : 'Si no cancelas a tiempo, puedes perder los abonos realizados y tus compras pueden pasar a remate.';
+        : 'Regulariza tu saldo para evitar bloqueos y restricciones en futuras compras.';
 
     const reglaBloqueoTexto = isBlocked
         ? 'Cuando un cliente supera $300 de deuda y no ha abonado, el sistema lo bloquea automaticamente.'
@@ -44,10 +44,10 @@ const sendDebtReminderEmail = async ({
         <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;">
             Registramos saldo pendiente en tu cuenta. Debes cancelar el valor adeudado para evitar penalizaciones.
         </p>
-        <p style="margin:0 0 12px 0;font-size:14px;line-height:1.6;color:#B42318;font-weight:700;">
+        <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#B42318;font-weight:700;">
             ${warningText}
         </p>
-        <p style="margin:0 0 12px 0;font-size:14px;line-height:1.6;color:#68473D;">
+        <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#68473D;">
             ${reglaBloqueoTexto}
         </p>
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:8px 0 16px 0;">
@@ -58,7 +58,7 @@ const sendDebtReminderEmail = async ({
                 { label: 'Orden con deuda', value: orden },
                 { label: 'Saldo de la orden', value: saldoOrdenTexto },
                 { label: 'Deuda total', value: deudaTexto },
-                { label: 'Fecha de cierre de la orden', value: fechaCierre }
+                { label: 'Fecha limite de pago', value: fechaCierre }
             ])}
         </table>
     `;
@@ -71,7 +71,7 @@ const sendDebtReminderEmail = async ({
         `Orden con deuda: ${orden}`,
         `Saldo de la orden: ${saldoOrdenTexto}`,
         `Deuda total: ${deudaTexto}`,
-        `Fecha de cierre de la orden: ${fechaCierre}`,
+        `Fecha limite de pago: ${fechaCierre}`,
         warningText,
         reglaBloqueoTexto,
         consecuenciaText
@@ -87,9 +87,10 @@ const sendDebtReminderEmail = async ({
             `Orden con deuda: ${orden}`,
             `Saldo de la orden: ${saldoOrdenTexto}`,
             `Deuda total: ${deudaTexto}`,
+            `Fecha limite de pago: ${fechaCierre}`,
             warningText
         ],
-        highlightText: isBlocked ? `${warningText} ${consecuenciaText}` : consecuenciaText,
+        highlightText: '',
         closingText: 'Realiza el pago cuanto antes y reporta tu abono. Si hoy estas bloqueado, al reducir la deuda podras volver al estado deudor y recuperar tu capacidad de compra.',
         footerText: 'Sistema Cherry · Recordatorio de deuda',
         text

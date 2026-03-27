@@ -72,8 +72,8 @@ const sendNewOrderAnnouncementEmail = async ({
             redesTexto,
             `TikTok: ${tiktokUrl}`
         ],
-        highlightText: `Mantente pendiente de los lives de TikTok para realizar tus compras. ${redesTexto}`,
-        closingText: 'Nos vemos en los lives para que puedas apartar tus productos a tiempo. Sigue tambien nuestras otras redes oficiales.',
+        highlightText: 'Mantente pendiente de los lives de TikTok para realizar tus compras.',
+        closingText: 'Sigue tambien nuestras otras redes oficiales para enterarte de novedades y horarios.',
         footerText: 'Sistema Cherry · Aviso de nueva orden',
         text
     });

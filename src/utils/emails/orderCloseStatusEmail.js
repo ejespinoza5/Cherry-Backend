@@ -91,7 +91,7 @@ const sendOrderCloseStatusEmail = async ({
             `Fecha limite de pago: ${enGracia ? limiteTexto : 'No aplica'}`,
             redesText
         ],
-        highlightText: `${warningText} ${redesText}`,
+        highlightText: warningText,
         closingText: enGracia
             ? 'Reporta tu abono cuanto antes para evitar remate automatico de tus compras y mantente pendiente de nuestras redes.'
             : 'Gracias por mantener tus pagos al dia en Sistema Cherry. Mantente pendiente de nuestras redes para nuevos lives.',
