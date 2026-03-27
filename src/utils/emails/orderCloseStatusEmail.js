@@ -39,8 +39,8 @@ const sendOrderCloseStatusEmail = async ({
     const estadoGraciaHtml = '<span style="color:#B54708;font-weight:700;">En Gracia (Pendiente de Remate)</span>';
 
     const introText = enGracia
-        ? `Hola ${fullName}, la ${orden} ha finalizado oficialmente. Debido a que mantienes un saldo pendiente, tu mercancía ha pasado a un período de gracia excepcional.`
-        : `Hola ${fullName}, la ${orden} ha cerrado oficialmente. Tu cuenta no registra valores pendientes y tu participación se ha completado correctamente.`;
+        ? `Hola ${fullName}, la orden ${orden} ha finalizado oficialmente. Debido a que mantienes un saldo pendiente, tu mercancía ha pasado a un período de gracia excepcional.`
+        : `Hola ${fullName}, la orden ${orden} ha cerrado oficialmente. Tu cuenta no registra valores pendientes y tu participación se ha completado correctamente.`;
 
     const warningText = enGracia
         ? `Debes liquidar el saldo total antes de que se procese el remate manual. Si el administrador ejecuta el remate, perderás tus productos y los abonos realizados previamente (${abonadoTexto}).`

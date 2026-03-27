@@ -16,56 +16,57 @@ const formatFecha = (fecha) => {
 const sendOrderClosingSoonEmail = async ({
     correoDestino,
     nombreCliente,
-    codigoCliente,
     nombreOrden,
     fechaCierreProgramada,
     tiktokUrl
 }) => {
     const fullName = nombreCliente || 'Cliente';
-    const codigo = codigoCliente || 'Sin codigo';
     const orden = nombreOrden || 'Orden';
     const cierreTexto = formatFecha(fechaCierreProgramada);
+    const tiktokHref = tiktokUrl || '#';
 
     const detailsHtml = `
-        <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;">
-            Te recordamos que faltan aproximadamente 3 dias para el cierre de esta orden.
+        <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#0A2A66;">
+            Hola ${fullName}, estamos llegando a la recta final. Tienes aproximadamente <strong style="color:#B54708;">3 días</strong> para realizar tus últimas compras o completar tus pagos antes del cierre oficial de la ${orden}.
+        </p>
+        <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#0A2A66;font-weight:700;">
+            No te pierdas los últimos lives en TikTok para asegurar tus productos favoritos.
         </p>
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:8px 0 16px 0;">
             ${buildDataRows([
-                { label: 'Cliente', value: fullName },
-                { label: 'Codigo', value: codigo },
                 { label: 'Orden', value: orden },
-                { label: 'Cierre programado', value: cierreTexto },
-                {
-                    label: 'TikTok Cherry',
-                    value: `<a href="${tiktokUrl}" target="_blank" style="color:#D92525;font-weight:700;text-decoration:none;">Ver lives de TikTok</a>`
-                }
+                { label: 'Fecha de Cierre Programado', value: `<span style="color:#B54708;font-weight:700;">${cierreTexto}</span>` }
             ])}
         </table>
+        <div style="text-align:center;margin:8px 0 16px 0;">
+            <a href="${tiktokHref}" target="_blank" style="display:inline-block;background:#D92525;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;line-height:1;padding:13px 20px;border-radius:10px;">
+                Ir al Live de TikTok de Cherry
+            </a>
+        </div>
     `;
 
     const text = [
-        `Aviso de cierre proximo - ${orden}`,
-        `Cliente: ${fullName}`,
-        `Codigo: ${codigo}`,
-        `Cierre programado: ${cierreTexto}`,
-        'Mantente pendiente de los lives de TikTok para realizar tus compras antes del cierre.',
-        `TikTok: ${tiktokUrl}`
+        `⏳ ¡Solo quedan 3 días! El cierre de ${orden} se acerca.`,
+        `Hola ${fullName}, estamos llegando a la recta final. Tienes aproximadamente 3 días para realizar tus últimas compras o completar tus pagos antes del cierre oficial de la ${orden}.`,
+        'No te pierdas los últimos lives en TikTok para asegurar tus productos favoritos.',
+        `Orden: ${orden}`,
+        `Fecha de Cierre Programado: ${cierreTexto}`,
+        `Ir al Live de TikTok de Cherry: ${tiktokHref}`,
+        'Si ya completaste tus compras y estas al dia, puedes ignorar este aviso. ¡Nos vemos en el live!'
     ].join('\n');
 
     await sendBrandedEmail({
         to: correoDestino,
-        subject: `Aviso: la orden ${orden} cierra en 3 dias`,
-        title: 'Aviso de cierre proximo',
-        introText: `Hola ${fullName}, este es un recordatorio preventivo para que te organices antes del cierre de la orden.`,
+        subject: `⏳ ¡Solo quedan 3 días! El cierre de ${orden} se acerca.`,
+        title: '¡Últimos días de la orden!',
+        introText: '',
         detailsHtml,
         detailTextLines: [
             `Orden: ${orden}`,
-            `Cierre programado: ${cierreTexto}`,
-            `TikTok: ${tiktokUrl}`
+            `Fecha de Cierre Programado: ${cierreTexto}`
         ],
-        highlightText: 'Tienes pocos dias para completar tus compras antes del cierre.',
-        closingText: 'Mantente pendiente de los lives de TikTok para realizar tus compras. Si ya completaste tus compras, ignora este aviso.',
+        highlightText: '<span style="color:#497413;font-weight:700;">Si ya completaste tus compras y estás al día, puedes ignorar este aviso. ¡Nos vemos en el live!</span>',
+        closingText: '',
         footerText: 'Sistema Cherry · Aviso de cierre',
         text
     });
