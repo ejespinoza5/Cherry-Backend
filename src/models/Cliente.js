@@ -106,6 +106,27 @@ class Cliente {
     }
 
     /**
+     * Obtener clientes activos elegibles para notificaciones de nuevas órdenes o avisos de cierre
+     * Excluye clientes con estado_actividad inactivo y bloqueado.
+     */
+    static async findRecipientsForOrderNotifications() {
+        try {
+            const [rows] = await pool.query(
+                `SELECT c.*, u.correo
+                 FROM clientes c
+                 INNER JOIN usuarios u ON c.id_usuario = u.id
+                 WHERE c.estado = 'activo'
+                   AND u.estado = 'activo'
+                   AND c.estado_actividad NOT IN ('inactivo', 'bloqueado')
+                 ORDER BY c.created_at DESC`
+            );
+            return rows;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
      * Actualizar cliente
      */
     static async update(id, data, updated_by) {
@@ -547,6 +568,43 @@ class Cliente {
             }
 
             return nuevoEstado;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Recalcular estado_actividad para todos los clientes activos.
+     * Se usa en tareas programadas para mantener estados al dia sin depender de eventos.
+     */
+    static async recalcularEstadoActividadTodosActivos() {
+        try {
+            const [clientes] = await pool.query(
+                `SELECT id, estado_actividad
+                 FROM clientes
+                 WHERE estado = 'activo'`
+            );
+
+            let actualizados = 0;
+            let errores = 0;
+
+            for (const cliente of clientes) {
+                try {
+                    const nuevoEstado = await this.calcularYActualizarEstadoActividad(cliente.id);
+                    if (nuevoEstado !== cliente.estado_actividad) {
+                        actualizados += 1;
+                    }
+                } catch (error) {
+                    errores += 1;
+                    console.error(`Error recalculando estado_actividad para cliente ${cliente.id}:`, error.message);
+                }
+            }
+
+            return {
+                total_clientes: clientes.length,
+                actualizados,
+                errores
+            };
         } catch (error) {
             throw error;
         }

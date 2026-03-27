@@ -231,6 +231,55 @@ class Orden {
     }
 
     /**
+     * Obtener órdenes abiertas con cierre programado dentro de los próximos N días
+     * y que aún no han recibido aviso preventivo.
+     */
+    static async findOrdenesProximasCierreSinAviso(dias = 3) {
+        try {
+            const horasMaximas = Number(dias) * 24;
+
+            const [rows] = await pool.query(
+                `SELECT
+                    id,
+                    nombre_orden,
+                    fecha_inicio,
+                    fecha_fin,
+                    fecha_cierre,
+                    COALESCE(fecha_cierre, fecha_fin) AS fecha_objetivo_cierre
+                 FROM ordenes
+                 WHERE estado = 'activo'
+                   AND estado_orden = 'abierta'
+                   AND aviso_cierre_3d_enviado_at IS NULL
+                   AND COALESCE(fecha_cierre, fecha_fin) IS NOT NULL
+                   AND TIMESTAMPDIFF(HOUR, NOW(), COALESCE(fecha_cierre, fecha_fin)) BETWEEN 1 AND ?`,
+                [horasMaximas]
+            );
+
+            return rows;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Marcar que ya se envió aviso preventivo de cierre para una orden
+     */
+    static async markAvisoCierre3dEnviado(id) {
+        try {
+            const [result] = await pool.query(
+                `UPDATE ordenes
+                 SET aviso_cierre_3d_enviado_at = NOW()
+                 WHERE id = ?`,
+                [id]
+            );
+
+            return result.affectedRows > 0;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
      * Eliminar orden (soft delete)
      */
     static async delete(id, updated_by) {

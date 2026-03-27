@@ -7,6 +7,7 @@ const { sendDebtReminderEmail } = require('./emails/debtReminderEmail');
 const { sendOrderCloseStatusEmail } = require('./emails/orderCloseStatusEmail');
 const { sendOrderAuctionedEmail } = require('./emails/orderAuctionedEmail');
 const { sendNewOrderAnnouncementEmail } = require('./emails/newOrderAnnouncementEmail');
+const { sendOrderClosingSoonEmail } = require('./emails/orderClosingSoonEmail');
 
 class EmailService {
     static async sendRecoveryCode(correoDestino, codigo) {
@@ -43,6 +44,10 @@ class EmailService {
 
     static async sendNewOrderAnnouncementEmail(data) {
         return sendNewOrderAnnouncementEmail(data);
+    }
+
+    static async sendOrderClosingSoonEmail(data) {
+        return sendOrderClosingSoonEmail(data);
     }
 }
 

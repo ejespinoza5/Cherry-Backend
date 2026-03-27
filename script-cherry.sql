@@ -126,6 +126,7 @@ CREATE TABLE ordenes (
   fecha_inicio DATETIME NOT NULL,
   fecha_fin DATETIME,
   fecha_cierre DATETIME,
+  aviso_cierre_3d_enviado_at DATETIME NULL COMMENT 'Marca de envio del aviso automatico de cierre en 3 dias',
   estado_orden ENUM('abierta','cerrada','en_periodo_gracia') DEFAULT 'abierta',
   tipo_cierre ENUM('manual','automatico') DEFAULT NULL,
   estado ENUM('activo','inactivo') DEFAULT 'activo',

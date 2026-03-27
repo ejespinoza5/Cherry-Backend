@@ -2,7 +2,10 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const path = require('path');
+const cron = require('node-cron');
 const { testConnection } = require('./src/config/database');
+const OrdenService = require('./src/services/ordenService');
+const Cliente = require('./src/models/Cliente');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -71,6 +74,32 @@ const startServer = async () => {
     app.listen(PORT, async () => {
         console.log(`🍒 Servidor Cherry iniciado en http://localhost:${PORT}`);
         await testConnection();
+
+        // Aviso preventivo de cierre: corre diariamente a las 09:00.
+        cron.schedule('0 9 * * *', async () => {
+            try {
+                const resultado = await OrdenService.enviarRecordatorioCierre3Dias();
+                if (resultado.total_ordenes > 0) {
+                    console.log(
+                        `📨 Aviso cierre 3 dias: ordenes=${resultado.total_ordenes}, enviados=${resultado.correos_enviados}, fallidos=${resultado.correos_fallidos}`
+                    );
+                }
+            } catch (error) {
+                console.error('Error en cron de aviso cierre 3 dias:', error.message);
+            }
+        });
+
+        // Recalculo diario de estado_actividad: asegura cambios automaticos a inactivo/deudor/bloqueado.
+        cron.schedule('0 6 * * *', async () => {
+            try {
+                const resultado = await Cliente.recalcularEstadoActividadTodosActivos();
+                console.log(
+                    `🔄 Recalculo estado_actividad: clientes=${resultado.total_clientes}, actualizados=${resultado.actualizados}, errores=${resultado.errores}`
+                );
+            } catch (error) {
+                console.error('Error en cron de recalculo estado_actividad:', error.message);
+            }
+        });
     });
 };
 

@@ -8,16 +8,7 @@ const ORDER_TIKTOK_URL = 'https://www.tiktok.com/@cherry_ropa24_2?_r=1&_t=ZS-952
 
 class OrdenService {
     static async enviarCorreosNuevaOrden(orden) {
-        const clientes = await Cliente.findAll();
-        const estadosNoPermitidos = new Set(['inactivo', 'bloqueado']);
-
-        const destinatarios = clientes.filter(cliente => {
-            if (!cliente?.correo) {
-                return false;
-            }
-
-            return !estadosNoPermitidos.has((cliente.estado_actividad || '').toLowerCase());
-        });
+        const destinatarios = await Cliente.findRecipientsForOrderNotifications();
 
         for (const cliente of destinatarios) {
             const nombreCliente = [cliente.nombre, cliente.apellido].filter(Boolean).join(' ').trim();
@@ -36,6 +27,52 @@ class OrdenService {
                 console.error('Error enviando correo de nueva orden:', emailError.message);
             }
         }
+    }
+
+    static async enviarRecordatorioCierre3Dias() {
+        const ordenes = await Orden.findOrdenesProximasCierreSinAviso(3);
+        if (ordenes.length === 0) {
+            return {
+                total_ordenes: 0,
+                correos_enviados: 0,
+                correos_fallidos: 0
+            };
+        }
+
+        const destinatarios = await Cliente.findRecipientsForOrderNotifications();
+        let enviados = 0;
+        let fallidos = 0;
+
+        for (const orden of ordenes) {
+            const fechaCierreProgramada = orden.fecha_objetivo_cierre || orden.fecha_cierre || orden.fecha_fin;
+
+            for (const cliente of destinatarios) {
+                const nombreCliente = [cliente.nombre, cliente.apellido].filter(Boolean).join(' ').trim();
+
+                try {
+                    await EmailService.sendOrderClosingSoonEmail({
+                        correoDestino: cliente.correo,
+                        nombreCliente,
+                        codigoCliente: cliente.codigo,
+                        nombreOrden: orden.nombre_orden,
+                        fechaCierreProgramada,
+                        tiktokUrl: ORDER_TIKTOK_URL
+                    });
+                    enviados += 1;
+                } catch (emailError) {
+                    fallidos += 1;
+                    console.error('Error enviando recordatorio de cierre 3 dias:', emailError.message);
+                }
+            }
+
+            await Orden.markAvisoCierre3dEnviado(orden.id);
+        }
+
+        return {
+            total_ordenes: ordenes.length,
+            correos_enviados: enviados,
+            correos_fallidos: fallidos
+        };
     }
 
     /**
