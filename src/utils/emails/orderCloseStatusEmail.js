@@ -50,7 +50,7 @@ const sendOrderCloseStatusEmail = async ({
 
     const detailsHtml = enGracia
         ? `
-        <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#0A2A66;">
+        <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#0A2A66;font-weight:700;">
             ${warningText}
         </p>
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:8px 0 16px 0;">
@@ -124,7 +124,7 @@ const sendOrderCloseStatusEmail = async ({
                 'Fecha límite de pago: No aplica',
                 redesText
             ],
-        highlightText: enGracia ? `<span style="color:#B42318;font-weight:700;">${warningText}</span>` : warningText,
+        highlightText: enGracia ? '' : warningText,
         closingText: enGracia
             ? 'Evita la pérdida de tu inversión. Reporta tu pago ahora mismo.'
             : 'Gracias por mantener tus pagos al día en Sistema Cherry. Mantente pendiente de nuestras redes para nuevos lives.',
