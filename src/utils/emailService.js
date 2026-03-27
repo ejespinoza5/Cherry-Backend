@@ -4,6 +4,9 @@ const { sendWelcomeAdmin } = require('./emails/welcomeAdminEmail');
 const { sendEmailChangeVerificationCode } = require('./emails/emailChangeVerificationEmail');
 const { sendAbonoVerificationEmail } = require('./emails/abonoVerificationEmail');
 const { sendDebtReminderEmail } = require('./emails/debtReminderEmail');
+const { sendOrderCloseStatusEmail } = require('./emails/orderCloseStatusEmail');
+const { sendOrderAuctionedEmail } = require('./emails/orderAuctionedEmail');
+const { sendNewOrderAnnouncementEmail } = require('./emails/newOrderAnnouncementEmail');
 
 class EmailService {
     static async sendRecoveryCode(correoDestino, codigo) {
@@ -28,6 +31,18 @@ class EmailService {
 
     static async sendDebtReminderEmail(data) {
         return sendDebtReminderEmail(data);
+    }
+
+    static async sendOrderCloseStatusEmail(data) {
+        return sendOrderCloseStatusEmail(data);
+    }
+
+    static async sendOrderAuctionedEmail(data) {
+        return sendOrderAuctionedEmail(data);
+    }
+
+    static async sendNewOrderAnnouncementEmail(data) {
+        return sendNewOrderAnnouncementEmail(data);
     }
 }
 

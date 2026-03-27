@@ -1,6 +1,10 @@
 const { pool } = require('../config/database');
 
 class Cliente {
+    static canNotifyDebtState(estadoAnterior, estadoNuevo) {
+        return estadoAnterior !== estadoNuevo && ['deudor', 'bloqueado'].includes(estadoNuevo);
+    }
+
     /**
      * Crear nuevo cliente
      */
@@ -106,6 +110,12 @@ class Cliente {
      */
     static async update(id, data, updated_by) {
         try {
+            const [clienteActual] = await pool.query(
+                'SELECT estado_actividad FROM clientes WHERE id = ? LIMIT 1',
+                [id]
+            );
+            const estadoAnterior = clienteActual.length > 0 ? clienteActual[0].estado_actividad : null;
+
             const {
                 nombre,
                 apellido,
@@ -138,6 +148,10 @@ class Cliente {
                     id
                 ]
             );
+
+            if (this.canNotifyDebtState(estadoAnterior, estado_actividad)) {
+                await this.enviarRecordatorioDeudaPorCambioEstado(id, estadoAnterior, estado_actividad);
+            }
             
             return result.affectedRows > 0;
         } catch (error) {
@@ -390,12 +404,23 @@ class Cliente {
      */
     static async updateEstadoActividadManual(id_cliente, estado_actividad, updated_by) {
         try {
+            const [clienteActual] = await pool.query(
+                'SELECT estado_actividad FROM clientes WHERE id = ? LIMIT 1',
+                [id_cliente]
+            );
+
+            const estadoAnterior = clienteActual.length > 0 ? clienteActual[0].estado_actividad : null;
+
             await pool.query(
                 `UPDATE clientes 
                  SET estado_actividad = ?, updated_by = ?
                  WHERE id = ?`,
                 [estado_actividad, updated_by, id_cliente]
             );
+
+            if (this.canNotifyDebtState(estadoAnterior, estado_actividad)) {
+                await this.enviarRecordatorioDeudaPorCambioEstado(id_cliente, estadoAnterior, estado_actividad);
+            }
             
             return true;
         } catch (error) {
@@ -464,6 +489,13 @@ class Cliente {
 
             const deuda = parseFloat(saldoData[0].deuda_total || 0);
 
+            const [estadoActualRows] = await useConnection.query(
+                'SELECT estado_actividad FROM clientes WHERE id = ? LIMIT 1',
+                [id_cliente]
+            );
+
+            const estadoAnterior = estadoActualRows.length > 0 ? estadoActualRows[0].estado_actividad : null;
+
             // Obtener fecha de última compra (última vez que se le asignó valor_total)
             const [ultimaCompra] = await useConnection.query(
                 `SELECT MAX(co.created_at) as ultima_compra
@@ -499,17 +531,121 @@ class Cliente {
                 nuevoEstado = 'activo';
             }
 
-            // Actualizar estado_actividad
-            await useConnection.query(
-                `UPDATE clientes 
-                 SET estado_actividad = ?
-                 WHERE id = ?`,
-                [nuevoEstado, id_cliente]
-            );
+            // Actualizar estado_actividad solo cuando hay un cambio real.
+            if (estadoAnterior !== nuevoEstado) {
+                await useConnection.query(
+                    `UPDATE clientes 
+                     SET estado_actividad = ?
+                     WHERE id = ?`,
+                    [nuevoEstado, id_cliente]
+                );
+
+                const isTransactionalConnection = connection && connection !== pool;
+                if (!isTransactionalConnection && this.canNotifyDebtState(estadoAnterior, nuevoEstado)) {
+                    await this.enviarRecordatorioDeudaPorCambioEstado(id_cliente, estadoAnterior, nuevoEstado);
+                }
+            }
 
             return nuevoEstado;
         } catch (error) {
             throw error;
+        }
+    }
+
+    static async getClienteRecordatorioDeudaById(id_cliente, connection = null) {
+        const useConnection = connection || pool;
+
+        const [rows] = await useConnection.query(
+            `SELECT
+                c.id,
+                c.nombre,
+                c.apellido,
+                c.codigo,
+                c.estado_actividad,
+                u.correo,
+                COALESCE(SUM(
+                    CASE
+                        WHEN o.estado_orden IN ('abierta', 'en_periodo_gracia')
+                             AND (co.valor_total - co.total_abonos) > 0
+                        THEN (co.valor_total - co.total_abonos)
+                        ELSE 0
+                    END
+                ), 0) AS deuda_total,
+                (
+                    SELECT o2.nombre_orden
+                    FROM cliente_orden co2
+                    INNER JOIN ordenes o2 ON o2.id = co2.id_orden
+                    WHERE co2.id_cliente = c.id
+                      AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
+                      AND (co2.valor_total - co2.total_abonos) > 0
+                    ORDER BY co2.created_at DESC
+                    LIMIT 1
+                ) AS nombre_orden,
+                (
+                    SELECT (co2.valor_total - co2.total_abonos)
+                    FROM cliente_orden co2
+                    INNER JOIN ordenes o2 ON o2.id = co2.id_orden
+                    WHERE co2.id_cliente = c.id
+                      AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
+                      AND (co2.valor_total - co2.total_abonos) > 0
+                    ORDER BY co2.created_at DESC
+                    LIMIT 1
+                ) AS saldo_orden,
+                (
+                    SELECT co2.fecha_limite_pago
+                    FROM cliente_orden co2
+                    INNER JOIN ordenes o2 ON o2.id = co2.id_orden
+                    WHERE co2.id_cliente = c.id
+                      AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
+                      AND (co2.valor_total - co2.total_abonos) > 0
+                    ORDER BY co2.created_at DESC
+                    LIMIT 1
+                ) AS fecha_limite_pago
+            FROM clientes c
+            INNER JOIN usuarios u ON u.id = c.id_usuario
+            LEFT JOIN cliente_orden co ON co.id_cliente = c.id
+            LEFT JOIN ordenes o ON o.id = co.id_orden
+            WHERE c.id = ?
+              AND c.estado = 'activo'
+              AND u.estado = 'activo'
+            GROUP BY c.id, c.nombre, c.apellido, c.codigo, c.estado_actividad, u.correo
+            HAVING deuda_total > 0
+            LIMIT 1`,
+            [id_cliente]
+        );
+
+        return rows[0] || null;
+    }
+
+    static async enviarRecordatorioDeudaPorCambioEstado(id_cliente, estadoAnterior, estadoNuevo, connection = null) {
+        if (!this.canNotifyDebtState(estadoAnterior, estadoNuevo)) {
+            return false;
+        }
+
+        try {
+            const cliente = await this.getClienteRecordatorioDeudaById(id_cliente, connection);
+            if (!cliente || !cliente.correo) {
+                return false;
+            }
+
+            const EmailService = require('../utils/emailService');
+            const nombreCliente = [cliente.nombre, cliente.apellido].filter(Boolean).join(' ').trim();
+
+            await EmailService.sendDebtReminderEmail({
+                correoDestino: cliente.correo,
+                nombreCliente,
+                codigoCliente: cliente.codigo,
+                estadoActividad: estadoNuevo,
+                deudaTotal: cliente.deuda_total,
+                nombreOrden: cliente.nombre_orden,
+                saldoOrden: cliente.saldo_orden,
+                fechaLimitePago: cliente.fecha_limite_pago
+            });
+
+            return true;
+        } catch (error) {
+            console.error('Error enviando correo por cambio de estado de actividad:', error.message);
+            return false;
         }
     }
 

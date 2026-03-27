@@ -4,9 +4,30 @@ const ClienteRematado = require('../models/ClienteRematado');
 const HistorialIncumplimiento = require('../models/HistorialIncumplimiento');
 const Producto = require('../models/Producto');
 const Cliente = require('../models/Cliente');
+const EmailService = require('../utils/emailService');
 const { pool } = require('../config/database');
 
 class CierreOrdenService {
+    static async enviarCorreosCierreOrden(correosPendientes = []) {
+        for (const correo of correosPendientes) {
+            try {
+                await EmailService.sendOrderCloseStatusEmail(correo);
+            } catch (emailError) {
+                console.error('Error enviando correo de cierre de orden:', emailError.message);
+            }
+        }
+    }
+
+    static async enviarCorreosRemateOrden(correosPendientes = []) {
+        for (const correo of correosPendientes) {
+            try {
+                await EmailService.sendOrderAuctionedEmail(correo);
+            } catch (emailError) {
+                console.error('Error enviando correo de remate:', emailError.message);
+            }
+        }
+    }
+
     /**
      * Cerrar una orden manualmente
      */
@@ -31,10 +52,27 @@ class CierreOrdenService {
 
             await connection.commit();
 
+            await this.enviarCorreosCierreOrden(resultadoCierre.correosCierrePendientes || []);
+
+            const notificacionesPendientes = resultadoCierre.notificacionesPendientes || [];
+            for (const notificacion of notificacionesPendientes) {
+                await Cliente.enviarRecordatorioDeudaPorCambioEstado(
+                    notificacion.id_cliente,
+                    notificacion.estado_anterior,
+                    notificacion.estado_nuevo
+                );
+            }
+
+            const {
+                notificacionesPendientes: _omitNotificaciones,
+                correosCierrePendientes: _omitCorreos,
+                ...resultadoPublico
+            } = resultadoCierre;
+
             return {
                 success: true,
                 mensaje: 'Orden cerrada exitosamente',
-                ...resultadoCierre
+                ...resultadoPublico
             };
         } catch (error) {
             await connection.rollback();
@@ -92,9 +130,19 @@ class CierreOrdenService {
 
             // Obtener todos los clientes que tienen valor_total > 0 en esta orden
             const [clientes] = await useConnection.query(
-                `SELECT id_cliente, valor_total, total_abonos 
+                `SELECT
+                    co.id_cliente,
+                    co.valor_total,
+                    co.total_abonos,
+                    c.nombre,
+                    c.apellido,
+                    c.codigo,
+                    u.correo
                  FROM cliente_orden 
-                 WHERE id_orden = ? AND valor_total > 0`,
+                 co
+                 INNER JOIN clientes c ON co.id_cliente = c.id
+                 INNER JOIN usuarios u ON c.id_usuario = u.id
+                 WHERE co.id_orden = ? AND co.valor_total > 0`,
                 [id_orden]
             );
 
@@ -104,12 +152,22 @@ class CierreOrdenService {
                 clientes_pendientes: 0,
                 clientes_con_deuda: 0
             };
+            const notificacionesPendientes = [];
+            const correosCierrePendientes = [];
 
             // Procesar cada cliente
             for (const cliente of clientes) {
                 stats.total_clientes++;
 
-                const { id_cliente, valor_total, total_abonos } = cliente;
+                const {
+                    id_cliente,
+                    valor_total,
+                    total_abonos,
+                    nombre,
+                    apellido,
+                    codigo,
+                    correo
+                } = cliente;
                 
                 // Calcular deuda: valor_total - total_abonos
                 const saldo_actual = parseFloat(valor_total) - parseFloat(total_abonos);
@@ -133,7 +191,33 @@ class CierreOrdenService {
                 }, useConnection);
 
                 // Calcular y actualizar estado_actividad del cliente
-                await Cliente.calcularYActualizarEstadoActividad(id_cliente, useConnection);
+                const [estadoActualRows] = await useConnection.query(
+                    'SELECT estado_actividad FROM clientes WHERE id = ? LIMIT 1',
+                    [id_cliente]
+                );
+                const estadoAnterior = estadoActualRows.length > 0 ? estadoActualRows[0].estado_actividad : null;
+                const estadoNuevo = await Cliente.calcularYActualizarEstadoActividad(id_cliente, useConnection);
+
+                if (Cliente.canNotifyDebtState(estadoAnterior, estadoNuevo)) {
+                    notificacionesPendientes.push({
+                        id_cliente,
+                        estado_anterior: estadoAnterior,
+                        estado_nuevo: estadoNuevo
+                    });
+                }
+
+                if (correo) {
+                    correosCierrePendientes.push({
+                        correoDestino: correo,
+                        nombreCliente: [nombre, apellido].filter(Boolean).join(' ').trim(),
+                        codigoCliente: codigo,
+                        nombreOrden: orden.nombre_orden,
+                        estadoPago: estado_pago,
+                        saldoPendiente: saldo_actual > 0 ? saldo_actual : 0,
+                        fechaCierre: fecha_cierre,
+                        fechaLimitePago: estado_pago === 'en_gracia' ? fecha_limite_pago : null
+                    });
+                }
             }
 
             stats.clientes_pendientes = stats.clientes_con_deuda;
@@ -194,6 +278,18 @@ class CierreOrdenService {
 
             if (!connection) await useConnection.commit();
 
+            if (!connection) {
+                await this.enviarCorreosCierreOrden(correosCierrePendientes);
+
+                for (const notificacion of notificacionesPendientes) {
+                    await Cliente.enviarRecordatorioDeudaPorCambioEstado(
+                        notificacion.id_cliente,
+                        notificacion.estado_anterior,
+                        notificacion.estado_nuevo
+                    );
+                }
+            }
+
             return {
                 fecha_cierre,
                 fecha_limite_pago,
@@ -202,7 +298,9 @@ class CierreOrdenService {
                     comisiones,
                     total_final
                 },
-                estadisticas: stats
+                estadisticas: stats,
+                notificacionesPendientes,
+                correosCierrePendientes
             };
         } catch (error) {
             if (!connection) await useConnection.rollback();
@@ -228,6 +326,8 @@ class CierreOrdenService {
             const clientesMorosos = await ClienteOrden.obtenerClientesMorosos(id_orden, connection, forzar);
 
             const resultados = [];
+            const notificacionesPendientes = [];
+            const correosRematePendientes = [];
 
             for (const clienteOrden of clientesMorosos) {
                 const ClienteRematado = require('../models/ClienteRematado');
@@ -293,6 +393,12 @@ class CierreOrdenService {
                 // Actualizar estado del cliente según el monto adeudado
                 // Solo bloquear si debe $300 o más
                 const nuevoEstado = deuda_pendiente >= 300 ? 'bloqueado' : 'deudor';
+
+                const [estadoActualRows] = await connection.query(
+                    'SELECT estado_actividad FROM clientes WHERE id = ? LIMIT 1',
+                    [clienteOrden.id_cliente]
+                );
+                const estadoAnterior = estadoActualRows.length > 0 ? estadoActualRows[0].estado_actividad : null;
                 
                 await connection.query(
                     `UPDATE clientes 
@@ -300,6 +406,26 @@ class CierreOrdenService {
                      WHERE id = ?`,
                     [nuevoEstado, clienteOrden.id_cliente]
                 );
+
+                if (Cliente.canNotifyDebtState(estadoAnterior, nuevoEstado)) {
+                    notificacionesPendientes.push({
+                        id_cliente: clienteOrden.id_cliente,
+                        estado_anterior: estadoAnterior,
+                        estado_nuevo: nuevoEstado
+                    });
+                }
+
+                if (clienteOrden.correo) {
+                    correosRematePendientes.push({
+                        correoDestino: clienteOrden.correo,
+                        nombreCliente: [clienteOrden.nombre, clienteOrden.apellido].filter(Boolean).join(' ').trim(),
+                        codigoCliente: clienteOrden.codigo,
+                        nombreOrden: clienteOrden.nombre_orden,
+                        valorAdeudado: deuda_pendiente,
+                        abonosPerdidos: abonos_perdidos,
+                        ordenCerrada: false
+                    });
+                }
 
                 // Actualizar estadísticas en cierre_orden
                 await connection.query(
@@ -327,9 +453,10 @@ class CierreOrdenService {
                  WHERE id_orden = ? AND estado_pago = 'en_gracia'`,
                 [id_orden]
             );
+            const ordenCerrada = pendientes[0].total === 0;
 
             // Si ya no hay clientes pendientes, cerrar completamente la orden
-            if (pendientes[0].total === 0) {
+            if (ordenCerrada) {
                 await connection.query(
                     `UPDATE ordenes 
                      SET estado_orden = 'cerrada'
@@ -347,11 +474,26 @@ class CierreOrdenService {
 
             await connection.commit();
 
+            const correosRemateFinal = correosRematePendientes.map(correo => ({
+                ...correo,
+                ordenCerrada
+            }));
+
+            await this.enviarCorreosRemateOrden(correosRemateFinal);
+
+            for (const notificacion of notificacionesPendientes) {
+                await Cliente.enviarRecordatorioDeudaPorCambioEstado(
+                    notificacion.id_cliente,
+                    notificacion.estado_anterior,
+                    notificacion.estado_nuevo
+                );
+            }
+
             return {
                 success: true,
                 mensaje: `Se remataron ${resultados.length} cliente(s) moroso(s)`,
                 clientes_rematados: resultados,
-                orden_cerrada: pendientes[0].total === 0
+                orden_cerrada: ordenCerrada
             };
         } catch (error) {
             await connection.rollback();

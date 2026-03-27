@@ -1,8 +1,43 @@
 const Orden = require('../models/Orden');
 const CierreOrdenService = require('./cierreOrdenService');
 const HistorialActualizacionCompraManual = require('../models/HistorialActualizacionCompraManual');
+const Cliente = require('../models/Cliente');
+const EmailService = require('../utils/emailService');
+
+const ORDER_TIKTOK_URL = 'https://www.tiktok.com/@cherry_ropa24_2?_r=1&_t=ZS-952gmY7zpvp';
 
 class OrdenService {
+    static async enviarCorreosNuevaOrden(orden) {
+        const clientes = await Cliente.findAll();
+        const estadosNoPermitidos = new Set(['inactivo', 'bloqueado']);
+
+        const destinatarios = clientes.filter(cliente => {
+            if (!cliente?.correo) {
+                return false;
+            }
+
+            return !estadosNoPermitidos.has((cliente.estado_actividad || '').toLowerCase());
+        });
+
+        for (const cliente of destinatarios) {
+            const nombreCliente = [cliente.nombre, cliente.apellido].filter(Boolean).join(' ').trim();
+
+            try {
+                await EmailService.sendNewOrderAnnouncementEmail({
+                    correoDestino: cliente.correo,
+                    nombreCliente,
+                    codigoCliente: cliente.codigo,
+                    nombreOrden: orden.nombre_orden,
+                    fechaInicio: orden.fecha_inicio,
+                    fechaFin: orden.fecha_fin,
+                    tiktokUrl: ORDER_TIKTOK_URL
+                });
+            } catch (emailError) {
+                console.error('Error enviando correo de nueva orden:', emailError.message);
+            }
+        }
+    }
+
     /**
      * Formatear datos de orden
      */
@@ -82,6 +117,9 @@ class OrdenService {
 
             // Obtener y devolver la orden creada
             const orden = await Orden.findById(resultado.id_orden);
+
+            await this.enviarCorreosNuevaOrden(orden);
+
             return {
                 ...this.formatOrdenData(orden),
                 mensaje: resultado.mensaje

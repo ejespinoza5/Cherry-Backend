@@ -205,6 +205,8 @@ class ClienteOrden {
             const [rows] = await useConnection.query(
                 `SELECT co.*, 
                         c.nombre, c.apellido, c.codigo,
+                        u.correo,
+                        o.nombre_orden,
                         (co.valor_total - co.total_abonos) as deuda_pendiente,
                         CASE 
                             WHEN co.fecha_limite_pago < NOW() THEN 'VENCIDO'
@@ -212,6 +214,8 @@ class ClienteOrden {
                         END as estado_plazo
                  FROM cliente_orden co
                  INNER JOIN clientes c ON co.id_cliente = c.id
+                 INNER JOIN usuarios u ON c.id_usuario = u.id
+                 INNER JOIN ordenes o ON co.id_orden = o.id
                  WHERE co.id_orden = ? 
                    AND co.estado_pago = 'en_gracia'
                    ${condicionFecha}
