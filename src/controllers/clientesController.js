@@ -262,7 +262,7 @@ class ClientesController {
      */
     static async updateDatosPersonales(req, res) {
         try {
-            const { nombre, apellido, direccion, pais } = req.body;
+            const { nombre, apellido, direccion, ciudad, provincia, pais } = req.body;
 
             // Validar que se incluyan los campos obligatorios
             if (!nombre || !apellido) {
@@ -276,6 +276,8 @@ class ClientesController {
                 nombre,
                 apellido,
                 direccion,
+                ciudad,
+                provincia,
                 pais
             });
 

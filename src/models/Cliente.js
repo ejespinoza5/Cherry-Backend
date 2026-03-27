@@ -992,6 +992,8 @@ class Cliente {
                     c.apellido,
                     c.codigo,
                     c.direccion,
+                    c.ciudad,
+                    c.provincia,
                     c.pais,
                     c.estado_actividad,
                     c.created_at,
@@ -1013,13 +1015,13 @@ class Cliente {
      */
     static async updateDatosPersonales(id_cliente, data) {
         try {
-            const { nombre, apellido, direccion, pais } = data;
+            const { nombre, apellido, direccion, ciudad, provincia, pais } = data;
             
             const [result] = await pool.query(
                 `UPDATE clientes 
-                 SET nombre = ?, apellido = ?, direccion = ?, pais = ?
+                 SET nombre = ?, apellido = ?, direccion = ?, ciudad = ?, provincia = ?, pais = ?
                  WHERE id = ?`,
-                [nombre, apellido, direccion, pais, id_cliente]
+                [nombre, apellido, direccion, ciudad || null, provincia || null, pais, id_cliente]
             );
             
             return result.affectedRows > 0;

@@ -43,29 +43,25 @@ const sendDebtReminderEmail = async ({
     const estadoColor = isBlocked ? '#B42318' : '#B54708';
     const estadoEtiqueta = isBlocked ? 'Bloqueado / En riesgo de remate' : 'Deudor';
 
+    const title = isBlocked ? 'AVISO DE BLOQUEO Y REMATE' : 'Regularizacion de cuenta';
+    const subject = isBlocked
+        ? `AVISO CRITICO! Riesgo de remate de productos - ${codigo}`
+        : `Recordatorio de saldo pendiente - ${codigo}`;
+
     const introText = isBlocked
-        ? `AVISO CRITICO: Tu cuenta se encuentra bloqueada. Debes pagar antes del ${fechaLimite} para evitar el remate de tus productos.`
-        : `Te informamos que tu cuenta registra un saldo pendiente de ${deudaTexto}. Para mantener los beneficios de tu cuenta, regulariza tu pago a la brevedad.`;
+        ? `Hola ${fullName}, tu cuenta se encuentra BLOQUEADA.`
+        : `Hola ${fullName}, te informamos que registras un saldo pendiente de ${deudaTexto}.`;
 
-    const warningText = isBlocked
-        ? `AVISO CRITICO: Si la deuda no es cancelada antes del cierre de la orden (${fechaLimite}), tus productos seran liberados para ${'<strong style="color:#B42318;">REMATE</strong>'} sin derecho a reclamo posterior.`
-        : 'Regulariza tu saldo para evitar bloqueos y asegurar que tus proximas compras se procesen sin demoras.';
-
-    const consecuenciaText = isBlocked
-        ? 'Tienes hasta la fecha de cierre de la orden para recuperar tu mercancia.'
-        : 'Evita superar el limite de deuda para no pasar a estado bloqueado.';
+    const bodyText = isBlocked
+        ? `Si la deuda no es cancelada antes del cierre de la orden (${fechaLimite}), tus productos seran liberados para REMATE sin derecho a reclamo posterior.`
+        : 'Por favor, realiza tu abono para mantener los beneficios de tu cuenta y asegurar que tus proximas compras se procesen sin demoras.';
 
     const detailsHtml = `
-        <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;">
-            ${isBlocked
-                ? `Tu cuenta esta en estado bloqueado y requiere accion inmediata para evitar el remate de tus compras.`
-                : `Registramos saldo pendiente en tu cuenta. Debes cancelar el valor adeudado para evitar penalizaciones.`}
+        <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#0A2A66;">
+            ${bodyText}
         </p>
-        <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#B42318;font-weight:700;">
-            ${warningText}
-        </p>
-        <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#68473D;">
-            ${consecuenciaText}
+        <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:${isBlocked ? '#B42318' : '#0A2A66'};font-weight:${isBlocked ? '700' : '400'};">
+            ${isBlocked ? 'Aun estas a tiempo de recuperar tu mercancia. Realiza el pago de inmediato.' : 'Reporta tu pago una vez realizado para actualizar tu estado inmediatamente.'}
         </p>
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:8px 0 16px 0;">
             ${buildDataRows([
@@ -73,44 +69,51 @@ const sendDebtReminderEmail = async ({
                 { label: 'Codigo', value: codigo },
                 { label: 'Estado de actividad', value: `<span style="color:${estadoColor};font-weight:700;">${estadoEtiqueta}</span>` },
                 { label: 'Orden con deuda', value: orden },
-                { label: 'Saldo de la orden', value: saldoOrdenTexto },
+                { label: 'Saldo de la orden', value: isBlocked ? null : saldoOrdenTexto },
                 { label: 'Deuda total', value: deudaTexto },
-                { label: 'Fecha limite de pago', value: fechaLimite }
+                {
+                    label: 'Fecha limite de pago',
+                    value: isBlocked
+                        ? `<span style="color:#B42318;font-weight:700;">${fechaLimite}</span>`
+                        : fechaLimite
+                }
             ])}
         </table>
     `;
 
     const text = [
-        'Recordatorio de pago pendiente - Sistema Cherry',
+        title,
         `Cliente: ${fullName}`,
         `Codigo: ${codigo}`,
         `Estado de actividad: ${estadoEtiqueta}`,
         `Orden con deuda: ${orden}`,
-        `Saldo de la orden: ${saldoOrdenTexto}`,
+        ...(isBlocked ? [] : [`Saldo de la orden: ${saldoOrdenTexto}`]),
         `Deuda total: ${deudaTexto}`,
         `Fecha limite de pago: ${fechaLimite}`,
-        warningText,
-        consecuenciaText
+        bodyText,
+        isBlocked
+            ? 'Aun estas a tiempo de recuperar tu mercancia. Realiza el pago de inmediato.'
+            : 'Reporta tu pago una vez realizado para actualizar tu estado inmediatamente.'
     ].join('\n');
 
     await sendBrandedEmail({
         to: correoDestino,
-        subject: 'Recordatorio de deuda pendiente - Sistema Cherry',
-        title: 'Recordatorio de pago pendiente',
-        introText: `Hola ${fullName}, ${introText}`,
+        subject,
+        title,
+        introText,
         detailsHtml,
         detailTextLines: [
             `Orden con deuda: ${orden}`,
-            `Saldo de la orden: ${saldoOrdenTexto}`,
+            ...(isBlocked ? [] : [`Saldo de la orden: ${saldoOrdenTexto}`]),
             `Deuda total: ${deudaTexto}`,
             `Fecha limite de pago: ${fechaLimite}`
         ],
         highlightText: isBlocked
             ? 'Si no cancelas antes del cierre de la orden, tus productos entraran en remate.'
-            : 'Paga cuanto antes para mantener tu cuenta habilitada y evitar restricciones.',
+            : '',
         closingText: isBlocked
-            ? 'Aun estas a tiempo de regularizar tu cuenta y evitar el remate.'
-            : 'Reporta tu abono apenas realices el pago para actualizar tu estado.',
+            ? 'Aun estas a tiempo de recuperar tu mercancia. Realiza el pago de inmediato.'
+            : 'Reporta tu pago una vez realizado para actualizar tu estado inmediatamente.',
         footerText: 'Sistema Cherry · Recordatorio de deuda',
         text
     });
