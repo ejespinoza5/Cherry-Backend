@@ -57,7 +57,7 @@ const sendDebtReminderEmail = async ({
         : 'Por favor, realiza tu abono para mantener los beneficios de tu cuenta y asegurar que tus proximas compras se procesen sin demoras.';
 
     const detailsHtml = `
-        <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#0A2A66;">
+        <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#0A2A66;font-weight:${isBlocked ? '400' : '700'};">
             ${bodyText}
         </p>
         <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:${isBlocked ? '#B42318' : '#0A2A66'};font-weight:${isBlocked ? '700' : '400'};">
@@ -112,7 +112,7 @@ const sendDebtReminderEmail = async ({
             ? 'Si no cancelas antes del cierre de la orden, tus productos entraran en remate.'
             : '',
         closingText: isBlocked
-            ? 'Aun estas a tiempo de recuperar tu mercancia. Realiza el pago de inmediato.'
+            ? ''
             : 'Reporta tu pago una vez realizado para actualizar tu estado inmediatamente.',
         footerText: 'Sistema Cherry · Recordatorio de deuda',
         text
