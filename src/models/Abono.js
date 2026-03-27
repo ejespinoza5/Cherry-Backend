@@ -140,10 +140,12 @@ class Abono {
                     c.nombre as cliente_nombre,
                     c.apellido as cliente_apellido,
                     c.codigo as cliente_codigo,
+                    u_cliente.correo as cliente_correo,
                     o.nombre_orden,
                     o.estado_orden
                 FROM historial_abono ha
                 INNER JOIN clientes c ON ha.id_cliente = c.id
+                INNER JOIN usuarios u_cliente ON c.id_usuario = u_cliente.id
                 INNER JOIN ordenes o ON ha.id_orden = o.id
                 WHERE ha.id = ?`,
                 [id]

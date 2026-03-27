@@ -1,4 +1,5 @@
 const Abono = require('../models/Abono');
+const EmailService = require('../utils/emailService');
 const { isPositiveInteger } = require('../utils/validators');
 
 class AbonoService {
@@ -51,7 +52,8 @@ class AbonoService {
             cliente: {
                 nombre: abono.cliente_nombre,
                 apellido: abono.cliente_apellido,
-                codigo: abono.cliente_codigo
+                codigo: abono.cliente_codigo,
+                correo: abono.cliente_correo || null
             },
             orden: {
                 nombre: abono.nombre_orden,
@@ -246,6 +248,33 @@ class AbonoService {
         return this.formatAbonoData(abonoCreado);
     }
 
+    static async notifyAbonoVerificationEmail(abono, estado) {
+        const correoDestino = abono?.cliente?.correo;
+        if (!correoDestino) {
+            return;
+        }
+
+        const nombreCliente = [abono?.cliente?.nombre, abono?.cliente?.apellido]
+            .filter(Boolean)
+            .join(' ')
+            .trim();
+
+        try {
+            await EmailService.sendAbonoVerificationEmail({
+                correoDestino,
+                estado,
+                nombreCliente,
+                codigoCliente: abono?.cliente?.codigo,
+                nombreOrden: abono?.orden?.nombre,
+                cantidad: abono?.cantidad,
+                observaciones: abono?.observaciones_verificacion,
+                verificadoPor: abono?.verificado_by
+            });
+        } catch (emailError) {
+            console.error('Error enviando correo de verificacion de abono:', emailError.message);
+        }
+    }
+
     /**
      * Verificar comprobante de pago
      */
@@ -260,9 +289,12 @@ class AbonoService {
 
         // Obtener el abono actualizado
         const abono = await Abono.findById(id);
+        const formattedAbono = this.formatAbonoData(abono);
+
+        await this.notifyAbonoVerificationEmail(formattedAbono, 'verificado');
 
         // Retornar el abono actualizado
-        return this.formatAbonoData(abono);
+        return formattedAbono;
     }
 
     /**
@@ -284,7 +316,11 @@ class AbonoService {
 
         // Retornar el abono actualizado
         const abono = await Abono.findById(id);
-        return this.formatAbonoData(abono);
+        const formattedAbono = this.formatAbonoData(abono);
+
+        await this.notifyAbonoVerificationEmail(formattedAbono, 'rechazado');
+
+        return formattedAbono;
     }
 
     /**
