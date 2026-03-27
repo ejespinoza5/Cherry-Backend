@@ -649,6 +649,16 @@ class Cliente {
                                         ORDER BY (o2.estado_orden = 'en_periodo_gracia') DESC, co2.created_at DESC
                     LIMIT 1
                 ) AS saldo_orden,
+                    (
+                        SELECT co2.valor_total
+                        FROM cliente_orden co2
+                        INNER JOIN ordenes o2 ON o2.id = co2.id_orden
+                                            WHERE co2.id_cliente = c.id
+                                                AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
+                          AND (co2.valor_total - co2.total_abonos) > 0
+                                            ORDER BY (o2.estado_orden = 'en_periodo_gracia') DESC, co2.created_at DESC
+                        LIMIT 1
+                    ) AS total_compra_orden,
                 (
                                         SELECT o2.fecha_fin
                     FROM cliente_orden co2
@@ -696,7 +706,7 @@ class Cliente {
                 estadoActividad: estadoNuevo,
                 deudaTotal: cliente.deuda_total,
                 nombreOrden: cliente.nombre_orden,
-                saldoOrden: cliente.saldo_orden,
+                    totalCompraOrden: cliente.total_compra_orden,
                 fechaFinOrden: cliente.fecha_fin_orden
             });
 
@@ -952,6 +962,16 @@ class Cliente {
                                                 ORDER BY (o2.estado_orden = 'en_periodo_gracia') DESC, co2.created_at DESC
                         LIMIT 1
                     ) AS saldo_orden,
+                    (
+                        SELECT co2.valor_total
+                        FROM cliente_orden co2
+                        INNER JOIN ordenes o2 ON o2.id = co2.id_orden
+                                                WHERE co2.id_cliente = c.id
+                                                    AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
+                          AND (co2.valor_total - co2.total_abonos) > 0
+                                                ORDER BY (o2.estado_orden = 'en_periodo_gracia') DESC, co2.created_at DESC
+                        LIMIT 1
+                    ) AS total_compra_orden,
                     (
                                                 SELECT o2.fecha_fin
                         FROM cliente_orden co2

@@ -29,14 +29,14 @@ const sendDebtReminderEmail = async ({
     estadoActividad,
     deudaTotal,
     nombreOrden,
-    saldoOrden,
+    totalCompraOrden,
     fechaFinOrden
 }) => {
     const fullName = nombreCliente || 'Cliente';
     const codigo = codigoCliente || 'Sin codigo';
     const orden = nombreOrden || 'Orden pendiente';
     const deudaTexto = formatMonto(deudaTotal);
-    const saldoOrdenTexto = formatMonto(saldoOrden);
+    const totalCompraTexto = formatMonto(totalCompraOrden);
     const estadoTexto = (estadoActividad || 'deudor').toLowerCase();
     const isBlocked = estadoTexto === 'bloqueado';
     const fechaLimite = formatFecha(fechaFinOrden) || 'Contacta hoy a administración para confirmar la fecha exacta de cierre';
@@ -69,7 +69,7 @@ const sendDebtReminderEmail = async ({
                 { label: 'Código', value: codigo },
                 { label: 'Estado de actividad', value: `<span style="color:${estadoColor};font-weight:700;">${estadoEtiqueta}</span>` },
                 { label: 'Orden con deuda', value: orden },
-                { label: 'Saldo de la orden', value: isBlocked ? null : saldoOrdenTexto },
+                { label: 'Total de compra', value: isBlocked ? null : totalCompraTexto },
                 { label: 'Deuda total', value: deudaTexto },
                 {
                     label: 'Fecha límite de pago',
@@ -87,7 +87,7 @@ const sendDebtReminderEmail = async ({
         `Código: ${codigo}`,
         `Estado de actividad: ${estadoEtiqueta}`,
         `Orden con deuda: ${orden}`,
-        ...(isBlocked ? [] : [`Saldo de la orden: ${saldoOrdenTexto}`]),
+        ...(isBlocked ? [] : [`Total de compra: ${totalCompraTexto}`]),
         `Deuda total: ${deudaTexto}`,
         `Fecha límite de pago: ${fechaLimite}`,
         bodyText,
@@ -104,7 +104,7 @@ const sendDebtReminderEmail = async ({
         detailsHtml,
         detailTextLines: [
             `Orden con deuda: ${orden}`,
-            ...(isBlocked ? [] : [`Saldo de la orden: ${saldoOrdenTexto}`]),
+            ...(isBlocked ? [] : [`Total de compra: ${totalCompraTexto}`]),
             `Deuda total: ${deudaTexto}`,
             `Fecha límite de pago: ${fechaLimite}`
         ],

@@ -487,7 +487,7 @@ class UsuarioService {
                     estadoActividad: cliente.estado_actividad,
                     deudaTotal: cliente.deuda_total,
                     nombreOrden: cliente.nombre_orden,
-                    saldoOrden: cliente.saldo_orden,
+                    totalCompraOrden: cliente.total_compra_orden,
                     fechaFinOrden: cliente.fecha_fin_orden
                 });
 
