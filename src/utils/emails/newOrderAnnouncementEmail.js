@@ -23,57 +23,62 @@ const sendNewOrderAnnouncementEmail = async ({
     tiktokUrl
 }) => {
     const fullName = nombreCliente || 'Cliente';
-    const codigo = codigoCliente || 'Sin codigo';
+    const codigo = codigoCliente || 'Sin código';
     const orden = nombreOrden || 'Nueva orden';
     const inicioTexto = formatFecha(fechaInicio);
     const finTexto = formatFecha(fechaFin);
-    const redesTexto = 'Mantente alerta tambien a nuestras otras redes sociales oficiales para enterarte de novedades y horarios.';
+    const redesTexto = 'Síguenos en nuestras redes para no perderte los horarios de transmisión.';
+    const tiktokHref = tiktokUrl || '#';
 
     const detailsHtml = `
         <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;">
-            Se abrio una nueva orden y ya puedes prepararte para comprar en los lives.
+            Una nueva temporada de compras ha comenzado. Ya puedes prepararte para participar en nuestros próximos Lives y asegurar tus productos favoritos.
         </p>
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:8px 0 16px 0;">
             ${buildDataRows([
                 { label: 'Cliente', value: fullName },
-                { label: 'Codigo', value: codigo },
+                { label: 'Código', value: codigo },
                 { label: 'Orden', value: orden },
-                { label: 'Fecha de inicio', value: inicioTexto },
-                { label: 'Fecha de fin', value: finTexto },
-                {
-                    label: 'TikTok Cherry',
-                    value: `<a href="${tiktokUrl}" target="_blank" style="color:#D92525;font-weight:700;text-decoration:none;">Ir al live de TikTok</a>`
-                }
+                { label: 'Fecha de Inicio', value: inicioTexto },
+                { label: 'Fecha de Cierre', value: finTexto }
             ])}
         </table>
+        <div style="text-align:center;margin:8px 0 18px 0;">
+            <a href="${tiktokHref}" target="_blank" style="display:inline-block;background:#D92525;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;line-height:1;padding:13px 20px;border-radius:10px;">
+                Ir al Live de TikTok de Cherry
+            </a>
+        </div>
     `;
 
     const text = [
-        `Nueva orden disponible: ${orden}`,
+        `🍒 ¡Ya puedes comprar! Nueva orden abierta: ${orden}`,
         `Cliente: ${fullName}`,
-        `Codigo: ${codigo}`,
-        `Fecha de inicio: ${inicioTexto}`,
-        `Fecha de fin: ${finTexto}`,
-        'Mantente pendiente de los lives de TikTok para realizar tus compras.',
+        `Código: ${codigo}`,
+        `Orden: ${orden}`,
+        `Fecha de Inicio: ${inicioTexto}`,
+        `Fecha de Cierre: ${finTexto}`,
+        'Ir al Live de TikTok de Cherry:',
+        tiktokHref,
         redesTexto,
-        `TikTok: ${tiktokUrl}`
     ].join('\n');
 
     await sendBrandedEmail({
         to: correoDestino,
-        subject: `Nueva orden activa - ${orden}`,
-        title: 'Nueva orden disponible',
-        introText: `Hola ${fullName}, ya puedes participar en la nueva orden ${orden}.`,
+        subject: `🍒 ¡Ya puedes comprar! Nueva orden abierta: ${orden}`,
+        title: '¡Nueva orden disponible!',
+        introText: `Hola ${fullName},`,
         detailsHtml,
         detailTextLines: [
+            `Cliente: ${fullName}`,
+            `Código: ${codigo}`,
             `Orden: ${orden}`,
-            `Fecha de inicio: ${inicioTexto}`,
-            `Fecha de fin: ${finTexto}`,
+            `Fecha de Inicio: ${inicioTexto}`,
+            `Fecha de Cierre: ${finTexto}`,
+            `Ir al Live de TikTok de Cherry: ${tiktokHref}`,
             redesTexto,
-            `TikTok: ${tiktokUrl}`
         ],
-        highlightText: 'Mantente pendiente de los lives de TikTok para realizar tus compras.',
-        closingText: 'Sigue tambien nuestras otras redes oficiales para enterarte de novedades y horarios.',
+        highlightText: '',
+        closingText: redesTexto,
         footerText: 'Sistema Cherry · Aviso de nueva orden',
         text
     });

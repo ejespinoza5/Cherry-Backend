@@ -40,13 +40,11 @@ const sendOrderCloseStatusEmail = async ({
 
     const introText = enGracia
         ? `Hola ${fullName}, la ${orden} ha finalizado oficialmente. Debido a que mantienes un saldo pendiente, tu mercancía ha pasado a un período de gracia excepcional.`
-        : `Hola ${fullName}, la orden ${orden} fue cerrada y no tienes deuda pendiente en esta orden.`;
+        : `Hola ${fullName}, la ${orden} ha cerrado oficialmente. Tu cuenta no registra valores pendientes y tu participación se ha completado correctamente.`;
 
     const warningText = enGracia
         ? `Debes liquidar el saldo total antes de que se procese el remate manual. Si el administrador ejecuta el remate, perderás tus productos y los abonos realizados previamente (${abonadoTexto}).`
         : 'Excelente, tu estado en esta orden quedó al día.';
-
-    const redesText = 'Mantente alerta también a nuestras otras redes sociales oficiales para novedades de próximos lives y anuncios importantes.';
 
     const detailsHtml = enGracia
         ? `
@@ -63,18 +61,12 @@ const sendOrderCloseStatusEmail = async ({
         </table>
     `
         : `
-        <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;">
-            Tu participación en la orden se cerró correctamente sin valores pendientes.
-        </p>
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:8px 0 16px 0;">
             ${buildDataRows([
-                { label: 'Cliente', value: fullName },
-                { label: 'Código', value: codigo },
                 { label: 'Orden', value: orden },
                 { label: 'Estado de pago', value: 'Pagado' },
-                { label: 'Saldo pendiente', value: saldoTexto },
-                { label: 'Fecha de cierre', value: cierreTexto },
-                { label: 'Fecha límite de pago', value: 'No aplica' }
+                { label: 'Saldo pendiente', value: '$0.00' },
+                { label: 'Fecha de cierre', value: cierreTexto }
             ])}
         </table>
     `;
@@ -91,23 +83,21 @@ const sendOrderCloseStatusEmail = async ({
             'Evita la pérdida de tu inversión. Reporta tu pago ahora mismo.'
         ].join('\n')
         : [
-            `Cierre de orden - ${orden}`,
-            `Cliente: ${fullName}`,
-            `Código: ${codigo}`,
+            `✅ Todo al día: Tu participación en ${orden} ha finalizado`,
+            `Hola ${fullName}, la ${orden} ha cerrado oficialmente. Tu cuenta no registra valores pendientes y tu participación se ha completado correctamente.`,
+            `Orden: ${orden}`,
             'Estado de pago: Pagado',
-            `Saldo pendiente: ${saldoTexto}`,
+            'Saldo pendiente: $0.00',
             `Fecha de cierre: ${cierreTexto}`,
-            'Fecha límite de pago: No aplica',
-            warningText,
-            redesText
+            '¡Gracias por tu puntualidad! Nos vemos en la siguiente orden.'
         ].join('\n');
 
     await sendBrandedEmail({
         to: correoDestino,
         subject: enGracia
             ? `ÚLTIMA OPORTUNIDAD: Tu orden entró en período de gracia - ${codigo}`
-            : 'Orden cerrada sin deuda - Sistema Cherry',
-        title: enGracia ? 'Orden en Período de Gracia.' : 'Orden cerrada correctamente',
+            : `✅ Todo al día: Tu participación en ${orden} ha finalizado`,
+        title: enGracia ? 'Orden en Período de Gracia.' : 'Orden finalizada con éxito',
         introText,
         detailsHtml,
         detailTextLines: enGracia
@@ -120,14 +110,13 @@ const sendOrderCloseStatusEmail = async ({
             : [
                 `Orden: ${orden}`,
                 'Estado de pago: Pagado',
-                `Saldo pendiente: ${saldoTexto}`,
-                'Fecha límite de pago: No aplica',
-                redesText
+                'Saldo pendiente: $0.00',
+                `Fecha de cierre: ${cierreTexto}`
             ],
-        highlightText: enGracia ? '' : warningText,
+        highlightText: '',
         closingText: enGracia
             ? 'Evita la pérdida de tu inversión. Reporta tu pago ahora mismo.'
-            : 'Gracias por mantener tus pagos al día en Sistema Cherry. Mantente pendiente de nuestras redes para nuevos lives.',
+            : '¡Gracias por tu puntualidad! Nos vemos en la siguiente orden.',
         footerText: 'Sistema Cherry · Cierre de orden',
         text
     });

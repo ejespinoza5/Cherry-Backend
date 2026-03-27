@@ -22,7 +22,7 @@ const sendOrderAuctionedEmail = async ({
     const deudaTexto = formatMonto(deudaAlCierre ?? valorAdeudado);
     const abonosPerdidosTexto = formatMonto(abonosPerdidos);
 
-    const introText = `Hola ${fullName}, te informamos que, tras haber finalizado el período de gracia sin registrar el pago total de la deuda, se ha procedido al remate oficial de tus productos correspondientes a la ${orden}.`;
+    const introText = `Hola ${fullName}, te informamos que, tras haber finalizado el período de gracia sin registrar el pago total de la deuda, se ha procedido al remate oficial de tus productos correspondientes a la Orden:  ${orden}.`;
 
     const highlightText = `De acuerdo con nuestras políticas de incumplimiento, los abonos realizados por un valor de ${abonosPerdidosTexto} han sido registrados como pérdida y no son reembolsables.`;
 
