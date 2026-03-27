@@ -422,6 +422,8 @@ class CierreOrdenService {
                         nombreCliente: [clienteOrden.nombre, clienteOrden.apellido].filter(Boolean).join(' ').trim(),
                         codigoCliente: clienteOrden.codigo,
                         nombreOrden: clienteOrden.nombre_orden,
+                        valorTotalCompra: parseFloat(clienteOrden.valor_total || 0),
+                        deudaAlCierre: parseFloat(clienteOrden.saldo_al_cierre || deuda_pendiente || 0),
                         valorAdeudado: deuda_pendiente,
                         abonosPerdidos: abonos_perdidos,
                         ordenCerrada: false

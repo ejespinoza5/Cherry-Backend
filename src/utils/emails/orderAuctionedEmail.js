@@ -10,66 +10,61 @@ const sendOrderAuctionedEmail = async ({
     nombreCliente,
     codigoCliente,
     nombreOrden,
+    valorTotalCompra,
+    deudaAlCierre,
     valorAdeudado,
-    abonosPerdidos,
-    ordenCerrada
+    abonosPerdidos
 }) => {
     const fullName = nombreCliente || 'Cliente';
-    const codigo = codigoCliente || 'Sin codigo';
+    const codigo = codigoCliente || 'Sin código';
     const orden = nombreOrden || 'Orden';
-    const deudaTexto = formatMonto(valorAdeudado);
+    const totalCompraTexto = formatMonto(valorTotalCompra);
+    const deudaTexto = formatMonto(deudaAlCierre ?? valorAdeudado);
     const abonosPerdidosTexto = formatMonto(abonosPerdidos);
 
-    const introText = ordenCerrada
-        ? `Hola ${fullName}, la orden ${orden} fue cerrada y tu cuenta fue rematada por incumplimiento de pago.`
-        : `Hola ${fullName}, tu cuenta fue rematada por incumplimiento de pago en la orden ${orden}.`;
+    const introText = `Hola ${fullName}, te informamos que, tras haber finalizado el período de gracia sin registrar el pago total de la deuda, se ha procedido al remate oficial de tus productos correspondientes a la ${orden}.`;
 
-    const highlightText = ordenCerrada
-        ? 'La orden fue cerrada. Tus compras de esta orden fueron rematadas y los abonos realizados se perdieron.'
-        : 'Tus compras de esta orden fueron rematadas y los abonos realizados se perdieron.';
+    const highlightText = `De acuerdo con nuestras políticas de incumplimiento, los abonos realizados por un valor de ${abonosPerdidosTexto} han sido registrados como pérdida y no son reembolsables.`;
 
     const detailsHtml = `
         <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;">
-            Registramos remate por no cancelar dentro del periodo de gracia.
+            Acta oficial emitida por Sistema Cherry sobre remate ejecutado.
         </p>
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:8px 0 16px 0;">
             ${buildDataRows([
-                { label: 'Cliente', value: fullName },
-                { label: 'Codigo', value: codigo },
                 { label: 'Orden', value: orden },
-                { label: 'Estado de la orden', value: ordenCerrada ? 'Cerrada' : 'En proceso de cierre' },
-                { label: 'Valor adeudado', value: deudaTexto },
-                { label: 'Abonos perdidos', value: abonosPerdidosTexto }
+                { label: 'Valor Total de la Compra', value: totalCompraTexto },
+                { label: 'Deuda al Cierre', value: deudaTexto },
+                { label: 'Abonos Perdidos', value: `<span style="color:#B42318;font-weight:700;">${abonosPerdidosTexto}</span>` }
             ])}
         </table>
     `;
 
     const text = [
-        `Remate de compras - ${orden}`,
-        `Cliente: ${fullName}`,
-        `Codigo: ${codigo}`,
-        `Estado de la orden: ${ordenCerrada ? 'Cerrada' : 'En proceso de cierre'}`,
-        `Valor adeudado: ${deudaTexto}`,
-        `Abonos perdidos: ${abonosPerdidosTexto}`,
+        `Notificación Final: Remate de productos ejecutado - ${codigo}`,
+        introText,
+        `Orden: ${orden}`,
+        `Valor Total de la Compra: ${totalCompraTexto}`,
+        `Deuda al Cierre: ${deudaTexto}`,
+        `Abonos Perdidos: ${abonosPerdidosTexto}`,
         highlightText
     ].join('\n');
 
     await sendBrandedEmail({
         to: correoDestino,
-        subject: ordenCerrada
-            ? 'Orden cerrada y compras rematadas - Sistema Cherry'
-            : 'Compras rematadas por incumplimiento - Sistema Cherry',
-        title: 'Compras rematadas',
+        subject: `Notificación Final: Remate de productos ejecutado - ${codigo}`,
+        title: 'Acta de Remate de Mercancía',
         introText,
         detailsHtml,
         detailTextLines: [
             `Orden: ${orden}`,
-            `Valor adeudado: ${deudaTexto}`,
-            `Abonos perdidos: ${abonosPerdidosTexto}`
+            `Valor Total de la Compra: ${totalCompraTexto}`,
+            `Deuda al Cierre: ${deudaTexto}`,
+            `Abonos Perdidos: ${abonosPerdidosTexto}`
         ],
-        highlightText,
-        closingText: 'Para futuras ordenes, mantente al dia con tus pagos y registra tus abonos dentro del plazo.',
-        footerText: 'Sistema Cherry · Notificacion de remate',
+        highlightText: `<span style="color:#B42318;font-weight:700;">${highlightText}</span>`,
+        closingText: 'Tu cuenta ha sido restablecida para futuras órdenes. Te invitamos a mantener tus pagos al día en próximas ocasiones para evitar la pérdida de tu inversión.',
+        footerText: 'Sistema Cherry · Notificación de remate',
         text
     });
 };
