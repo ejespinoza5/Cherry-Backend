@@ -650,7 +650,7 @@ class Cliente {
                     LIMIT 1
                 ) AS saldo_orden,
                 (
-                    SELECT co2.fecha_limite_pago
+                                        SELECT co2.fecha_cierre
                     FROM cliente_orden co2
                     INNER JOIN ordenes o2 ON o2.id = co2.id_orden
                     WHERE co2.id_cliente = c.id
@@ -658,7 +658,7 @@ class Cliente {
                       AND (co2.valor_total - co2.total_abonos) > 0
                     ORDER BY co2.created_at DESC
                     LIMIT 1
-                ) AS fecha_limite_pago
+                                ) AS fecha_cierre_orden
             FROM clientes c
             INNER JOIN usuarios u ON u.id = c.id_usuario
             LEFT JOIN cliente_orden co ON co.id_cliente = c.id
@@ -697,7 +697,7 @@ class Cliente {
                 deudaTotal: cliente.deuda_total,
                 nombreOrden: cliente.nombre_orden,
                 saldoOrden: cliente.saldo_orden,
-                fechaLimitePago: cliente.fecha_limite_pago
+                fechaCierreOrden: cliente.fecha_cierre_orden
             });
 
             return true;
@@ -953,7 +953,7 @@ class Cliente {
                         LIMIT 1
                     ) AS saldo_orden,
                     (
-                        SELECT co2.fecha_limite_pago
+                                                SELECT co2.fecha_cierre
                         FROM cliente_orden co2
                         INNER JOIN ordenes o2 ON o2.id = co2.id_orden
                         WHERE co2.id_cliente = c.id
@@ -961,7 +961,7 @@ class Cliente {
                           AND (co2.valor_total - co2.total_abonos) > 0
                         ORDER BY co2.created_at DESC
                         LIMIT 1
-                    ) AS fecha_limite_pago
+                                        ) AS fecha_cierre_orden
                 FROM clientes c
                 INNER JOIN usuarios u ON u.id = c.id_usuario
                 LEFT JOIN cliente_orden co ON co.id_cliente = c.id

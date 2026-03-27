@@ -27,6 +27,7 @@ const sendNewOrderAnnouncementEmail = async ({
     const orden = nombreOrden || 'Nueva orden';
     const inicioTexto = formatFecha(fechaInicio);
     const finTexto = formatFecha(fechaFin);
+    const redesTexto = 'Mantente alerta tambien a nuestras otras redes sociales oficiales para enterarte de novedades y horarios.';
 
     const detailsHtml = `
         <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;">
@@ -53,7 +54,8 @@ const sendNewOrderAnnouncementEmail = async ({
         `Codigo: ${codigo}`,
         `Fecha de inicio: ${inicioTexto}`,
         `Fecha de fin: ${finTexto}`,
-        'Mantente pendiente a los lives de TikTok para realizar tus compras.',
+        'Mantente pendiente de los lives de TikTok para realizar tus compras.',
+        redesTexto,
         `TikTok: ${tiktokUrl}`
     ].join('\n');
 
@@ -67,10 +69,11 @@ const sendNewOrderAnnouncementEmail = async ({
             `Orden: ${orden}`,
             `Fecha de inicio: ${inicioTexto}`,
             `Fecha de fin: ${finTexto}`,
+            redesTexto,
             `TikTok: ${tiktokUrl}`
         ],
-        highlightText: 'Mantente pendiente a los lives de TikTok para realizar tus compras.',
-        closingText: 'Nos vemos en los lives para que puedas apartar tus productos a tiempo.',
+        highlightText: `Mantente pendiente de los lives de TikTok para realizar tus compras. ${redesTexto}`,
+        closingText: 'Nos vemos en los lives para que puedas apartar tus productos a tiempo. Sigue tambien nuestras otras redes oficiales.',
         footerText: 'Sistema Cherry · Aviso de nueva orden',
         text
     });

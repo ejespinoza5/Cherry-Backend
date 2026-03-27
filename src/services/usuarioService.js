@@ -488,7 +488,7 @@ class UsuarioService {
                     deudaTotal: cliente.deuda_total,
                     nombreOrden: cliente.nombre_orden,
                     saldoOrden: cliente.saldo_orden,
-                    fechaLimitePago: cliente.fecha_limite_pago
+                    fechaCierreOrden: cliente.fecha_cierre_orden
                 });
 
                 enviados += 1;

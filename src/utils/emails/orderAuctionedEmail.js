@@ -68,7 +68,7 @@ const sendOrderAuctionedEmail = async ({
             `Abonos perdidos: ${abonosPerdidosTexto}`
         ],
         highlightText,
-        closingText: 'Para futuras ordenes, mantente al dia con tus pagos y registra tus abonos a tiempo.',
+        closingText: 'Para futuras ordenes, mantente al dia con tus pagos y registra tus abonos dentro del plazo.',
         footerText: 'Sistema Cherry · Notificacion de remate',
         text
     });

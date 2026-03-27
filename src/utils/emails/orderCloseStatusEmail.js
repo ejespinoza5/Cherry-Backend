@@ -44,6 +44,8 @@ const sendOrderCloseStatusEmail = async ({
         ? 'Tu orden esta en periodo de gracia. Debes cancelar antes de la fecha limite para evitar remate de tus compras y perdida de abonos.'
         : 'Excelente, tu estado en esta orden quedo al dia.';
 
+    const redesText = 'Mantente alerta a nuestras otras redes sociales oficiales para novedades de proximos lives y anuncios importantes.';
+
     const detailsHtml = `
         <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;">${enGracia
             ? 'Tu orden continua en periodo de gracia hasta regularizar tu pago.'
@@ -70,7 +72,8 @@ const sendOrderCloseStatusEmail = async ({
         `Saldo pendiente: ${saldoTexto}`,
         `Fecha de cierre: ${cierreTexto}`,
         `Fecha limite de pago: ${enGracia ? limiteTexto : 'No aplica'}`,
-        warningText
+        warningText,
+        redesText
     ].join('\n');
 
     await sendBrandedEmail({
@@ -85,12 +88,13 @@ const sendOrderCloseStatusEmail = async ({
             `Orden: ${orden}`,
             `Estado de pago: ${enGracia ? 'En gracia' : 'Pagado'}`,
             `Saldo pendiente: ${saldoTexto}`,
-            `Fecha limite de pago: ${enGracia ? limiteTexto : 'No aplica'}`
+            `Fecha limite de pago: ${enGracia ? limiteTexto : 'No aplica'}`,
+            redesText
         ],
-        highlightText: warningText,
+        highlightText: `${warningText} ${redesText}`,
         closingText: enGracia
-            ? 'Reporta tu abono cuanto antes para evitar remate automatico de tus compras.'
-            : 'Gracias por mantener tus pagos al dia en Sistema Cherry.',
+            ? 'Reporta tu abono cuanto antes para evitar remate automatico de tus compras y mantente pendiente de nuestras redes.'
+            : 'Gracias por mantener tus pagos al dia en Sistema Cherry. Mantente pendiente de nuestras redes para nuevos lives.',
         footerText: 'Sistema Cherry · Cierre de orden',
         text
     });
