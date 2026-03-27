@@ -9,6 +9,19 @@ const formatMonto = (monto) => {
     return `$${valor.toFixed(2)}`;
 };
 
+const formatFecha = (fecha) => {
+    if (!fecha) {
+        return null;
+    }
+
+    const date = new Date(fecha);
+    if (Number.isNaN(date.getTime())) {
+        return null;
+    }
+
+    return date.toISOString().slice(0, 10);
+};
+
 const sendDebtReminderEmail = async ({
     correoDestino,
     nombreCliente,
@@ -17,7 +30,7 @@ const sendDebtReminderEmail = async ({
     deudaTotal,
     nombreOrden,
     saldoOrden,
-    fechaCierreOrden
+    fechaFinOrden
 }) => {
     const fullName = nombreCliente || 'Cliente';
     const codigo = codigoCliente || 'Sin codigo';
@@ -26,39 +39,43 @@ const sendDebtReminderEmail = async ({
     const saldoOrdenTexto = formatMonto(saldoOrden);
     const estadoTexto = (estadoActividad || 'deudor').toLowerCase();
     const isBlocked = estadoTexto === 'bloqueado';
-    const fechaCierre = fechaCierreOrden
-        ? new Date(fechaCierreOrden).toISOString().slice(0, 10)
-        : 'Sin fecha de cierre registrada';
+    const fechaLimite = formatFecha(fechaFinOrden) || 'Contacta hoy a administracion para confirmar la fecha exacta de cierre';
+    const estadoColor = isBlocked ? '#B42318' : '#B54708';
+    const estadoEtiqueta = isBlocked ? 'Bloqueado / En riesgo de remate' : 'Deudor';
+
+    const introText = isBlocked
+        ? `AVISO CRITICO: Tu cuenta se encuentra bloqueada. Debes pagar antes del ${fechaLimite} para evitar el remate de tus productos.`
+        : `Te informamos que tu cuenta registra un saldo pendiente de ${deudaTexto}. Para mantener los beneficios de tu cuenta, regulariza tu pago a la brevedad.`;
 
     const warningText = isBlocked
-        ? 'Tu cuenta esta bloqueada y no puedes hacer compras hasta que tu estado baje al menos a deudor.'
-        : 'Regulariza tu saldo para evitar bloqueos y restricciones en futuras compras.';
+        ? `AVISO CRITICO: Si la deuda no es cancelada antes del cierre de la orden (${fechaLimite}), tus productos seran liberados para ${'<strong style="color:#B42318;">REMATE</strong>'} sin derecho a reclamo posterior.`
+        : 'Regulariza tu saldo para evitar bloqueos y asegurar que tus proximas compras se procesen sin demoras.';
 
-    const reglaBloqueoTexto = isBlocked
-        ? 'Cuando un cliente supera $300 de deuda y no ha abonado, el sistema lo bloquea automaticamente.'
-        : 'Evita superar $300 de deuda sin abonos para no pasar al estado bloqueado.';
-
-    const consecuenciaText = 'Si no cancelas a tiempo, puedes perder los abonos realizados y tus compras pueden pasar a remate.';
+    const consecuenciaText = isBlocked
+        ? 'Tienes hasta la fecha de cierre de la orden para recuperar tu mercancia.'
+        : 'Evita superar el limite de deuda para no pasar a estado bloqueado.';
 
     const detailsHtml = `
         <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;">
-            Registramos saldo pendiente en tu cuenta. Debes cancelar el valor adeudado para evitar penalizaciones.
+            ${isBlocked
+                ? `Tu cuenta esta en estado bloqueado y requiere accion inmediata para evitar el remate de tus compras.`
+                : `Registramos saldo pendiente en tu cuenta. Debes cancelar el valor adeudado para evitar penalizaciones.`}
         </p>
         <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#B42318;font-weight:700;">
             ${warningText}
         </p>
         <p style="margin:0 0 12px 0;font-size:15px;line-height:1.6;color:#68473D;">
-            ${reglaBloqueoTexto}
+            ${consecuenciaText}
         </p>
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;margin:8px 0 16px 0;">
             ${buildDataRows([
                 { label: 'Cliente', value: fullName },
                 { label: 'Codigo', value: codigo },
-                { label: 'Estado de actividad', value: estadoTexto },
+                { label: 'Estado de actividad', value: `<span style="color:${estadoColor};font-weight:700;">${estadoEtiqueta}</span>` },
                 { label: 'Orden con deuda', value: orden },
                 { label: 'Saldo de la orden', value: saldoOrdenTexto },
                 { label: 'Deuda total', value: deudaTexto },
-                { label: 'Fecha limite de pago', value: fechaCierre }
+                { label: 'Fecha limite de pago', value: fechaLimite }
             ])}
         </table>
     `;
@@ -67,13 +84,12 @@ const sendDebtReminderEmail = async ({
         'Recordatorio de pago pendiente - Sistema Cherry',
         `Cliente: ${fullName}`,
         `Codigo: ${codigo}`,
-        `Estado de actividad: ${estadoTexto}`,
+        `Estado de actividad: ${estadoEtiqueta}`,
         `Orden con deuda: ${orden}`,
         `Saldo de la orden: ${saldoOrdenTexto}`,
         `Deuda total: ${deudaTexto}`,
-        `Fecha limite de pago: ${fechaCierre}`,
+        `Fecha limite de pago: ${fechaLimite}`,
         warningText,
-        reglaBloqueoTexto,
         consecuenciaText
     ].join('\n');
 
@@ -81,17 +97,20 @@ const sendDebtReminderEmail = async ({
         to: correoDestino,
         subject: 'Recordatorio de deuda pendiente - Sistema Cherry',
         title: 'Recordatorio de pago pendiente',
-        introText: `Hola ${fullName}, este es un recordatorio importante sobre tu deuda pendiente.`,
+        introText: `Hola ${fullName}, ${introText}`,
         detailsHtml,
         detailTextLines: [
             `Orden con deuda: ${orden}`,
             `Saldo de la orden: ${saldoOrdenTexto}`,
             `Deuda total: ${deudaTexto}`,
-            `Fecha limite de pago: ${fechaCierre}`,
-            warningText
+            `Fecha limite de pago: ${fechaLimite}`
         ],
-        highlightText: '',
-        closingText: 'Realiza el pago cuanto antes y reporta tu abono. Si hoy estas bloqueado, al reducir la deuda podras volver al estado deudor y recuperar tu capacidad de compra.',
+        highlightText: isBlocked
+            ? 'Si no cancelas antes del cierre de la orden, tus productos entraran en remate.'
+            : 'Paga cuanto antes para mantener tu cuenta habilitada y evitar restricciones.',
+        closingText: isBlocked
+            ? 'Aun estas a tiempo de regularizar tu cuenta y evitar el remate.'
+            : 'Reporta tu abono apenas realices el pago para actualizar tu estado.',
         footerText: 'Sistema Cherry · Recordatorio de deuda',
         text
     });

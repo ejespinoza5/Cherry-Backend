@@ -633,8 +633,8 @@ class Cliente {
                     SELECT o2.nombre_orden
                     FROM cliente_orden co2
                     INNER JOIN ordenes o2 ON o2.id = co2.id_orden
-                    WHERE co2.id_cliente = c.id
-                      AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
+                                        WHERE co2.id_cliente = c.id
+                                            AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
                       AND (co2.valor_total - co2.total_abonos) > 0
                                         ORDER BY (o2.estado_orden = 'en_periodo_gracia') DESC, co2.created_at DESC
                     LIMIT 1
@@ -643,22 +643,22 @@ class Cliente {
                     SELECT (co2.valor_total - co2.total_abonos)
                     FROM cliente_orden co2
                     INNER JOIN ordenes o2 ON o2.id = co2.id_orden
-                    WHERE co2.id_cliente = c.id
-                      AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
+                                        WHERE co2.id_cliente = c.id
+                                            AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
                       AND (co2.valor_total - co2.total_abonos) > 0
                                         ORDER BY (o2.estado_orden = 'en_periodo_gracia') DESC, co2.created_at DESC
                     LIMIT 1
                 ) AS saldo_orden,
                 (
-                                        SELECT o2.fecha_cierre
+                                        SELECT o2.fecha_fin
                     FROM cliente_orden co2
                     INNER JOIN ordenes o2 ON o2.id = co2.id_orden
-                    WHERE co2.id_cliente = c.id
-                      AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
+                                        WHERE co2.id_cliente = c.id
+                                            AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
                       AND (co2.valor_total - co2.total_abonos) > 0
                                         ORDER BY (o2.estado_orden = 'en_periodo_gracia') DESC, co2.created_at DESC
                     LIMIT 1
-                                ) AS fecha_cierre_orden
+                                ) AS fecha_fin_orden
             FROM clientes c
             INNER JOIN usuarios u ON u.id = c.id_usuario
             LEFT JOIN cliente_orden co ON co.id_cliente = c.id
@@ -697,7 +697,7 @@ class Cliente {
                 deudaTotal: cliente.deuda_total,
                 nombreOrden: cliente.nombre_orden,
                 saldoOrden: cliente.saldo_orden,
-                fechaCierreOrden: cliente.fecha_cierre_orden
+                fechaFinOrden: cliente.fecha_fin_orden
             });
 
             return true;
@@ -936,8 +936,8 @@ class Cliente {
                         SELECT o2.nombre_orden
                         FROM cliente_orden co2
                         INNER JOIN ordenes o2 ON o2.id = co2.id_orden
-                        WHERE co2.id_cliente = c.id
-                          AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
+                                                WHERE co2.id_cliente = c.id
+                                                    AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
                           AND (co2.valor_total - co2.total_abonos) > 0
                                                 ORDER BY (o2.estado_orden = 'en_periodo_gracia') DESC, co2.created_at DESC
                         LIMIT 1
@@ -946,22 +946,22 @@ class Cliente {
                         SELECT (co2.valor_total - co2.total_abonos)
                         FROM cliente_orden co2
                         INNER JOIN ordenes o2 ON o2.id = co2.id_orden
-                        WHERE co2.id_cliente = c.id
-                          AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
+                                                WHERE co2.id_cliente = c.id
+                                                    AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
                           AND (co2.valor_total - co2.total_abonos) > 0
                                                 ORDER BY (o2.estado_orden = 'en_periodo_gracia') DESC, co2.created_at DESC
                         LIMIT 1
                     ) AS saldo_orden,
                     (
-                                                SELECT o2.fecha_cierre
+                                                SELECT o2.fecha_fin
                         FROM cliente_orden co2
                         INNER JOIN ordenes o2 ON o2.id = co2.id_orden
-                        WHERE co2.id_cliente = c.id
-                          AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
+                                                WHERE co2.id_cliente = c.id
+                                                    AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
                           AND (co2.valor_total - co2.total_abonos) > 0
                                                 ORDER BY (o2.estado_orden = 'en_periodo_gracia') DESC, co2.created_at DESC
                         LIMIT 1
-                                        ) AS fecha_cierre_orden
+                                        ) AS fecha_fin_orden
                 FROM clientes c
                 INNER JOIN usuarios u ON u.id = c.id_usuario
                 LEFT JOIN cliente_orden co ON co.id_cliente = c.id
