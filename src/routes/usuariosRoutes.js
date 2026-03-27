@@ -58,6 +58,13 @@ router.patch('/:id/estado-actividad', usuariosController.updateEstadoActividad);
 router.put('/clientes/:id_cliente/habilitar', usuariosController.habilitarCliente);
 
 /**
+ * @route   POST /api/usuarios/clientes/recordatorio-deuda
+ * @desc    Enviar recordatorio de deuda a clientes deudores y bloqueados
+ * @access  Private (Admin o SuperAdmin)
+ */
+router.post('/clientes/recordatorio-deuda', usuariosController.enviarRecordatorioDeudaClientes);
+
+/**
  * @route   GET /api/usuarios/clientes/:id_cliente/saldo-ultima-orden
  * @desc    Obtener saldo del cliente en su última orden
  * @access  Private (Admin o SuperAdmin)

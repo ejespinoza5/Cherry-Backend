@@ -3,6 +3,7 @@ const { sendWelcomeClient } = require('./emails/welcomeClientEmail');
 const { sendWelcomeAdmin } = require('./emails/welcomeAdminEmail');
 const { sendEmailChangeVerificationCode } = require('./emails/emailChangeVerificationEmail');
 const { sendAbonoVerificationEmail } = require('./emails/abonoVerificationEmail');
+const { sendDebtReminderEmail } = require('./emails/debtReminderEmail');
 
 class EmailService {
     static async sendRecoveryCode(correoDestino, codigo) {
@@ -23,6 +24,10 @@ class EmailService {
 
     static async sendAbonoVerificationEmail(data) {
         return sendAbonoVerificationEmail(data);
+    }
+
+    static async sendDebtReminderEmail(data) {
+        return sendDebtReminderEmail(data);
     }
 }
 

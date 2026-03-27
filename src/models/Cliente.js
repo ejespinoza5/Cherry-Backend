@@ -718,6 +718,75 @@ class Cliente {
     }
 
     /**
+     * Obtener clientes deudores/bloqueados con deuda pendiente para recordatorio por correo
+     */
+    static async getClientesParaRecordatorioDeuda() {
+        try {
+            const [rows] = await pool.query(
+                `SELECT
+                    c.id,
+                    c.nombre,
+                    c.apellido,
+                    c.codigo,
+                    c.estado_actividad,
+                    u.correo,
+                    COALESCE(SUM(
+                        CASE
+                            WHEN o.estado_orden IN ('abierta', 'en_periodo_gracia')
+                                 AND (co.valor_total - co.total_abonos) > 0
+                            THEN (co.valor_total - co.total_abonos)
+                            ELSE 0
+                        END
+                    ), 0) AS deuda_total,
+                    (
+                        SELECT o2.nombre_orden
+                        FROM cliente_orden co2
+                        INNER JOIN ordenes o2 ON o2.id = co2.id_orden
+                        WHERE co2.id_cliente = c.id
+                          AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
+                          AND (co2.valor_total - co2.total_abonos) > 0
+                        ORDER BY co2.created_at DESC
+                        LIMIT 1
+                    ) AS nombre_orden,
+                    (
+                        SELECT (co2.valor_total - co2.total_abonos)
+                        FROM cliente_orden co2
+                        INNER JOIN ordenes o2 ON o2.id = co2.id_orden
+                        WHERE co2.id_cliente = c.id
+                          AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
+                          AND (co2.valor_total - co2.total_abonos) > 0
+                        ORDER BY co2.created_at DESC
+                        LIMIT 1
+                    ) AS saldo_orden,
+                    (
+                        SELECT co2.fecha_limite_pago
+                        FROM cliente_orden co2
+                        INNER JOIN ordenes o2 ON o2.id = co2.id_orden
+                        WHERE co2.id_cliente = c.id
+                          AND o2.estado_orden IN ('abierta', 'en_periodo_gracia')
+                          AND (co2.valor_total - co2.total_abonos) > 0
+                        ORDER BY co2.created_at DESC
+                        LIMIT 1
+                    ) AS fecha_limite_pago
+                FROM clientes c
+                INNER JOIN usuarios u ON u.id = c.id_usuario
+                LEFT JOIN cliente_orden co ON co.id_cliente = c.id
+                LEFT JOIN ordenes o ON o.id = co.id_orden
+                WHERE c.estado = 'activo'
+                  AND u.estado = 'activo'
+                  AND c.estado_actividad IN ('deudor', 'bloqueado')
+                GROUP BY c.id, c.nombre, c.apellido, c.codigo, c.estado_actividad, u.correo
+                HAVING deuda_total > 0
+                ORDER BY deuda_total DESC`
+            );
+
+            return rows;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
      * Obtener datos personales del cliente para perfil
      */
     static async getDatosPersonales(id_cliente) {

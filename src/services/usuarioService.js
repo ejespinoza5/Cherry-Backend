@@ -453,6 +453,68 @@ class UsuarioService {
             updated_at: clienteActualizado.updated_at
         };
     }
+
+    /**
+     * Enviar recordatorio de deuda a clientes deudores y bloqueados
+     */
+    static async enviarRecordatorioDeudaClientes() {
+        const clientes = await Cliente.getClientesParaRecordatorioDeuda();
+
+        if (clientes.length === 0) {
+            return {
+                total_clientes: 0,
+                enviados: 0,
+                fallidos: 0,
+                detalle: []
+            };
+        }
+
+        const detalle = [];
+        let enviados = 0;
+        let fallidos = 0;
+
+        for (const cliente of clientes) {
+            const nombreCliente = [cliente.nombre, cliente.apellido]
+                .filter(Boolean)
+                .join(' ')
+                .trim();
+
+            try {
+                await EmailService.sendDebtReminderEmail({
+                    correoDestino: cliente.correo,
+                    nombreCliente,
+                    codigoCliente: cliente.codigo,
+                    estadoActividad: cliente.estado_actividad,
+                    deudaTotal: cliente.deuda_total,
+                    nombreOrden: cliente.nombre_orden,
+                    saldoOrden: cliente.saldo_orden,
+                    fechaLimitePago: cliente.fecha_limite_pago
+                });
+
+                enviados += 1;
+                detalle.push({
+                    id_cliente: cliente.id,
+                    correo: cliente.correo,
+                    estado: 'enviado'
+                });
+            } catch (emailError) {
+                fallidos += 1;
+                detalle.push({
+                    id_cliente: cliente.id,
+                    correo: cliente.correo,
+                    estado: 'fallido',
+                    error: emailError.message
+                });
+            }
+        }
+
+        return {
+            total_clientes: clientes.length,
+            enviados,
+            fallidos,
+            detalle
+        };
+    }
 }
 
 module.exports = UsuarioService;

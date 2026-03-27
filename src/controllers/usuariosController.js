@@ -515,6 +515,30 @@ const getSaldoUltimaOrden = async (req, res) => {
     }
 };
 
+/**
+ * Enviar recordatorio de deuda a clientes deudores y bloqueados
+ * POST /api/usuarios/clientes/recordatorio-deuda
+ */
+const enviarRecordatorioDeudaClientes = async (req, res) => {
+    try {
+        const resultado = await UsuarioService.enviarRecordatorioDeudaClientes();
+
+        res.json({
+            success: true,
+            message: 'Recordatorios de deuda procesados exitosamente',
+            data: resultado
+        });
+    } catch (error) {
+        console.error('Error al enviar recordatorios de deuda:', error);
+
+        res.status(500).json({
+            success: false,
+            message: 'Error al enviar recordatorios de deuda',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
 module.exports = {
     getAllUsuarios,
     getUsuarioById,
@@ -523,5 +547,6 @@ module.exports = {
     deleteUsuario,
     updateEstadoActividad,
     habilitarCliente,
-    getSaldoUltimaOrden
+    getSaldoUltimaOrden,
+    enviarRecordatorioDeudaClientes
 };
