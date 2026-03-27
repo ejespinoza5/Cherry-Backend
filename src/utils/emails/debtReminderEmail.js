@@ -69,7 +69,7 @@ const sendDebtReminderEmail = async ({
                 { label: 'Código', value: codigo },
                 { label: 'Estado de actividad', value: `<span style="color:${estadoColor};font-weight:700;">${estadoEtiqueta}</span>` },
                 { label: 'Orden con deuda', value: orden },
-                { label: 'Total de compra', value: isBlocked ? null : totalCompraTexto },
+                { label: 'Total de compra', value: totalCompraTexto },
                 { label: 'Deuda total', value: deudaTexto },
                 {
                     label: 'Fecha límite de pago',
@@ -87,7 +87,7 @@ const sendDebtReminderEmail = async ({
         `Código: ${codigo}`,
         `Estado de actividad: ${estadoEtiqueta}`,
         `Orden con deuda: ${orden}`,
-        ...(isBlocked ? [] : [`Total de compra: ${totalCompraTexto}`]),
+        `Total de compra: ${totalCompraTexto}`,
         `Deuda total: ${deudaTexto}`,
         `Fecha límite de pago: ${fechaLimite}`,
         bodyText,
@@ -104,7 +104,7 @@ const sendDebtReminderEmail = async ({
         detailsHtml,
         detailTextLines: [
             `Orden con deuda: ${orden}`,
-            ...(isBlocked ? [] : [`Total de compra: ${totalCompraTexto}`]),
+            `Total de compra: ${totalCompraTexto}`,
             `Deuda total: ${deudaTexto}`,
             `Fecha límite de pago: ${fechaLimite}`
         ],
