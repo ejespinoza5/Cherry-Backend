@@ -189,7 +189,7 @@ class Abono {
     /**
      * Actualizar abono (solo permitido si está en estado pendiente)
      */
-    static async update(id, cantidad, comprobante_pago, updated_by) {
+    static async update(id, cantidad, fecha_abono, comprobante_pago, updated_by) {
         const connection = await pool.getConnection();
         try {
             await connection.beginTransaction();
@@ -223,6 +223,11 @@ class Abono {
             if (cantidad !== null) {
                 updates.push('cantidad = ?');
                 values.push(cantidad);
+            }
+
+            if (fecha_abono !== null) {
+                updates.push('fecha_abono = ?');
+                values.push(fecha_abono);
             }
 
             if (comprobante_pago !== undefined && comprobante_pago !== null) {

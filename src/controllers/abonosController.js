@@ -383,23 +383,26 @@ const rechazarComprobante = async (req, res) => {
 const updateAbono = async (req, res) => {
     try {
         const { id } = req.params;
-        const { cantidad } = req.body;
+        const { cantidad, fecha_abono } = req.body;
         
         // Obtener la URL del comprobante comprimido si se subió uno nuevo
         const comprobante_pago = req.comprobanteUrl || null;
 
-        // Validar que al menos se envíe cantidad o comprobante
-        if (!cantidad && !comprobante_pago) {
+        // Validar que al menos se envíe cantidad, fecha_abono o comprobante
+        if (cantidad === undefined && fecha_abono === undefined && !comprobante_pago) {
             return res.status(400).json({
                 success: false,
-                message: 'Debe proporcionar al menos la cantidad o el comprobante para actualizar'
+                message: 'Debe proporcionar al menos la cantidad, la fecha_abono o el comprobante para actualizar'
             });
         }
 
         // Preparar datos para actualizar
         const updateData = {};
-        if (cantidad) {
+        if (cantidad !== undefined) {
             updateData.cantidad = cantidad;
+        }
+        if (fecha_abono !== undefined) {
+            updateData.fecha_abono = fecha_abono;
         }
         if (comprobante_pago) {
             updateData.comprobante_pago = comprobante_pago;
@@ -432,6 +435,13 @@ const updateAbono = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'La cantidad debe ser un número positivo'
+            });
+        }
+
+        if (error.message === 'INVALID_ABONO_DATE') {
+            return res.status(400).json({
+                success: false,
+                message: 'La fecha_abono debe tener formato YYYY-MM-DD'
             });
         }
 

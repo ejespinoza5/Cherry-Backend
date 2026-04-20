@@ -327,7 +327,7 @@ class AbonoService {
      * Actualizar abono
      */
     static async updateAbono(id, data, updated_by) {
-        const { cantidad, comprobante_pago } = data;
+        const { cantidad, fecha_abono, comprobante_pago } = data;
 
         // Validar que el ID sea válido
         if (!isPositiveInteger(id)) {
@@ -342,15 +342,20 @@ class AbonoService {
 
         // Preparar datos para actualizar
         let cantidadNum = null;
-        if (cantidad) {
+        if (cantidad !== undefined) {
             cantidadNum = parseFloat(cantidad);
             if (isNaN(cantidadNum) || cantidadNum <= 0) {
                 throw new Error('INVALID_AMOUNT');
             }
         }
 
-        // Actualizar abono (puede ser cantidad, comprobante o ambos)
-        await Abono.update(id, cantidadNum, comprobante_pago, updated_by);
+        let fechaAbonoNormalizada = null;
+        if (fecha_abono !== undefined) {
+            fechaAbonoNormalizada = this.resolveFechaAbono(fecha_abono);
+        }
+
+        // Actualizar abono (puede ser cantidad, fecha_abono, comprobante o combinaciones)
+        await Abono.update(id, cantidadNum, fechaAbonoNormalizada, comprobante_pago, updated_by);
 
         // Retornar el abono actualizado
         const abonoActualizado = await Abono.findById(id);
