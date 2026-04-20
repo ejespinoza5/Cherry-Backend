@@ -45,6 +45,53 @@ const login = async (req, res) => {
 };
 
 /**
+ * Renovar token de acceso
+ */
+const refreshToken = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+
+        if (!refreshToken) {
+            return res.status(400).json({
+                success: false,
+                message: 'refreshToken es requerido'
+            });
+        }
+
+        const result = await AuthService.refreshAccessToken(refreshToken);
+
+        return res.json({
+            success: true,
+            message: 'Token renovado exitosamente',
+            data: result
+        });
+
+    } catch (error) {
+        console.error('Error en refreshToken:', error);
+
+        if (error.message === 'INVALID_REFRESH_TOKEN') {
+            return res.status(401).json({
+                success: false,
+                message: 'Refresh token inválido o expirado'
+            });
+        }
+
+        if (error.message === 'USER_NOT_FOUND') {
+            return res.status(404).json({
+                success: false,
+                message: 'Usuario no encontrado'
+            });
+        }
+
+        return res.status(500).json({
+            success: false,
+            message: 'No se pudo renovar el token',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
+/**
  * Obtener información del usuario autenticado
  */
 const me = async (req, res) => {
@@ -425,6 +472,7 @@ const verifyEmailChange = async (req, res) => {
 
 module.exports = {
     login,
+    refreshToken,
     me,
     forgotPassword,
     verifyRecoveryCode,

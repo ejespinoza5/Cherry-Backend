@@ -184,6 +184,7 @@ class ClienteService {
                     estado: abono.estado_orden
                 },
                 cantidad: parseFloat(abono.cantidad),
+                fecha_abono: abono.fecha_abono,
                 comprobante: abono.comprobante_pago,
                 estado_verificacion: abono.estado_verificacion,
                 fecha_verificacion: abono.fecha_verificacion,

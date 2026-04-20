@@ -11,6 +11,13 @@ const { verifyToken } = require('../middlewares/auth');
 router.post('/login', authController.login);
 
 /**
+ * @route   POST /api/auth/refresh-token
+ * @desc    Renovar token de acceso con refresh token
+ * @access  Public
+ */
+router.post('/refresh-token', authController.refreshToken);
+
+/**
  * @route   POST /api/auth/forgot-password
  * @desc    Solicitar codigo OTP para recuperar contrasena
  * @access  Public

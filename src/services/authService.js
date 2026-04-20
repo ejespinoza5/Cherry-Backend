@@ -9,10 +9,56 @@ const { isValidPassword, isValidEmail } = require('../utils/validators');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRATION;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || JWT_SECRET;
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRATION || '7d';
 const JWT_RESET_SECRET = process.env.JWT_RESET_SECRET || JWT_SECRET;
 const JWT_RESET_EXPIRES_IN = process.env.JWT_RESET_EXPIRATION || '15m';
 
 class AuthService {
+    static generateAccessToken(usuario) {
+        return jwt.sign(
+            {
+                id: usuario.id,
+                correo: usuario.correo,
+                id_rol: usuario.id_rol,
+                rol_nombre: usuario.rol_nombre
+            },
+            JWT_SECRET,
+            { expiresIn: JWT_EXPIRES_IN }
+        );
+    }
+
+    static generateRefreshToken(usuario) {
+        return jwt.sign(
+            {
+                id: usuario.id,
+                type: 'refresh'
+            },
+            JWT_REFRESH_SECRET,
+            { expiresIn: JWT_REFRESH_EXPIRES_IN }
+        );
+    }
+
+    static buildAuthResponse(usuario) {
+        const token = this.generateAccessToken(usuario);
+        const refreshToken = this.generateRefreshToken(usuario);
+
+        return {
+            token,
+            expiresIn: JWT_EXPIRES_IN,
+            refreshToken,
+            refreshExpiresIn: JWT_REFRESH_EXPIRES_IN,
+            usuario: {
+                id: usuario.id,
+                correo: usuario.correo,
+                id_rol: usuario.id_rol,
+                rol_nombre: usuario.rol_nombre,
+                estado: usuario.estado,
+                requiere_cambio_password: Boolean(usuario.requiere_cambio_password)
+            }
+        };
+    }
+
     /**
      * Autenticar usuario y generar token
      */
@@ -31,29 +77,32 @@ class AuthService {
             throw new Error('INVALID_CREDENTIALS');
         }
 
-        // Generar token JWT
-        const token = jwt.sign(
-            {
-                id: usuario.id,
-                correo: usuario.correo,
-                id_rol: usuario.id_rol,
-                rol_nombre: usuario.rol_nombre
-            },
-            JWT_SECRET,
-            { expiresIn: JWT_EXPIRES_IN }
-        );
+        return this.buildAuthResponse(usuario);
+    }
 
-        return {
-            token,
-            usuario: {
-                id: usuario.id,
-                correo: usuario.correo,
-                id_rol: usuario.id_rol,
-                rol_nombre: usuario.rol_nombre,
-                estado: usuario.estado,
-                requiere_cambio_password: Boolean(usuario.requiere_cambio_password)
-            }
-        };
+    /**
+     * Renovar token de acceso con refresh token
+     */
+    static async refreshAccessToken(refreshToken) {
+        let payload;
+
+        try {
+            payload = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
+        } catch (error) {
+            throw new Error('INVALID_REFRESH_TOKEN');
+        }
+
+        if (payload.type !== 'refresh' || !payload.id) {
+            throw new Error('INVALID_REFRESH_TOKEN');
+        }
+
+        const usuario = await Usuario.findById(payload.id);
+
+        if (!usuario || usuario.estado !== 'activo') {
+            throw new Error('USER_NOT_FOUND');
+        }
+
+        return this.buildAuthResponse(usuario);
     }
 
     /**
