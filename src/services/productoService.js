@@ -97,6 +97,25 @@ class ProductoService {
             throw new Error('INVALID_COMMISSION');
         }
 
+        // Verificar que la orden esté abierta
+        const { pool } = require('../config/database');
+        const [ordenRows] = await pool.query(
+            `SELECT estado_orden FROM ordenes WHERE id = ? AND estado = 'activo'`,
+            [id_orden]
+        );
+        if (ordenRows.length === 0 || ordenRows[0].estado_orden !== 'abierta') {
+            throw new Error('ORDER_CLOSED');
+        }
+
+        // Verificar que el cliente no esté ya cerrado individualmente en esta orden
+        const [clienteOrdenRows] = await pool.query(
+            `SELECT estado_pago FROM cliente_orden WHERE id_cliente = ? AND id_orden = ?`,
+            [id_cliente, id_orden]
+        );
+        if (clienteOrdenRows.length > 0 && clienteOrdenRows[0].estado_pago !== 'activo') {
+            throw new Error('CLIENT_ALREADY_CLOSED_IN_ORDER');
+        }
+
         // Crear el producto
         const productoId = await Producto.create({
             id_cliente,

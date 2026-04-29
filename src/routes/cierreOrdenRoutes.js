@@ -61,8 +61,33 @@ router.get(
 );
 
 /**
+ * @route   POST /api/cierre-ordenes/:id/cerrar-cliente/:id_cliente
+ * @desc    Cerrar la orden para un cliente individual
+ * @access  Private (Admin, Superadmin)
+ */
+router.post(
+    '/:id/cerrar-cliente/:id_cliente',
+    verifyToken,
+    isAdminOrSuperAdmin,
+    CierreOrdenController.cerrarOrdenPorCliente
+);
+
+/**
+ * @route   POST /api/cierre-ordenes/:id/rematar-cliente/:id_cliente
+ * @desc    Rematar un cliente individual de una orden
+ * @access  Private (Admin, Superadmin)
+ * @query   forzar=true (opcional, remata aunque no haya vencido el periodo de gracia)
+ */
+router.post(
+    '/:id/rematar-cliente/:id_cliente',
+    verifyToken,
+    isAdminOrSuperAdmin,
+    CierreOrdenController.rematarClienteIndividual
+);
+
+/**
  * @route   POST /api/cierre-ordenes/:id/rematar
- * @desc    Rematar clientes morosos manualmente
+ * @desc    Rematar clientes morosos manualmente (todos a la vez)
  * @access  Private (Admin, Superadmin)
  */
 router.post(

@@ -126,6 +126,13 @@ const createProducto = async (req, res) => {
             });
         }
 
+        if (error.message === 'CLIENT_ALREADY_CLOSED_IN_ORDER') {
+            return res.status(403).json({
+                success: false,
+                message: 'El cliente ya fue cerrado en esta orden y no puede agregar más productos'
+            });
+        }
+
         if (error.message === 'CLIENT_BLOCKED') {
             return res.status(403).json({
                 success: false,

@@ -195,6 +195,99 @@ class CierreOrdenController {
     }
 
     /**
+     * Cerrar la orden para un cliente individual
+     */
+    static async cerrarOrdenPorCliente(req, res) {
+        try {
+            const { id, id_cliente } = req.params;
+            const usuario_id = req.user.id;
+
+            const resultado = await CierreOrdenService.cerrarOrdenPorCliente(id, id_cliente, usuario_id);
+
+            const message = resultado.orden_cerrada
+                ? 'Cliente cerrado. La orden ha sido cerrada completamente.'
+                : 'Cliente cerrado exitosamente';
+
+            res.status(200).json({
+                success: true,
+                message,
+                data: resultado
+            });
+        } catch (error) {
+            console.error('Error al cerrar orden por cliente:', error);
+
+            let statusCode = 500;
+            let message = 'Error al cerrar la orden por cliente';
+
+            if (error.message === 'Orden no encontrada' || error.message === 'El cliente no tiene registro en esta orden') {
+                statusCode = 404;
+                message = error.message;
+            } else if (
+                error.message === 'La orden ya está cerrada' ||
+                error.message === 'El cliente no tiene valor total registrado en esta orden' ||
+                error.message.startsWith('El cliente ya fue cerrado')
+            ) {
+                statusCode = 400;
+                message = error.message;
+            }
+
+            res.status(statusCode).json({
+                success: false,
+                message,
+                error: error.message
+            });
+        }
+    }
+
+    /**
+     * Rematar un cliente individual de una orden
+     * Query params: ?forzar=true (permite rematar antes de que venza el periodo de gracia)
+     */
+    static async rematarClienteIndividual(req, res) {
+        try {
+            const { id, id_cliente } = req.params;
+            const usuario_id = req.user.id;
+            const forzar = req.query.forzar === 'true';
+
+            const resultado = await CierreOrdenService.rematarClienteIndividual(id, id_cliente, usuario_id, forzar);
+
+            const message = resultado.orden_cerrada
+                ? `${resultado.mensaje}. La orden ha sido cerrada completamente.`
+                : resultado.mensaje;
+
+            res.status(200).json({
+                success: true,
+                message,
+                data: resultado.cliente,
+                orden_cerrada: resultado.orden_cerrada
+            });
+        } catch (error) {
+            console.error('Error al rematar cliente individual:', error);
+
+            let statusCode = 500;
+            let message = 'Error al rematar el cliente';
+
+            if (error.message === 'El cliente no tiene registro en esta orden') {
+                statusCode = 404;
+                message = error.message;
+            } else if (
+                error.message.startsWith('No se puede rematar') ||
+                error.message.startsWith('El periodo de gracia') ||
+                error.message === 'El cliente ya fue rematado en esta orden'
+            ) {
+                statusCode = 400;
+                message = error.message;
+            }
+
+            res.status(statusCode).json({
+                success: false,
+                message,
+                error: error.message
+            });
+        }
+    }
+
+    /**
      * Verificar si un cliente puede participar en nuevas órdenes
      */
     static async verificarElegibilidadCliente(req, res) {

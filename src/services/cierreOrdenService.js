@@ -539,6 +539,381 @@ class CierreOrdenService {
     }
 
     /**
+     * Cerrar la orden para un cliente individual.
+     * Cuando el último cliente activo es cerrado, la orden se cierra automáticamente
+     * y se registra fecha_fin.
+     */
+    static async cerrarOrdenPorCliente(id_orden, id_cliente, usuario_id) {
+        const connection = await pool.getConnection();
+
+        try {
+            await connection.beginTransaction();
+
+            const orden = await Orden.findById(id_orden);
+            if (!orden) throw new Error('Orden no encontrada');
+            if (orden.estado_orden !== 'abierta') throw new Error('La orden ya está cerrada');
+
+            // Buscar registro existente en cliente_orden
+            const [clienteRows] = await connection.query(
+                `SELECT co.*, c.nombre, c.apellido, c.codigo, u.correo
+                 FROM cliente_orden co
+                 INNER JOIN clientes c ON co.id_cliente = c.id
+                 INNER JOIN usuarios u ON c.id_usuario = u.id
+                 WHERE co.id_cliente = ? AND co.id_orden = ?`,
+                [id_cliente, id_orden]
+            );
+
+            let clienteOrden = clienteRows[0] || null;
+
+            if (!clienteOrden) {
+                // No existe cliente_orden: calcular totales desde la tabla productos
+                const [clienteInfoRows] = await connection.query(
+                    `SELECT c.nombre, c.apellido, c.codigo, u.correo
+                     FROM clientes c
+                     INNER JOIN usuarios u ON c.id_usuario = u.id
+                     WHERE c.id = ? AND c.estado = 'activo'`,
+                    [id_cliente]
+                );
+
+                if (clienteInfoRows.length === 0) throw new Error('Cliente no encontrado');
+
+                const [productosRows] = await connection.query(
+                    `SELECT
+                        COALESCE(SUM(p.valor_etiqueta * p.cantidad_articulos), 0) AS subtotal,
+                        COALESCE(SUM(p.comision), 0) AS total_comisiones
+                     FROM productos p
+                     WHERE p.id_cliente = ? AND p.id_orden = ? AND p.estado = 'activo'`,
+                    [id_cliente, id_orden]
+                );
+
+                const valor_calculado = parseFloat(productosRows[0].subtotal) + parseFloat(productosRows[0].total_comisiones);
+
+                if (valor_calculado <= 0) {
+                    throw new Error('El cliente no tiene productos en esta orden');
+                }
+
+                const [abonosRows] = await connection.query(
+                    `SELECT COALESCE(SUM(cantidad), 0) AS total
+                     FROM historial_abono
+                     WHERE id_cliente = ? AND id_orden = ? AND estado_verificacion = 'verificado'`,
+                    [id_cliente, id_orden]
+                );
+
+                const total_abonos_calculado = parseFloat(abonosRows[0].total);
+
+                await connection.query(
+                    `INSERT INTO cliente_orden
+                        (id_cliente, id_orden, valor_total, total_compras, total_abonos, estado_pago)
+                     VALUES (?, ?, ?, ?, ?, 'activo')`,
+                    [id_cliente, id_orden, valor_calculado, valor_calculado, total_abonos_calculado]
+                );
+
+                clienteOrden = {
+                    ...clienteInfoRows[0],
+                    id_cliente,
+                    id_orden,
+                    valor_total: valor_calculado,
+                    total_abonos: total_abonos_calculado,
+                    estado_pago: 'activo'
+                };
+            }
+
+            if (clienteOrden.estado_pago !== 'activo') {
+                throw new Error(`El cliente ya fue cerrado en esta orden (estado actual: ${clienteOrden.estado_pago})`);
+            }
+
+            if (parseFloat(clienteOrden.valor_total) <= 0) {
+                throw new Error('El cliente no tiene valor total registrado en esta orden');
+            }
+
+            const fecha_cierre = new Date();
+            const fecha_limite_pago = new Date(fecha_cierre.getTime() + (1 * 60 * 1000)); // +1 minuto
+
+            const saldo_actual = parseFloat(clienteOrden.valor_total) - parseFloat(clienteOrden.total_abonos);
+            const estado_pago = saldo_actual > 0 ? 'en_gracia' : 'pagado';
+
+            await ClienteOrden.actualizarAlCierre(id_cliente, id_orden, {
+                saldo_al_cierre: saldo_actual > 0 ? saldo_actual : 0,
+                fecha_cierre,
+                fecha_limite_pago,
+                estado_pago
+            }, connection);
+
+            const [estadoActualRows] = await connection.query(
+                'SELECT estado_actividad FROM clientes WHERE id = ? LIMIT 1',
+                [id_cliente]
+            );
+            const estadoAnterior = estadoActualRows[0]?.estado_actividad ?? null;
+            const estadoNuevo = await Cliente.calcularYActualizarEstadoActividad(id_cliente, connection);
+
+            // Verificar si todos los clientes con productos en la orden ya fueron cerrados.
+            // Se cruza productos con cliente_orden: un cliente "pendiente" es aquel que tiene
+            // productos activos pero no tiene registro en cliente_orden O aún está en estado 'activo'.
+            const [pendientesRows] = await connection.query(
+                `SELECT COUNT(DISTINCT p.id_cliente) AS total
+                 FROM productos p
+                 LEFT JOIN cliente_orden co
+                   ON p.id_cliente = co.id_cliente AND p.id_orden = co.id_orden
+                 WHERE p.id_orden = ?
+                   AND p.estado = 'activo'
+                   AND (co.id IS NULL OR co.estado_pago = 'activo')`,
+                [id_orden]
+            );
+            const todosListos = pendientesRows[0].total === 0;
+
+            let ordenCerrada = false;
+            let estado_orden_final = null;
+
+            if (todosListos) {
+                const [totalesRows] = await connection.query(
+                    `SELECT
+                        COUNT(*) as total_clientes,
+                        SUM(CASE WHEN estado_pago = 'pagado' THEN 1 ELSE 0 END) as clientes_pagados,
+                        SUM(CASE WHEN estado_pago = 'en_gracia' THEN 1 ELSE 0 END) as clientes_pendientes,
+                        COALESCE(SUM(valor_total), 0) as subtotal,
+                        MAX(fecha_limite_pago) as max_fecha_limite_pago
+                     FROM cliente_orden WHERE id_orden = ? AND valor_total > 0`,
+                    [id_orden]
+                );
+
+                const t = totalesRows[0];
+                const subtotal = parseFloat(t.subtotal) || 0;
+                const max_fecha_limite = t.max_fecha_limite_pago || fecha_limite_pago;
+
+                estado_orden_final = parseInt(t.clientes_pendientes) > 0 ? 'en_periodo_gracia' : 'cerrada';
+
+                await connection.query(
+                    `INSERT INTO cierre_orden
+                        (id_orden, subtotal, comisiones, total_final, fecha_cierre, fecha_limite_pago, tipo_cierre,
+                         total_clientes, clientes_pagados, clientes_pendientes, created_by)
+                     VALUES (?, ?, 0, ?, ?, ?, 'manual', ?, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                        subtotal = VALUES(subtotal), total_final = VALUES(total_final),
+                        fecha_cierre = VALUES(fecha_cierre), fecha_limite_pago = VALUES(fecha_limite_pago),
+                        total_clientes = VALUES(total_clientes), clientes_pagados = VALUES(clientes_pagados),
+                        clientes_pendientes = VALUES(clientes_pendientes)`,
+                    [id_orden, subtotal, subtotal, fecha_cierre, max_fecha_limite,
+                     t.total_clientes, t.clientes_pagados, t.clientes_pendientes, usuario_id]
+                );
+
+                await connection.query(
+                    `UPDATE ordenes
+                     SET estado_orden = ?, fecha_fin = ?, fecha_cierre = ?,
+                         tipo_cierre = 'manual', closed_by = ?, updated_by = ?
+                     WHERE id = ?`,
+                    [estado_orden_final, fecha_cierre, fecha_cierre, usuario_id, usuario_id, id_orden]
+                );
+
+                ordenCerrada = true;
+            }
+
+            await connection.commit();
+
+            if (Cliente.canNotifyDebtState(estadoAnterior, estadoNuevo)) {
+                await Cliente.enviarRecordatorioDeudaPorCambioEstado(id_cliente, estadoAnterior, estadoNuevo);
+            }
+
+            if (clienteOrden.correo) {
+                await this.enviarCorreosCierreOrden([{
+                    correoDestino: clienteOrden.correo,
+                    nombreCliente: [clienteOrden.nombre, clienteOrden.apellido].filter(Boolean).join(' ').trim(),
+                    codigoCliente: clienteOrden.codigo,
+                    nombreOrden: orden.nombre_orden,
+                    estadoPago: estado_pago,
+                    saldoPendiente: saldo_actual > 0 ? saldo_actual : 0,
+                    totalAbonado: parseFloat(clienteOrden.total_abonos) || 0,
+                    fechaCierre: fecha_cierre,
+                    fechaLimitePago: estado_pago === 'en_gracia' ? fecha_limite_pago : null
+                }]);
+            }
+
+            return {
+                success: true,
+                mensaje: 'Cliente cerrado exitosamente',
+                cliente: {
+                    id_cliente,
+                    nombre: [clienteOrden.nombre, clienteOrden.apellido].filter(Boolean).join(' ').trim(),
+                    codigo: clienteOrden.codigo,
+                    estado_pago,
+                    saldo_al_cierre: saldo_actual > 0 ? parseFloat(saldo_actual.toFixed(2)) : 0,
+                    fecha_cierre,
+                    fecha_limite_pago: estado_pago === 'en_gracia' ? fecha_limite_pago : null
+                },
+                orden_cerrada: ordenCerrada,
+                estado_orden: estado_orden_final
+            };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+    }
+
+    /**
+     * Rematar un cliente individual en una orden.
+     * @param {boolean} forzar - Si true, remata aunque no haya vencido el periodo de gracia
+     */
+    static async rematarClienteIndividual(id_orden, id_cliente, usuario_id, forzar = false) {
+        const connection = await pool.getConnection();
+
+        try {
+            await connection.beginTransaction();
+
+            const [clienteRows] = await connection.query(
+                `SELECT co.*, c.nombre, c.apellido, c.codigo, u.correo, o.nombre_orden,
+                        (co.valor_total - co.total_abonos) as deuda_pendiente,
+                        CASE WHEN co.fecha_limite_pago < NOW() THEN 'VENCIDO' ELSE 'VIGENTE' END as estado_plazo
+                 FROM cliente_orden co
+                 INNER JOIN clientes c ON co.id_cliente = c.id
+                 INNER JOIN usuarios u ON c.id_usuario = u.id
+                 INNER JOIN ordenes o ON co.id_orden = o.id
+                 WHERE co.id_cliente = ? AND co.id_orden = ?`,
+                [id_cliente, id_orden]
+            );
+
+            if (clienteRows.length === 0) throw new Error('El cliente no tiene registro en esta orden');
+
+            const clienteOrden = clienteRows[0];
+
+            if (clienteOrden.estado_pago !== 'en_gracia') {
+                throw new Error(`No se puede rematar: el cliente no está en periodo de gracia (estado actual: ${clienteOrden.estado_pago})`);
+            }
+
+            if (!forzar && clienteOrden.estado_plazo === 'VIGENTE') {
+                throw new Error('El periodo de gracia del cliente aún no ha vencido. Use ?forzar=true para rematar antes de tiempo');
+            }
+
+            const yaRematado = await ClienteRematado.existeRemate(id_cliente, id_orden);
+            if (yaRematado) throw new Error('El cliente ya fue rematado en esta orden');
+
+            const deuda_pendiente = parseFloat(clienteOrden.deuda_pendiente || 0);
+            const abonos_perdidos = parseFloat(clienteOrden.total_abonos || 0);
+
+            const observacion = forzar
+                ? `Remate manual por administrador antes de vencer el periodo de gracia (${clienteOrden.estado_plazo})`
+                : `Remate por no pagar en periodo de gracia`;
+
+            await ClienteRematado.create({
+                id_cliente, id_orden,
+                valor_adeudado: deuda_pendiente,
+                abonos_perdidos,
+                motivo: 'incumplimiento_pago',
+                fecha_remate: new Date(),
+                observaciones: observacion,
+                created_by: usuario_id
+            });
+
+            const [incumpExistente] = await connection.query(
+                `SELECT id FROM historial_incumplimientos
+                 WHERE id_cliente = ? AND id_orden = ? AND tipo_incumplimiento = 'remate'`,
+                [id_cliente, id_orden]
+            );
+
+            if (incumpExistente.length === 0) {
+                await HistorialIncumplimiento.create({
+                    id_cliente, id_orden,
+                    tipo_incumplimiento: 'remate',
+                    monto_adeudado: deuda_pendiente,
+                    monto_perdido: abonos_perdidos,
+                    fecha_incumplimiento: new Date(),
+                    afecta_credito: true,
+                    observaciones: forzar
+                        ? `Remate manual por administrador. Estado: ${clienteOrden.estado_plazo}`
+                        : `Cliente no pagó en el periodo de gracia`
+                });
+            }
+
+            await ClienteOrden.marcarComoRematado(
+                id_cliente, id_orden,
+                `Cliente rematado por mora. Abonos perdidos: $${abonos_perdidos}`,
+                connection
+            );
+
+            const nuevoEstado = deuda_pendiente >= 300 ? 'bloqueado' : 'deudor';
+
+            const [estadoActualRows] = await connection.query(
+                'SELECT estado_actividad FROM clientes WHERE id = ? LIMIT 1',
+                [id_cliente]
+            );
+            const estadoAnterior = estadoActualRows[0]?.estado_actividad ?? null;
+
+            await connection.query(
+                'UPDATE clientes SET estado_actividad = ? WHERE id = ?',
+                [nuevoEstado, id_cliente]
+            );
+
+            await connection.query(
+                `UPDATE cierre_orden
+                 SET clientes_rematados = clientes_rematados + 1,
+                     clientes_pendientes = clientes_pendientes - 1
+                 WHERE id_orden = ?`,
+                [id_orden]
+            );
+
+            // Si ya no quedan clientes con productos pendientes de cierre o en gracia, cerrar la orden.
+            // Un cliente sigue pendiente si tiene productos activos y no está cerrado (sin registro o 'activo'/'en_gracia').
+            const [pendientesRows] = await connection.query(
+                `SELECT COUNT(DISTINCT p.id_cliente) AS total
+                 FROM productos p
+                 LEFT JOIN cliente_orden co
+                   ON p.id_cliente = co.id_cliente AND p.id_orden = co.id_orden
+                 WHERE p.id_orden = ?
+                   AND p.estado = 'activo'
+                   AND (co.id IS NULL OR co.estado_pago IN ('activo', 'en_gracia'))`,
+                [id_orden]
+            );
+            const ordenCerrada = pendientesRows[0].total === 0;
+
+            if (ordenCerrada) {
+                await connection.query(
+                    `UPDATE ordenes SET estado_orden = 'cerrada' WHERE id = ?`,
+                    [id_orden]
+                );
+            }
+
+            await connection.commit();
+
+            if (Cliente.canNotifyDebtState(estadoAnterior, nuevoEstado)) {
+                await Cliente.enviarRecordatorioDeudaPorCambioEstado(id_cliente, estadoAnterior, nuevoEstado);
+            }
+
+            if (clienteOrden.correo) {
+                await this.enviarCorreosRemateOrden([{
+                    correoDestino: clienteOrden.correo,
+                    nombreCliente: [clienteOrden.nombre, clienteOrden.apellido].filter(Boolean).join(' ').trim(),
+                    codigoCliente: clienteOrden.codigo,
+                    nombreOrden: clienteOrden.nombre_orden,
+                    valorTotalCompra: parseFloat(clienteOrden.valor_total || 0),
+                    deudaAlCierre: parseFloat(clienteOrden.saldo_al_cierre || deuda_pendiente || 0),
+                    valorAdeudado: deuda_pendiente,
+                    abonosPerdidos: abonos_perdidos,
+                    ordenCerrada
+                }]);
+            }
+
+            return {
+                success: true,
+                mensaje: 'Cliente rematado exitosamente',
+                cliente: {
+                    id_cliente,
+                    nombre: [clienteOrden.nombre, clienteOrden.apellido].filter(Boolean).join(' ').trim(),
+                    codigo: clienteOrden.codigo,
+                    valor_adeudado: deuda_pendiente.toFixed(2),
+                    abonos_perdidos: abonos_perdidos.toFixed(2),
+                    estado_final: nuevoEstado
+                },
+                orden_cerrada: ordenCerrada
+            };
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
+        }
+    }
+
+    /**
      * Reabrir orden (solo administradores)
      */
     static async reabrirOrden(id_orden, usuario_id) {

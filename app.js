@@ -26,7 +26,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Rutas
 app.get('/', (req, res) => {
-    res.send('Sistema Cherry - Servidor funcionando correctamente vvvvv');
+    res.send('Sistema Cherry - Servidor funcionando correctamente');
 });
 
 

@@ -161,8 +161,9 @@ class Orden {
     static async reabrirOrden(id, updated_by) {
         try {
             const [result] = await pool.query(
-                `UPDATE ordenes 
+                `UPDATE ordenes
                  SET estado_orden = 'abierta',
+                     fecha_fin = NULL,
                      fecha_cierre = NULL,
                      tipo_cierre = NULL,
                      closed_by = NULL,

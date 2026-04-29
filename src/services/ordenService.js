@@ -361,7 +361,6 @@ class OrdenService {
     static async getClienteOrdenDatos(id_cliente, id_orden) {
         const ClienteOrden = require('../models/ClienteOrden');
 
-        // Obtener registro
         const registro = await ClienteOrden.findByClienteAndOrden(id_cliente, id_orden);
         if (!registro) {
             throw new Error('CLIENT_ORDER_NOT_FOUND');
@@ -384,7 +383,8 @@ class OrdenService {
             valor_total: parseFloat(registro.valor_total || 0).toFixed(2),
             libras_acumuladas: parseFloat(registro.libras_acumuladas || 0).toFixed(2),
             link_excel: registro.link_excel,
-            estado_pago: registro.estado_pago
+            estado_pago: registro.estado_pago,
+            orden_cerrada: registro.estado_pago !== 'activo'
         };
     }
 
