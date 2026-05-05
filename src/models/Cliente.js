@@ -870,7 +870,7 @@ class Cliente {
                 orden: {
                     id: c.id_orden,
                     nombre: c.nombre_orden,
-                    estado: c.estado_orden,
+                    estado: c.estado_pago !== 'activo' ? 'cerrada' : c.estado_orden,
                     fecha_inicio: c.fecha_inicio,
                     fecha_fin: c.fecha_fin
                 },
