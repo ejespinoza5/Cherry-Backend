@@ -1120,11 +1120,17 @@ class CierreOrdenService {
             });
 
             // Cambiar clientes deudores a activos (nueva oportunidad con la nueva orden)
-            // Los clientes bloqueados permanecen bloqueados
             await connection.query(
-                `UPDATE clientes 
+                `UPDATE clientes
                  SET estado_actividad = 'activo'
                  WHERE estado = 'activo' AND estado_actividad = 'deudor'`
+            );
+
+            // Cambiar clientes bloqueados a reestablecido al iniciar nueva orden
+            await connection.query(
+                `UPDATE clientes
+                 SET estado_actividad = 'reestablecido'
+                 WHERE estado = 'activo' AND estado_actividad = 'bloqueado'`
             );
 
             await connection.commit();
