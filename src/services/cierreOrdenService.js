@@ -142,7 +142,7 @@ class CierreOrdenService {
                  co
                  INNER JOIN clientes c ON co.id_cliente = c.id
                  INNER JOIN usuarios u ON c.id_usuario = u.id
-                 WHERE co.id_orden = ? AND co.valor_total > 0`,
+                 WHERE co.id_orden = ? AND co.valor_total > 0 AND co.estado_pago = 'activo'`,
                 [id_orden]
             );
 
@@ -650,14 +650,21 @@ class CierreOrdenService {
             // Se cruza productos con cliente_orden: un cliente "pendiente" es aquel que tiene
             // productos activos pero no tiene registro en cliente_orden O aún está en estado 'activo'.
             const [pendientesRows] = await connection.query(
-                `SELECT COUNT(DISTINCT p.id_cliente) AS total
-                 FROM productos p
-                 LEFT JOIN cliente_orden co
-                   ON p.id_cliente = co.id_cliente AND p.id_orden = co.id_orden
-                 WHERE p.id_orden = ?
-                   AND p.estado = 'activo'
-                   AND (co.id IS NULL OR co.estado_pago = 'activo')`,
-                [id_orden]
+                `SELECT COUNT(*) AS total
+                 FROM (
+                     SELECT p.id_cliente
+                     FROM productos p
+                     LEFT JOIN cliente_orden co
+                       ON p.id_cliente = co.id_cliente AND p.id_orden = co.id_orden
+                     WHERE p.id_orden = ?
+                       AND p.estado = 'activo'
+                       AND (co.id IS NULL OR co.estado_pago = 'activo')
+                     UNION
+                     SELECT id_cliente
+                     FROM cliente_orden
+                     WHERE id_orden = ? AND estado_pago = 'activo' AND valor_total > 0
+                 ) AS pendientes`,
+                [id_orden, id_orden]
             );
             const todosListos = pendientesRows[0].total === 0;
 
