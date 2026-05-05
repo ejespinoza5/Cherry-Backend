@@ -461,18 +461,23 @@ class CierreOrdenService {
             // Si ya no hay clientes pendientes, cerrar completamente la orden
             if (ordenCerrada) {
                 await connection.query(
-                    `UPDATE ordenes 
+                    `UPDATE ordenes
                      SET estado_orden = 'cerrada'
                      WHERE id = ?`,
                     [id_orden]
                 );
 
-                // Cambiar clientes deudores a reestablecidos (nueva oportunidad después de rematar la orden)
-                await connection.query(
-                    `UPDATE clientes 
-                     SET estado_actividad = 'reestablecido'
-                     WHERE estado = 'activo' AND estado_actividad = 'deudor'`
-                );
+                // Reestablecer solo los clientes que fueron rematados en esta ejecución
+                // y cuyo estado quedó como 'deudor' (deben < $300)
+                const idsRematados = resultados.map(r => r.cliente_id);
+                if (idsRematados.length > 0) {
+                    await connection.query(
+                        `UPDATE clientes
+                         SET estado_actividad = 'reestablecido'
+                         WHERE id IN (?) AND estado = 'activo' AND estado_actividad = 'deudor'`,
+                        [idsRematados]
+                    );
+                }
             }
 
             await connection.commit();
@@ -858,17 +863,24 @@ class CierreOrdenService {
                 [id_orden]
             );
 
-            // Si ya no quedan clientes con productos pendientes de cierre o en gracia, cerrar la orden.
-            // Un cliente sigue pendiente si tiene productos activos y no está cerrado (sin registro o 'activo'/'en_gracia').
+            // Un cliente sigue pendiente si tiene productos activos sin cerrar,
+            // O si tiene un registro en cliente_orden con estado activo/en_gracia y valor_total > 0.
             const [pendientesRows] = await connection.query(
-                `SELECT COUNT(DISTINCT p.id_cliente) AS total
-                 FROM productos p
-                 LEFT JOIN cliente_orden co
-                   ON p.id_cliente = co.id_cliente AND p.id_orden = co.id_orden
-                 WHERE p.id_orden = ?
-                   AND p.estado = 'activo'
-                   AND (co.id IS NULL OR co.estado_pago IN ('activo', 'en_gracia'))`,
-                [id_orden]
+                `SELECT COUNT(*) AS total
+                 FROM (
+                     SELECT p.id_cliente
+                     FROM productos p
+                     LEFT JOIN cliente_orden co
+                       ON p.id_cliente = co.id_cliente AND p.id_orden = co.id_orden
+                     WHERE p.id_orden = ?
+                       AND p.estado = 'activo'
+                       AND (co.id IS NULL OR co.estado_pago IN ('activo', 'en_gracia'))
+                     UNION
+                     SELECT id_cliente
+                     FROM cliente_orden
+                     WHERE id_orden = ? AND estado_pago IN ('activo', 'en_gracia') AND valor_total > 0
+                 ) AS pendientes`,
+                [id_orden, id_orden]
             );
             const ordenCerrada = pendientesRows[0].total === 0;
 
