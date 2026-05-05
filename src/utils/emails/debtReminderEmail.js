@@ -39,7 +39,7 @@ const sendDebtReminderEmail = async ({
     const totalCompraTexto = formatMonto(totalCompraOrden);
     const estadoTexto = (estadoActividad || 'deudor').toLowerCase();
     const isBlocked = estadoTexto === 'bloqueado';
-    const fechaLimite = formatFecha(fechaFinOrden) || 'Contacta hoy a administración para confirmar la fecha exacta de cierre';
+    const fechaLimite = formatFecha(fechaFinOrden) || 'Tienes 24 horas para realizar el pago antes del cierre de la orden';
     const estadoColor = isBlocked ? '#B42318' : '#B54708';
     const estadoEtiqueta = isBlocked ? 'Bloqueado / En riesgo de remate' : 'Deudor';
 
@@ -72,10 +72,10 @@ const sendDebtReminderEmail = async ({
                 { label: 'Total de compra', value: totalCompraTexto },
                 { label: 'Deuda total', value: deudaTexto },
                 {
-                    label: 'Fecha límite de pago',
+                    label: 'Plazo de pago',
                     value: isBlocked
-                        ? `<span style="color:#B42318;font-weight:700;">${fechaLimite}</span>`
-                        : fechaLimite
+                        ? `<span style="color:#B42318;font-weight:700;">Dispones de 24 horas para regularizar tu pago. Para coordinar o resolver cualquier inquietud, comunícate directamente con el administrador.</span>`
+                        : 'Dispones de 24 horas para realizar tu pago. Ante cualquier consulta, comunícate con el administrador.'
                 }
             ])}
         </table>
@@ -89,7 +89,9 @@ const sendDebtReminderEmail = async ({
         `Orden con deuda: ${orden}`,
         `Total de compra: ${totalCompraTexto}`,
         `Deuda total: ${deudaTexto}`,
-        `Fecha límite de pago: ${fechaLimite}`,
+        isBlocked
+            ? 'Plazo de pago: Dispones de 24 horas para regularizar tu pago. Para coordinar o resolver cualquier inquietud, comunícate directamente con el administrador.'
+            : 'Plazo de pago: Dispones de 24 horas para realizar tu pago. Ante cualquier consulta, comunícate con el administrador.',
         bodyText,
         isBlocked
             ? 'Aún estás a tiempo de recuperar tu mercancía. Realiza el pago de inmediato.'
@@ -106,7 +108,9 @@ const sendDebtReminderEmail = async ({
             `Orden con deuda: ${orden}`,
             `Total de compra: ${totalCompraTexto}`,
             `Deuda total: ${deudaTexto}`,
-            `Fecha límite de pago: ${fechaLimite}`
+            isBlocked
+                ? 'Plazo de pago: Dispones de 24 horas para regularizar tu pago. Para coordinar o resolver cualquier inquietud, comunícate directamente con el administrador.'
+                : 'Plazo de pago: Dispones de 24 horas para realizar tu pago. Ante cualquier consulta, comunícate con el administrador.'
         ],
         highlightText: isBlocked
             ? 'Si no cancelas antes del cierre de la orden, tus productos entrarán en remate.'

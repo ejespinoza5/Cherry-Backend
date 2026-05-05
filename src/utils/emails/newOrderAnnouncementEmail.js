@@ -19,14 +19,12 @@ const sendNewOrderAnnouncementEmail = async ({
     codigoCliente,
     nombreOrden,
     fechaInicio,
-    fechaFin,
     tiktokUrl
 }) => {
     const fullName = nombreCliente || 'Cliente';
     const codigo = codigoCliente || 'Sin código';
     const orden = nombreOrden || 'Nueva orden';
     const inicioTexto = formatFecha(fechaInicio);
-    const finTexto = formatFecha(fechaFin);
     const redesTexto = 'Síguenos en nuestras redes para no perderte los horarios de transmisión.';
     const tiktokHref = tiktokUrl || '#';
 
@@ -40,7 +38,7 @@ const sendNewOrderAnnouncementEmail = async ({
                 { label: 'Código', value: codigo },
                 { label: 'Orden', value: orden },
                 { label: 'Fecha de Inicio', value: inicioTexto },
-                { label: 'Fecha de Cierre', value: finTexto }
+                { label: 'Fecha de Cierre', value: 'Contacta al administrador para consultar la fecha de cierre' }
             ])}
         </table>
         <div style="text-align:center;margin:8px 0 18px 0;">
@@ -56,7 +54,7 @@ const sendNewOrderAnnouncementEmail = async ({
         `Código: ${codigo}`,
         `Orden: ${orden}`,
         `Fecha de Inicio: ${inicioTexto}`,
-        `Fecha de Cierre: ${finTexto}`,
+        'Fecha de Cierre: Contacta al administrador para consultar la fecha de cierre',
         'Ir al Live de TikTok de Cherry:',
         tiktokHref,
         redesTexto,
@@ -73,7 +71,7 @@ const sendNewOrderAnnouncementEmail = async ({
             `Código: ${codigo}`,
             `Orden: ${orden}`,
             `Fecha de Inicio: ${inicioTexto}`,
-            `Fecha de Cierre: ${finTexto}`,
+            'Fecha de Cierre: Contacta al administrador para consultar la fecha de cierre',
             `Ir al Live de TikTok de Cherry: ${tiktokHref}`,
             redesTexto,
         ],
