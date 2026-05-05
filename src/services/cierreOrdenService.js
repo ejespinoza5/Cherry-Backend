@@ -391,9 +391,7 @@ class CierreOrdenService {
                     connection
                 );
 
-                // Actualizar estado del cliente según el monto adeudado
-                // Solo bloquear si debe $300 o más
-                const nuevoEstado = deuda_pendiente >= 300 ? 'bloqueado' : 'deudor';
+                const nuevoEstado = 'reestablecido';
 
                 const [estadoActualRows] = await connection.query(
                     'SELECT estado_actividad FROM clientes WHERE id = ? LIMIT 1',
@@ -467,17 +465,6 @@ class CierreOrdenService {
                     [id_orden]
                 );
 
-                // Reestablecer solo los clientes que fueron rematados en esta ejecución
-                // y cuyo estado quedó como 'deudor' (deben < $300)
-                const idsRematados = resultados.map(r => r.cliente_id);
-                if (idsRematados.length > 0) {
-                    await connection.query(
-                        `UPDATE clientes
-                         SET estado_actividad = 'reestablecido'
-                         WHERE id IN (?) AND estado = 'activo' AND estado_actividad = 'deudor'`,
-                        [idsRematados]
-                    );
-                }
             }
 
             await connection.commit();
@@ -842,7 +829,7 @@ class CierreOrdenService {
                 connection
             );
 
-            const nuevoEstado = deuda_pendiente >= 300 ? 'bloqueado' : 'deudor';
+            const nuevoEstado = 'reestablecido';
 
             const [estadoActualRows] = await connection.query(
                 'SELECT estado_actividad FROM clientes WHERE id = ? LIMIT 1',
@@ -1126,12 +1113,6 @@ class CierreOrdenService {
                  WHERE estado = 'activo' AND estado_actividad = 'deudor'`
             );
 
-            // Cambiar clientes bloqueados a reestablecido al iniciar nueva orden
-            await connection.query(
-                `UPDATE clientes
-                 SET estado_actividad = 'reestablecido'
-                 WHERE estado = 'activo' AND estado_actividad = 'bloqueado'`
-            );
 
             await connection.commit();
 
