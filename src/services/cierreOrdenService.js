@@ -267,14 +267,15 @@ class CierreOrdenService {
 
             // Cerrar la orden con el estado correcto
             await useConnection.query(
-                `UPDATE ordenes 
-                 SET estado_orden = ?, 
+                `UPDATE ordenes
+                 SET estado_orden = ?,
+                     fecha_fin = ?,
                      fecha_cierre = ?,
                      tipo_cierre = ?,
                      closed_by = ?,
                      updated_by = ?
                  WHERE id = ? AND estado_orden = 'abierta'`,
-                [estado_final, fecha_cierre, orden.tipo_cierre || 'manual', usuario_id, usuario_id, id_orden]
+                [estado_final, fecha_cierre, fecha_cierre, orden.tipo_cierre || 'manual', usuario_id, usuario_id, id_orden]
             );
 
             if (!connection) await useConnection.commit();
@@ -458,13 +459,15 @@ class CierreOrdenService {
 
             // Si ya no hay clientes pendientes, cerrar completamente la orden
             if (ordenCerrada) {
+                const fechaCierreRemate = new Date();
                 await connection.query(
                     `UPDATE ordenes
-                     SET estado_orden = 'cerrada'
+                     SET estado_orden = 'cerrada',
+                         fecha_fin = ?,
+                         fecha_cierre = ?
                      WHERE id = ?`,
-                    [id_orden]
+                    [fechaCierreRemate, fechaCierreRemate, id_orden]
                 );
-
             }
 
             await connection.commit();
@@ -872,9 +875,14 @@ class CierreOrdenService {
             const ordenCerrada = pendientesRows[0].total === 0;
 
             if (ordenCerrada) {
+                const fechaCierreRemate = new Date();
                 await connection.query(
-                    `UPDATE ordenes SET estado_orden = 'cerrada' WHERE id = ?`,
-                    [id_orden]
+                    `UPDATE ordenes
+                     SET estado_orden = 'cerrada',
+                         fecha_fin = ?,
+                         fecha_cierre = ?
+                     WHERE id = ?`,
+                    [fechaCierreRemate, fechaCierreRemate, id_orden]
                 );
             }
 
