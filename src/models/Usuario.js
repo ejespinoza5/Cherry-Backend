@@ -40,9 +40,10 @@ class Usuario {
     /**
      * Crear nuevo usuario
      */
-    static async create(correo, hashedPassword, id_rol, requiereCambioPassword = false) {
+    static async create(correo, hashedPassword, id_rol, requiereCambioPassword = false, connection = null) {
         try {
-            const [result] = await pool.query(
+            const useConnection = connection || pool;
+            const [result] = await useConnection.query(
                 'INSERT INTO usuarios (correo, contraseña, id_rol, estado, requiere_cambio_password) VALUES (?, ?, ?, ?, ?)',
                 [correo, hashedPassword, id_rol, 'activo', requiereCambioPassword ? 1 : 0]
             );

@@ -8,7 +8,7 @@ class Cliente {
     /**
      * Crear nuevo cliente
      */
-    static async create(data) {
+    static async create(data, connection = null) {
         try {
             const {
                 id_usuario,
@@ -22,8 +22,9 @@ class Cliente {
                 informacion_adicional,
                 created_by
             } = data;
-            
-            const [result] = await pool.query(
+
+            const useConnection = connection || pool;
+            const [result] = await useConnection.query(
                 `INSERT INTO clientes (
                     id_usuario,
                     nombre,

@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const { pool } = require('../config/database');
 const Usuario = require('../models/Usuario');
 const Cliente = require('../models/Cliente');
 const Admin = require('../models/Admin');
@@ -157,48 +158,64 @@ class UsuarioService {
         // Cliente y administrador se crean con contraseña temporal y deben cambiarla en primer login.
         const requiereCambioPassword = [1, 2].includes(parseInt(id_rol));
 
-        // Crear usuario
-        const usuarioId = await Usuario.create(correo, hashedPassword, id_rol, requiereCambioPassword);
+        // Crear usuario y su perfil (cliente o admin) de forma atómica:
+        // si falla cualquier paso, no debe quedar un usuario huérfano sin perfil.
+        const connection = await pool.getConnection();
+        let usuarioId;
 
-        // Si el rol es cliente (2), crear registro en la tabla clientes
-        if (parseInt(id_rol) === 2) {
-            await Cliente.create({
-                id_usuario: usuarioId,
-                nombre,
-                apellido: apellido || '',
-                codigo,
-                direccion: direccion || '',
-                ciudad: ciudad || null,
-                provincia: provincia || null,
-                pais: pais || null,
-                informacion_adicional: informacion_adicional || null,
-                created_by: createdBy
-            });
-        }
+        try {
+            await connection.beginTransaction();
 
-        if (parseInt(id_rol) === 1 || parseInt(id_rol) === 3) {
-            const adminExistente = await Admin.findByUsuarioAny(usuarioId);
-            const nombreAdmin = nombre || correo.split('@')[0];
-            const apellidoAdmin = apellido || '';
+            usuarioId = await Usuario.create(correo, hashedPassword, id_rol, requiereCambioPassword, connection);
 
-            if (adminExistente) {
-                await Admin.update(
-                    adminExistente.id,
-                    {
+            // Si el rol es cliente (2), crear registro en la tabla clientes
+            if (parseInt(id_rol) === 2) {
+                await Cliente.create({
+                    id_usuario: usuarioId,
+                    nombre,
+                    apellido: apellido || '',
+                    codigo,
+                    direccion: direccion || '',
+                    ciudad: ciudad || null,
+                    provincia: provincia || null,
+                    pais: pais || null,
+                    informacion_adicional: informacion_adicional || null,
+                    created_by: createdBy
+                }, connection);
+            }
+
+            if (parseInt(id_rol) === 1 || parseInt(id_rol) === 3) {
+                const adminExistente = await Admin.findByUsuarioAny(usuarioId, connection);
+                const nombreAdmin = nombre || correo.split('@')[0];
+                const apellidoAdmin = apellido || '';
+
+                if (adminExistente) {
+                    await Admin.update(
+                        adminExistente.id,
+                        {
+                            nombre: nombreAdmin,
+                            apellido: apellidoAdmin,
+                            estado: 'activo'
+                        },
+                        createdBy,
+                        connection
+                    );
+                } else {
+                    await Admin.create({
+                        id_usuario: usuarioId,
                         nombre: nombreAdmin,
                         apellido: apellidoAdmin,
-                        estado: 'activo'
-                    },
-                    createdBy
-                );
-            } else {
-                await Admin.create({
-                    id_usuario: usuarioId,
-                    nombre: nombreAdmin,
-                    apellido: apellidoAdmin,
-                    created_by: createdBy
-                });
+                        created_by: createdBy
+                    }, connection);
+                }
             }
+
+            await connection.commit();
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+        } finally {
+            connection.release();
         }
 
         // Enviar correo de bienvenida sin bloquear la creacion del usuario.

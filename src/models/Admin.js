@@ -4,10 +4,11 @@ class Admin {
     /**
      * Crear registro de administrador
      */
-    static async create(data) {
+    static async create(data, connection = null) {
         const { id_usuario, nombre, apellido = '', created_by } = data;
+        const useConnection = connection || pool;
 
-        const [result] = await pool.query(
+        const [result] = await useConnection.query(
             `INSERT INTO admins (id_usuario, nombre, apellido, estado, created_by)
              VALUES (?, ?, ?, 'activo', ?)` ,
             [id_usuario, nombre, apellido, created_by]
@@ -31,8 +32,9 @@ class Admin {
     /**
      * Buscar admin por id_usuario sin filtrar estado
      */
-    static async findByUsuarioAny(id_usuario) {
-        const [rows] = await pool.query(
+    static async findByUsuarioAny(id_usuario, connection = null) {
+        const useConnection = connection || pool;
+        const [rows] = await useConnection.query(
             'SELECT * FROM admins WHERE id_usuario = ?',
             [id_usuario]
         );
@@ -43,10 +45,11 @@ class Admin {
     /**
      * Actualizar datos del admin
      */
-    static async update(id, data, updated_by) {
+    static async update(id, data, updated_by, connection = null) {
         const { nombre, apellido = '', estado = 'activo' } = data;
+        const useConnection = connection || pool;
 
-        const [result] = await pool.query(
+        const [result] = await useConnection.query(
             `UPDATE admins
              SET nombre = ?, apellido = ?, estado = ?, updated_by = ?
              WHERE id = ?`,
