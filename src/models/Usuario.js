@@ -201,11 +201,19 @@ class Usuario {
     /**
      * Eliminar usuario (cambiar estado a inactivo)
      */
+    /**
+     * Eliminar usuario (soft delete). El correo se renombra con un prefijo
+     * para liberar el valor original: la columna 'correo' es UNIQUE en la BD,
+     * y sin este renombrado no se podria volver a registrar ese mismo correo.
+     */
     static async delete(id) {
         try {
             const [result] = await pool.query(
-                'UPDATE usuarios SET estado = ? WHERE id = ?',
-                ['inactivo', id]
+                `UPDATE usuarios
+                 SET estado = 'inactivo',
+                     correo = CONCAT('deleted_', id, '_', UNIX_TIMESTAMP(), '_', LEFT(correo, 60))
+                 WHERE id = ?`,
+                [id]
             );
             return result.affectedRows > 0;
         } catch (error) {
@@ -214,18 +222,19 @@ class Usuario {
     }
 
     /**
-     * Verificar si existe un correo
+     * Verificar si existe un correo entre usuarios activos.
+     * Los correos de usuarios eliminados (estado 'inactivo') quedan libres para reutilizarse.
      */
     static async emailExists(correo, excludeId = null) {
         try {
-            let query = 'SELECT id FROM usuarios WHERE correo = ?';
+            let query = 'SELECT id FROM usuarios WHERE correo = ? AND estado = "activo"';
             let params = [correo];
-            
+
             if (excludeId) {
                 query += ' AND id != ?';
                 params.push(excludeId);
             }
-            
+
             const [rows] = await pool.query(query, params);
             return rows.length > 0;
         } catch (error) {

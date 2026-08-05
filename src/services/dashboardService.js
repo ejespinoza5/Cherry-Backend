@@ -60,11 +60,13 @@ class DashboardService {
                 [id_orden]
             ),
 
-            // Clientes con estado_actividad activo
+            // Clientes con estado_actividad activo (excluye clientes eliminados)
             pool.query(
                 `SELECT COUNT(*) AS total
-                 FROM clientes
-                 WHERE estado_actividad = 'activo'`
+                 FROM clientes c
+                 INNER JOIN usuarios u ON c.id_usuario = u.id
+                 WHERE c.estado = 'activo' AND u.estado = 'activo'
+                   AND c.estado_actividad = 'activo'`
             ),
 
             // Abonos pendientes de la última orden
@@ -97,32 +99,40 @@ class DashboardService {
                 [id_orden]
             ),
 
-            // Clientes con estado_actividad bloqueado
+            // Clientes con estado_actividad bloqueado (excluye clientes eliminados)
             pool.query(
                 `SELECT COUNT(*) AS total
-                 FROM clientes
-                 WHERE estado_actividad = 'bloqueado'`
+                 FROM clientes c
+                 INNER JOIN usuarios u ON c.id_usuario = u.id
+                 WHERE c.estado = 'activo' AND u.estado = 'activo'
+                   AND c.estado_actividad = 'bloqueado'`
             ),
 
-            // Clientes con estado_actividad inactivo (los que deben)
+            // Clientes con estado_actividad inactivo (los que deben, excluye clientes eliminados)
             pool.query(
                 `SELECT COUNT(*) AS total
-                 FROM clientes
-                 WHERE estado_actividad = 'inactivo'`
+                 FROM clientes c
+                 INNER JOIN usuarios u ON c.id_usuario = u.id
+                 WHERE c.estado = 'activo' AND u.estado = 'activo'
+                   AND c.estado_actividad = 'inactivo'`
             ),
 
-            // Clientes con estado_actividad deudor
+            // Clientes con estado_actividad deudor (excluye clientes eliminados)
             pool.query(
                 `SELECT COUNT(*) AS total
-                 FROM clientes
-                 WHERE estado_actividad = 'deudor'`
+                 FROM clientes c
+                 INNER JOIN usuarios u ON c.id_usuario = u.id
+                 WHERE c.estado = 'activo' AND u.estado = 'activo'
+                   AND c.estado_actividad = 'deudor'`
             ),
 
-            // Clientes con estado_actividad reestablecido
+            // Clientes con estado_actividad reestablecido (excluye clientes eliminados)
             pool.query(
                 `SELECT COUNT(*) AS total
-                 FROM clientes
-                 WHERE estado_actividad = 'reestablecido'`
+                 FROM clientes c
+                 INNER JOIN usuarios u ON c.id_usuario = u.id
+                 WHERE c.estado = 'activo' AND u.estado = 'activo'
+                   AND c.estado_actividad = 'reestablecido'`
             ),
 
             // Administradores activos (rol admin = 1, superAdmin = 3)
