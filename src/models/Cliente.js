@@ -182,20 +182,44 @@ class Cliente {
     }
 
     /**
-     * Verificar si existe un código (excluyendo un cliente específico)
+     * Verificar si existe un código entre clientes activos (excluyendo un cliente específico).
+     * Los códigos de clientes eliminados (estado 'inactivo') quedan libres para reutilizarse.
      */
     static async codigoExists(codigo, excludeId = null) {
         try {
-            let query = 'SELECT id FROM clientes WHERE codigo = ?';
+            let query = 'SELECT id FROM clientes WHERE codigo = ? AND estado = "activo"';
             let params = [codigo];
-            
+
             if (excludeId) {
                 query += ' AND id != ?';
                 params.push(excludeId);
             }
-            
+
             const [rows] = await pool.query(query, params);
             return rows.length > 0;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
+     * Desactivar el registro de cliente y liberar su código (soft delete).
+     * El código es UNIQUE en la BD, asi que se renombra para permitir reutilizarlo,
+     * igual que se hace con el correo del usuario en Usuario.delete().
+     */
+    static async deactivateByUsuarioDelete(id_cliente) {
+        try {
+            const [result] = await pool.query(
+                `UPDATE clientes
+                 SET estado = 'inactivo',
+                     codigo = CASE
+                         WHEN codigo IS NULL THEN NULL
+                         ELSE CONCAT('del_', id, '_', UNIX_TIMESTAMP(), '_', LEFT(codigo, 15))
+                     END
+                 WHERE id = ?`,
+                [id_cliente]
+            );
+            return result.affectedRows > 0;
         } catch (error) {
             throw error;
         }

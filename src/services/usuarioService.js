@@ -428,8 +428,16 @@ class UsuarioService {
             throw new Error('CANNOT_DELETE_OWN_USER');
         }
 
-        // Eliminar (cambiar estado a inactivo)
+        // Eliminar (cambiar estado a inactivo y liberar el correo)
         await Usuario.delete(id);
+
+        // Si es cliente, desactivar también su registro y liberar el código
+        if (usuario.id_rol === 2) {
+            const cliente = await Cliente.findByUsuario(id);
+            if (cliente) {
+                await Cliente.deactivateByUsuarioDelete(cliente.id);
+            }
+        }
 
         return true;
     }
