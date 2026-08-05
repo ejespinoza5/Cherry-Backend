@@ -11,8 +11,8 @@ async function createSuperAdmin() {
         console.log('🚀 Iniciando creación de superAdministrador...\n');
 
         // Datos del superAdministrador
-        const correo = 'superadmin@cherry.com';
-        const contraseña = 'Super@2026'; // Cambiar por una contraseña segura
+        const correo = 'joycelapo1888@gmail.com';
+        const contraseña = 'J@yce321'; // Cambiar por una contraseña segura
         const id_rol = 3; // SuperAdministrador
 
         // Verificar si ya existe

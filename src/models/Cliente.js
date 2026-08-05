@@ -489,10 +489,10 @@ class Cliente {
     /**
      * Calcular y actualizar estado_actividad automáticamente
      * Reglas:
-     * - activo: saldo >= 0 Y ha comprado en los últimos 3 meses
+     * - activo: saldo >= 0 Y ha comprado o abonado en los últimos 3 meses
      * - deudor: debe < $300
      * - bloqueado: debe >= $300
-     * - inactivo: sin compras en los últimos 3 meses
+     * - inactivo: sin compras ni abonos en los últimos 3 meses
      */
     static async calcularYActualizarEstadoActividad(id_cliente, connection = null) {
         const useConnection = connection || pool;
@@ -518,29 +518,44 @@ class Cliente {
 
             const estadoAnterior = estadoActualRows.length > 0 ? estadoActualRows[0].estado_actividad : null;
 
-            // Obtener fecha de última compra (última vez que se le asignó valor_total)
-            const [ultimaCompra] = await useConnection.query(
-                `SELECT MAX(co.created_at) as ultima_compra
-                 FROM cliente_orden co
-                 WHERE co.id_cliente = ? AND co.valor_total > 0`,
-                [id_cliente]
+            // Obtener fecha de última actividad: última compra (valor_total asignado)
+            // o último abono verificado, lo que sea más reciente. Un pago cuenta
+            // como actividad tanto como una compra, para no marcar inactivo a un
+            // cliente que acaba de abonar sobre una orden antigua.
+            const [ultimaActividad] = await useConnection.query(
+                `SELECT GREATEST(
+                            COALESCE(
+                                (SELECT MAX(co.created_at)
+                                 FROM cliente_orden co
+                                 WHERE co.id_cliente = ? AND co.valor_total > 0),
+                                '1970-01-01'
+                            ),
+                            COALESCE(
+                                (SELECT MAX(ha.fecha_verificacion)
+                                 FROM historial_abono ha
+                                 WHERE ha.id_cliente = ? AND ha.estado_verificacion = 'verificado'),
+                                '1970-01-01'
+                            )
+                        ) as ultima_actividad`,
+                [id_cliente, id_cliente]
             );
 
-            const fechaUltimaCompra = ultimaCompra[0].ultima_compra;
-            
-            // Calcular si tiene actividad en los últimos 3 meses
+            const fechaUltimaActividad = ultimaActividad[0].ultima_actividad;
+            const sinActividadRegistrada = new Date(fechaUltimaActividad).getFullYear() === 1970;
+
+            // Calcular si tiene actividad (compra o abono) en los últimos 3 meses
             let tieneActividadReciente = false;
-            if (fechaUltimaCompra) {
+            if (fechaUltimaActividad && !sinActividadRegistrada) {
                 const tresMesesAtras = new Date();
                 tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
-                tieneActividadReciente = new Date(fechaUltimaCompra) >= tresMesesAtras;
+                tieneActividadReciente = new Date(fechaUltimaActividad) >= tresMesesAtras;
             }
 
             // Determinar estado según reglas
             let nuevoEstado;
-            
+
             if (!tieneActividadReciente) {
-                // Sin compras en 3 meses = inactivo
+                // Sin compras ni abonos en 3 meses = inactivo
                 nuevoEstado = 'inactivo';
             } else if (deuda >= 300) {
                 // Debe $300 o más = bloqueado

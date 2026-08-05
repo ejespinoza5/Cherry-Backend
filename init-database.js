@@ -40,8 +40,8 @@ const initDatabase = async () => {
         console.log('👤 Creando usuario administrador...');
         
         // CONFIGURA AQUÍ LA CONTRASEÑA DEL ADMINISTRADOR
-        const adminEmail = 'admin@cherry.com';
-        const adminPassword = 'admin123'; 
+        const adminEmail = 'joycelapo1888@gmail.com';
+        const adminPassword = 'Joyce593.'; 
         
         // Verificar si el admin ya existe
         const [adminExists] = await connection.query(
