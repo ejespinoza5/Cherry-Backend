@@ -468,7 +468,8 @@ const updateAbono = async (req, res) => {
 };
 
 /**
- * Eliminar abono (cambiar estado a inactivo y ajustar saldo)
+ * Eliminar abono (pendiente, verificado o rechazado). Cambia estado a inactivo
+ * y, si estaba verificado, revierte el monto en el saldo del cliente.
  */
 const deleteAbono = async (req, res) => {
     try {
@@ -495,13 +496,6 @@ const deleteAbono = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: 'Abono no encontrado'
-            });
-        }
-
-        if (error.message === 'ABONO_NOT_DELETABLE') {
-            return res.status(400).json({
-                success: false,
-                message: 'Solo se pueden eliminar abonos en estado pendiente'
             });
         }
 

@@ -41,3 +41,12 @@ coverage/
 *.tmp
 *.temp
 .cache/
+
+# Archivos subidos por usuarios (comprobantes de pago, imagenes de productos).
+# Viven de forma persistente en el servidor y NO deben versionarse: si se
+# commitean, "git clean" en el deploy borra cualquier archivo nuevo que no
+# se haya subido al repo todavia.
+uploads/comprobantes/*
+uploads/images/*
+!uploads/comprobantes/.gitkeep
+!uploads/images/.gitkeep

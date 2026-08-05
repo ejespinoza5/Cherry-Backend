@@ -259,7 +259,9 @@ class Abono {
     }
 
     /**
-     * Eliminar abono (solo permitido si está en estado pendiente)
+     * Eliminar abono (pendiente, verificado o rechazado).
+     * Si estaba verificado, revierte el monto sumado a cliente_orden.total_abonos
+     * y, si corresponde, revierte el estado_pago de 'pagado' a 'en_gracia'.
      */
     static async delete(id, updated_by) {
         const connection = await pool.getConnection();
@@ -276,11 +278,43 @@ class Abono {
                 throw new Error('ABONO_NOT_FOUND');
             }
 
-            const { estado_verificacion, comprobante_pago } = abono[0];
+            const { id_cliente, id_orden, cantidad, estado_verificacion, comprobante_pago } = abono[0];
 
-            // Validar que el abono esté en estado pendiente
-            if (estado_verificacion !== 'pendiente') {
-                throw new Error('ABONO_NOT_DELETABLE');
+            // Si el abono estaba verificado, revertir el saldo que se le sumó a cliente_orden
+            if (estado_verificacion === 'verificado') {
+                await connection.query(
+                    `UPDATE cliente_orden
+                     SET total_abonos = GREATEST(0, total_abonos - ?)
+                     WHERE id_cliente = ? AND id_orden = ?`,
+                    [cantidad, id_cliente, id_orden]
+                );
+
+                // Si el pago ya estaba marcado como completo y al restar este abono
+                // queda saldo pendiente, regresar el estado a 'en_gracia'
+                const [clienteOrden] = await connection.query(
+                    `SELECT valor_total, total_abonos, estado_pago
+                     FROM cliente_orden
+                     WHERE id_cliente = ? AND id_orden = ?`,
+                    [id_cliente, id_orden]
+                );
+
+                if (clienteOrden.length > 0) {
+                    const { valor_total, total_abonos, estado_pago } = clienteOrden[0];
+                    const deuda_restante = parseFloat(valor_total) - parseFloat(total_abonos);
+
+                    if (estado_pago === 'pagado' && deuda_restante > 0) {
+                        await connection.query(
+                            `UPDATE cliente_orden
+                             SET estado_pago = 'en_gracia', fecha_pago_completo = NULL
+                             WHERE id_cliente = ? AND id_orden = ?`,
+                            [id_cliente, id_orden]
+                        );
+                    }
+                }
+
+                // Actualizar estado_actividad del cliente tras revertir el abono
+                const Cliente = require('./Cliente');
+                await Cliente.calcularYActualizarEstadoActividad(id_cliente, connection);
             }
 
             // Cambiar estado a inactivo

@@ -363,7 +363,8 @@ class AbonoService {
     }
 
     /**
-     * Eliminar abono (cambiar estado a inactivo)
+     * Eliminar abono (pendiente, verificado o rechazado). Si estaba verificado,
+     * revierte la cantidad del saldo del cliente en la orden.
      */
     static async deleteAbono(id, updated_by) {
         // Validar que el ID sea válido

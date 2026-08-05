@@ -650,7 +650,10 @@ curl -X PUT http://localhost:3000/api/abonos/1 \
 
 **DELETE** `/api/abonos/:id`
 
-Elimina un abono (soft delete). **Solo se pueden eliminar abonos en estado "pendiente"**. Una vez verificado o rechazado, el abono no puede ser eliminado para mantener la integridad del historial.
+Elimina un abono (soft delete). Puede eliminarse un abono en cualquier estado de verificación: **pendiente, verificado o rechazado**.
+
+- Si el abono estaba **verificado**, su cantidad se resta automáticamente de `total_abonos` en `cliente_orden` (el saldo pendiente del cliente vuelve a ser como si el abono nunca se hubiera aprobado). Si el cliente ya figuraba como `pagado`, su estado vuelve a `en_gracia`.
+- Si estaba **pendiente** o **rechazado**, no había afectado el saldo, así que solo se marca como inactivo.
 
 **El comprobante asociado se elimina automáticamente del servidor.**
 
@@ -672,7 +675,7 @@ curl -X DELETE http://localhost:3000/api/abonos/1 \
 ```
 
 **Errores:**
-- **400** - ID de abono inválido o abono no está en estado pendiente
+- **400** - ID de abono inválido
 - **404** - Abono no encontrado
 
 ---

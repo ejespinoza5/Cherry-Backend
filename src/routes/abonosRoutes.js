@@ -106,7 +106,9 @@ router.put('/:id',
 
 /**
  * @route   DELETE /api/abonos/:id
- * @desc    Eliminar abono (cambia estado a inactivo y resta del saldo si estaba verificado)
+ * @desc    Eliminar abono (pendiente, verificado o rechazado). Cambia estado a
+ *          inactivo y, si estaba verificado, resta la cantidad del saldo del
+ *          cliente en la orden (revierte a 'en_gracia' si ya estaba 'pagado').
  * @access  Private (Admin o SuperAdmin)
  */
 router.delete('/:id', abonosController.deleteAbono);
