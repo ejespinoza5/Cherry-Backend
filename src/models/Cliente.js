@@ -543,9 +543,11 @@ class Cliente {
             const estadoAnterior = estadoActualRows.length > 0 ? estadoActualRows[0].estado_actividad : null;
 
             // Obtener fecha de última actividad: última compra (valor_total asignado)
-            // o último abono verificado, lo que sea más reciente. Un pago cuenta
-            // como actividad tanto como una compra, para no marcar inactivo a un
-            // cliente que acaba de abonar sobre una orden antigua.
+            // o último abono registrado, lo que sea más reciente. Un abono cuenta
+            // como actividad desde que el cliente lo REGISTRA (created_at), no solo
+            // cuando un admin lo verifica: si solo contara al verificar, un cliente
+            // que acaba de pagar podía caer a 'inactivo' (p.ej. por el cron diario)
+            // mientras su comprobante seguía pendiente de revisión.
             const [ultimaActividad] = await useConnection.query(
                 `SELECT GREATEST(
                             COALESCE(
@@ -555,9 +557,10 @@ class Cliente {
                                 '1970-01-01'
                             ),
                             COALESCE(
-                                (SELECT MAX(ha.fecha_verificacion)
+                                (SELECT MAX(ha.created_at)
                                  FROM historial_abono ha
-                                 WHERE ha.id_cliente = ? AND ha.estado_verificacion = 'verificado'),
+                                 WHERE ha.id_cliente = ? AND ha.estado = 'activo'
+                                   AND ha.estado_verificacion IN ('pendiente', 'verificado')),
                                 '1970-01-01'
                             )
                         ) as ultima_actividad`,
