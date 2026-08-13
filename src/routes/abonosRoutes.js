@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const abonosController = require('../controllers/abonosController');
 const { verifyToken, isAdminOrSuperAdmin } = require('../middlewares/auth');
-const { uploadComprobante, processComprobante } = require('../middlewares/upload');
+const { uploadComprobanteMiddleware, processComprobante } = require('../middlewares/upload');
 
 /**
  * Todas las rutas requieren autenticación y permisos de administrador o superAdministrador
@@ -74,7 +74,7 @@ router.get('/:id', abonosController.getAbonoById);
  * @access  Private (Admin o SuperAdmin)
  */
 router.post('/', 
-    uploadComprobante.single('comprobante'),
+    uploadComprobanteMiddleware,
     processComprobante,
     abonosController.createAbono
 );
@@ -99,7 +99,7 @@ router.put('/:id/rechazar', abonosController.rechazarComprobante);
  * @access  Private (Admin o SuperAdmin)
  */
 router.put('/:id', 
-    uploadComprobante.single('comprobante'),
+    uploadComprobanteMiddleware,
     processComprobante,
     abonosController.updateAbono
 );

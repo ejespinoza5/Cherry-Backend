@@ -28,16 +28,16 @@ const upload = multer({
     }
 });
 
-// Filtro para comprobantes (solo imágenes)
+// Filtro para comprobantes (imágenes; sharp convierte cualquier formato a WebP)
 const comprobanteFilter = (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
+    const allowedExtensions = /\.(jpeg|jpg|jfif|jpe|png|webp|bmp|gif|heic|heif|tiff|tif|avif)$/;
+    const isImageByExt = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
+    const isImageByMime = file.mimetype && file.mimetype.startsWith('image/');
 
-    if (extname && mimetype) {
+    if (isImageByExt || isImageByMime) {
         cb(null, true);
     } else {
-        cb(new Error('Solo se permiten archivos de imagen (jpeg, jpg, png, webp)'), false);
+        cb(new Error('Formato de comprobante no válido. Sube una imagen (JPG, PNG, WebP, HEIC, BMP o GIF)'), false);
     }
 };
 
@@ -46,9 +46,39 @@ const uploadComprobante = multer({
     storage: storage, // Usar memoria para procesar con sharp
     fileFilter: comprobanteFilter,
     limits: {
-        fileSize: 10 * 1024 * 1024 // 10MB máximo para comprobantes
+        fileSize: 25 * 1024 * 1024 // 25MB máximo para comprobantes
     }
 });
+
+/**
+ * Middleware que envuelve la subida de comprobante y traduce los errores de
+ * multer a respuestas claras (413 tamaño, 400 formato) en lugar del 500 genérico.
+ */
+const uploadComprobanteMiddleware = (req, res, next) => {
+    uploadComprobante.single('comprobante')(req, res, (err) => {
+        if (!err) {
+            return next();
+        }
+
+        if (err instanceof multer.MulterError) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(413).json({
+                    success: false,
+                    message: 'El comprobante supera el tamaño máximo permitido (25MB). Comprime la imagen e inténtalo de nuevo.'
+                });
+            }
+            return res.status(400).json({
+                success: false,
+                message: `Error al subir el comprobante: ${err.message}`
+            });
+        }
+
+        return res.status(400).json({
+            success: false,
+            message: err.message || 'Error al subir el comprobante'
+        });
+    });
+};
 
 /**
  * Middleware para procesar y comprimir imagen con sharp
@@ -178,6 +208,7 @@ module.exports = {
     processImage,
     deleteImage,
     uploadComprobante,
+    uploadComprobanteMiddleware,
     processComprobante,
     deleteComprobante
 };
