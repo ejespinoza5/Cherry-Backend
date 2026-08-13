@@ -946,31 +946,10 @@ class CierreOrdenService {
                 throw new Error('La orden ya está abierta');
             }
 
-            // Verificar que NO haya OTRAS órdenes en periodo de gracia en el sistema
-            const ordenesEnGracia = await Orden.findOrdenesEnGracia(id_orden);
-
-            if (ordenesEnGracia.length > 0) {
-                const ordenGracia = ordenesEnGracia[0];
-                const fechaLimite = new Date(ordenGracia.fecha_limite_pago);
-                const ahora = new Date();
-                const horasRestantes = Math.ceil((fechaLimite - ahora) / (1000 * 60 * 60));
-
-                throw new Error(
-                    `No se puede reabrir porque la orden "${ordenGracia.nombre_orden}" está en periodo de gracia. ` +
-                    `Opciones: espera ${horasRestantes}h o remata a los clientes morosos.`
-                );
-            }
-
-            // Verificar que NO haya otras órdenes abiertas
-            const ordenesAbiertas = await Orden.findOrdenesAbiertas(id_orden);
-
-            if (ordenesAbiertas.length > 0) {
-                const ordenAbierta = ordenesAbiertas[0];
-                throw new Error(
-                    `No se puede reabrir esta orden porque ya existe otra orden abierta: "${ordenAbierta.nombre_orden}". ` +
-                    `Solo puede haber una orden abierta a la vez. Cierra primero la orden actual.`
-                );
-            }
+            // NOTA: ya no se valida que no existan otras órdenes abiertas/en gracia en el
+            // sistema, porque ahora pueden coexistir varias órdenes abiertas al mismo tiempo.
+            // La restricción de "una sola orden activa" ahora es por cliente, no global
+            // (ver ClienteOrden.findOrdenAbiertaActivaCliente / productoService.createProducto).
 
             // LIMPIAR TODOS LOS DATOS DEL CIERRE ANTERIOR
             
@@ -1074,39 +1053,18 @@ class CierreOrdenService {
     }
 
     /**
-     * Iniciar nueva orden (reiniciar saldos de clientes)
+     * Iniciar nueva orden.
+     * Ahora pueden existir varias órdenes abiertas simultáneamente: cada cliente
+     * pertenece activamente a una sola orden a la vez, pero distintos clientes pueden
+     * estar comprando en distintas órdenes abiertas al mismo tiempo. Por eso ya NO se
+     * bloquea la creación por la existencia de otras órdenes abiertas o en periodo de
+     * gracia (eso ahora se valida por cliente en productoService.createProducto).
      */
     static async iniciarNuevaOrden(data_orden, usuario_id) {
         const connection = await pool.getConnection();
-        
+
         try {
             await connection.beginTransaction();
-
-            // VALIDACIÓN 1: Verificar que NO haya órdenes en periodo de gracia
-            const ordenesEnGracia = await Orden.findOrdenesEnGracia();
-
-            if (ordenesEnGracia.length > 0) {
-                const orden = ordenesEnGracia[0];
-                const fechaLimite = new Date(orden.fecha_limite_pago);
-                const ahora = new Date();
-                const horasRestantes = Math.ceil((fechaLimite - ahora) / (1000 * 60 * 60));
-
-                throw new Error(
-                    `NO_PUEDE_CREAR_ORDEN|No se puede crear una nueva orden mientras "${orden.nombre_orden}" está en periodo de gracia. ` +
-                    `Opciones: espera ${horasRestantes}h para que expire automáticamente, o remata manualmente a los clientes morosos.`
-                );
-            }
-
-            // VALIDACIÓN 2: Verificar que NO haya otras órdenes abiertas
-            const ordenesAbiertas = await Orden.findOrdenesAbiertas();
-
-            if (ordenesAbiertas.length > 0) {
-                const orden = ordenesAbiertas[0];
-                throw new Error(
-                    `NO_PUEDE_CREAR_ORDEN|No se puede crear una nueva orden mientras la orden "${orden.nombre_orden}" ` +
-                    `está abierta. Debes cerrar la orden actual antes de crear una nueva.`
-                );
-            }
 
             // Crear la nueva orden
             const id_orden = await Orden.create({
@@ -1114,20 +1072,12 @@ class CierreOrdenService {
                 created_by: usuario_id
             });
 
-            // Cambiar clientes deudores a activos (nueva oportunidad con la nueva orden)
-            await connection.query(
-                `UPDATE clientes
-                 SET estado_actividad = 'activo'
-                 WHERE estado = 'activo' AND estado_actividad = 'deudor'`
-            );
-
-
             await connection.commit();
 
             return {
                 success: true,
                 id_orden,
-                mensaje: 'Nueva orden iniciada. Todos los clientes activos pueden participar.'
+                mensaje: 'Nueva orden iniciada. Los clientes con una orden anterior activa deben cerrarla antes de participar en esta.'
             };
         } catch (error) {
             await connection.rollback();

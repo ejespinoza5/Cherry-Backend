@@ -133,6 +133,15 @@ const createProducto = async (req, res) => {
             });
         }
 
+        if (error.message === 'CLIENT_ACTIVE_IN_ANOTHER_ORDER') {
+            return res.status(409).json({
+                success: false,
+                message: `El cliente ya tiene una participación activa en la orden "${error.ordenActiva?.nombre_orden}". Debe cerrarse su participación en esa orden (POST /api/cierre-ordenes/${error.ordenActiva?.id}/cerrar-cliente/${id_cliente}) antes de comprar en esta.`,
+                error_code: 'CLIENT_ACTIVE_IN_ANOTHER_ORDER',
+                orden_activa: error.ordenActiva
+            });
+        }
+
         if (error.message === 'CLIENT_BLOCKED') {
             return res.status(403).json({
                 success: false,

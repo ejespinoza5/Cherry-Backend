@@ -155,7 +155,12 @@ class OrdenService {
             // Obtener y devolver la orden creada
             const orden = await Orden.findById(resultado.id_orden);
 
-            await this.enviarCorreosNuevaOrden(orden);
+            // No bloquear la respuesta HTTP esperando el envío de correos a todos los
+            // clientes (puede tardar minutos si hay muchos destinatarios). La orden ya
+            // quedó creada/commiteada; los correos se envían en segundo plano.
+            this.enviarCorreosNuevaOrden(orden).catch(emailError => {
+                console.error('Error enviando correos de nueva orden (background):', emailError.message);
+            });
 
             return {
                 ...this.formatOrdenData(orden),

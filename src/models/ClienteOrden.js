@@ -229,6 +229,50 @@ class ClienteOrden {
     }
 
     /**
+     * Buscar si un cliente tiene una participación activa (no cerrada) en OTRA orden abierta.
+     * Se usa para impedir que un cliente compre en dos órdenes abiertas al mismo tiempo:
+     * primero debe cerrarse su participación en la orden anterior (cerrarOrdenPorCliente)
+     * antes de poder comprar en una orden distinta.
+     */
+    static async findOrdenAbiertaActivaCliente(id_cliente, excludeOrdenId = null) {
+        try {
+            let query = `
+                SELECT DISTINCT o.id, o.nombre_orden, o.fecha_inicio, o.fecha_fin
+                FROM ordenes o
+                WHERE o.estado_orden = 'abierta' AND o.estado = 'activo'
+                  AND (
+                      EXISTS (
+                          SELECT 1 FROM productos p
+                          WHERE p.id_orden = o.id AND p.id_cliente = ? AND p.estado = 'activo'
+                            AND NOT EXISTS (
+                                SELECT 1 FROM cliente_orden co
+                                WHERE co.id_orden = o.id AND co.id_cliente = ? AND co.estado_pago != 'activo'
+                            )
+                      )
+                      OR EXISTS (
+                          SELECT 1 FROM cliente_orden co
+                          WHERE co.id_orden = o.id AND co.id_cliente = ?
+                            AND co.estado_pago = 'activo' AND co.valor_total > 0
+                      )
+                  )
+            `;
+            const params = [id_cliente, id_cliente, id_cliente];
+
+            if (excludeOrdenId) {
+                query += ' AND o.id != ?';
+                params.push(excludeOrdenId);
+            }
+
+            query += ' LIMIT 1';
+
+            const [rows] = await pool.query(query, params);
+            return rows[0] || null;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
      * Actualizar totales de abonos (valor_total se ingresa manualmente)
      * Solo actualiza total_abonos, NO total_compras
      */

@@ -516,6 +516,48 @@ const getSaldoUltimaOrden = async (req, res) => {
 };
 
 /**
+ * Obtener la orden abierta a la que pertenece actualmente el cliente (si tiene alguna)
+ * GET /api/usuarios/clientes/:id_cliente/orden-actual
+ */
+const getOrdenActualCliente = async (req, res) => {
+    try {
+        const { id_cliente } = req.params;
+        const Cliente = require('../models/Cliente');
+        const ClienteOrden = require('../models/ClienteOrden');
+
+        // Acepta tanto clientes.id como usuarios.id (error común: usar el id de login)
+        const idClienteReal = await Cliente.resolveClienteId(id_cliente);
+
+        if (!idClienteReal) {
+            return res.status(404).json({
+                success: false,
+                message: 'Cliente no encontrado'
+            });
+        }
+
+        const ordenActiva = await ClienteOrden.findOrdenAbiertaActivaCliente(idClienteReal);
+
+        res.json({
+            success: true,
+            data: {
+                id_cliente: idClienteReal,
+                tiene_orden_activa: !!ordenActiva,
+                orden_activa: ordenActiva || null
+            }
+        });
+
+    } catch (error) {
+        console.error('Error al obtener la orden actual del cliente:', error);
+
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener la orden actual del cliente',
+            error: process.env.NODE_ENV === 'development' ? error.message : {}
+        });
+    }
+};
+
+/**
  * Enviar recordatorio de deuda a clientes deudores y bloqueados
  * POST /api/usuarios/clientes/recordatorio-deuda
  */
@@ -548,5 +590,6 @@ module.exports = {
     updateEstadoActividad,
     habilitarCliente,
     getSaldoUltimaOrden,
+    getOrdenActualCliente,
     enviarRecordatorioDeudaClientes
 };

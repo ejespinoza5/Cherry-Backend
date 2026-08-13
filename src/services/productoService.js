@@ -116,6 +116,21 @@ class ProductoService {
             throw new Error('CLIENT_ALREADY_CLOSED_IN_ORDER');
         }
 
+        // Verificar que el cliente no tenga ya una participación activa en OTRA orden abierta.
+        // Ahora pueden existir varias órdenes abiertas al mismo tiempo, pero un cliente solo
+        // puede pertenecer activamente a una a la vez: debe cerrarse su participación anterior
+        // (POST /api/cierre-ordenes/:id/cerrar-cliente/:id_cliente) antes de comprar en otra.
+        const ClienteOrden = require('../models/ClienteOrden');
+        const ordenActivaOtra = await ClienteOrden.findOrdenAbiertaActivaCliente(id_cliente, id_orden);
+        if (ordenActivaOtra) {
+            const error = new Error('CLIENT_ACTIVE_IN_ANOTHER_ORDER');
+            error.ordenActiva = {
+                id: ordenActivaOtra.id,
+                nombre_orden: ordenActivaOtra.nombre_orden
+            };
+            throw error;
+        }
+
         // Crear el producto
         const productoId = await Producto.create({
             id_cliente,

@@ -71,4 +71,12 @@ router.post('/clientes/recordatorio-deuda', usuariosController.enviarRecordatori
  */
 router.get('/clientes/:id_cliente/saldo-ultima-orden', usuariosController.getSaldoUltimaOrden);
 
+/**
+ * @route   GET /api/usuarios/clientes/:id_cliente/orden-actual
+ * @desc    Obtener la orden abierta a la que pertenece actualmente el cliente (si tiene alguna).
+ *          Útil para saber si hay que cerrar su participación antes de asignarlo a otra orden.
+ * @access  Private (Admin o SuperAdmin)
+ */
+router.get('/clientes/:id_cliente/orden-actual', usuariosController.getOrdenActualCliente);
+
 module.exports = router;

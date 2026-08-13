@@ -124,11 +124,12 @@ SI pasan AMBAS validaciones ENTONCES:
   → Los clientes "deudor" (de órdenes pasadas) vuelven a "activo"
 ```
 
-**💡 Regla de Oro:** 
-- ✅ Solo puedes tener **UNA orden a la vez**
-- 🔄 Flujo: **Abrir Orden → Cerrar Orden → Abrir Nueva Orden**
-- ❌ NO puedes crear una nueva orden si hay una abierta o en periodo de gracia
-- ⚠️ Debes cerrar completamente la orden actual antes de crear la siguiente
+**💡 Regla de Oro (ACTUALIZADA):**
+- ✅ Ahora pueden existir **varias órdenes abiertas al mismo tiempo** (ej. "Live A" y "Live B")
+- 🔒 Pero cada **cliente** solo puede pertenecer activamente a **UNA orden a la vez**
+- 🔄 Flujo por cliente: **Cliente compra en Orden A → Se cierra su participación en Orden A → Cliente puede comprar en Orden B**
+- ❌ Un cliente NO puede agregar productos en una orden distinta mientras siga "activo" en otra orden abierta (error 409 `CLIENT_ACTIVE_IN_ANOTHER_ORDER`)
+- ⚠️ Para mover a un cliente a otra orden, un admin debe cerrar primero su participación con `POST /api/cierre-ordenes/:id/cerrar-cliente/:id_cliente`
 
 ---
 

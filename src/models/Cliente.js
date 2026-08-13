@@ -75,6 +75,29 @@ class Cliente {
     }
 
     /**
+     * Resolver un identificador ambiguo a un cliente.id real.
+     * El sistema tiene dos espacios de IDs: usuarios.id (el id de login/cuenta,
+     * el que devuelve GET /api/usuarios como "id" de nivel superior) y clientes.id
+     * (el id del registro de cliente, anidado como "cliente.id" en esa misma respuesta).
+     * Los endpoints ":id_cliente" esperan clientes.id, pero es fácil pasar por error
+     * el usuarios.id. Este helper prueba primero como clientes.id y, si no existe,
+     * intenta resolverlo como usuarios.id.
+     */
+    static async resolveClienteId(id) {
+        try {
+            const clientePorId = await this.findById(id);
+            if (clientePorId) {
+                return clientePorId.id;
+            }
+
+            const clientePorUsuario = await this.findByUsuario(id);
+            return clientePorUsuario ? clientePorUsuario.id : null;
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    /**
      * Buscar cliente por ID
      */
     static async findById(id) {
