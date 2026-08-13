@@ -287,9 +287,38 @@ class OrdenService {
         const HistorialActualizacionLibras = require('../models/HistorialActualizacionLibras');
 
         try {
+            // Verificar que la orden existe
+            const orden = await Orden.findById(id_orden);
+            if (!orden) {
+                throw new Error('ORDER_NOT_FOUND');
+            }
+
+            const registroActual = await ClienteOrden.findByClienteAndOrden(id_cliente, id_orden);
+
+            // Verificar que el cliente no esté ya cerrado individualmente en ESTA orden.
+            // Una vez cerrada su participación, no puede volver a comprar en la misma orden.
+            if (registroActual && registroActual.estado_pago !== 'activo') {
+                throw new Error('CLIENT_ALREADY_CLOSED_IN_ORDER');
+            }
+
+            // Si la orden objetivo está abierta, verificar que el cliente no tenga ya una
+            // participación activa en OTRA orden abierta. Un cliente solo puede pertenecer
+            // activamente a una orden a la vez: debe cerrarse su participación anterior
+            // (POST /api/cierre-ordenes/:id/cerrar-cliente/:id_cliente) antes de comprar en otra.
+            if (orden.estado_orden === 'abierta') {
+                const ordenActivaOtra = await ClienteOrden.findOrdenAbiertaActivaCliente(id_cliente, id_orden);
+                if (ordenActivaOtra) {
+                    const error = new Error('CLIENT_ACTIVE_IN_ANOTHER_ORDER');
+                    error.ordenActiva = {
+                        id: ordenActivaOtra.id,
+                        nombre_orden: ordenActivaOtra.nombre_orden
+                    };
+                    throw error;
+                }
+            }
+
             // Separar campos por orden y del cliente
             const { valor_total, libras_acumuladas, link_excel } = data;
-            const registroActual = await ClienteOrden.findByClienteAndOrden(id_cliente, id_orden);
             const clienteActual = await Cliente.findById(id_cliente);
             const valorTotalAnterior = registroActual ? parseFloat(registroActual.valor_total || 0) : 0;
             const librasAnterior = registroActual ? parseFloat(registroActual.libras_acumuladas || 0) : 0;

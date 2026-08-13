@@ -279,8 +279,8 @@ const getOrdenEstadisticas = async (req, res) => {
  * PUT /api/ordenes/:id_orden/clientes/:id_cliente/datos-manuales
  */
 const updateClienteOrdenDatosManuales = async (req, res) => {
+    const { id_orden, id_cliente } = req.params;
     try {
-        const { id_orden, id_cliente } = req.params;
         const { valor_total, libras_acumuladas, link_excel } = req.body;
         const actualizado_por = req.user.id; // Usuario que realiza la actualización
 
@@ -307,10 +307,26 @@ const updateClienteOrdenDatosManuales = async (req, res) => {
             });
         }
 
+        if (error.message === 'CLIENT_ALREADY_CLOSED_IN_ORDER') {
+            return res.status(403).json({
+                success: false,
+                message: 'El cliente ya fue cerrado en esta orden y no puede agregar más compras. Reabre su participación antes de continuar.'
+            });
+        }
+
         if (error.message === 'ORDER_NOT_FOUND') {
             return res.status(404).json({
                 success: false,
                 message: 'Orden no encontrada'
+            });
+        }
+
+        if (error.message === 'CLIENT_ACTIVE_IN_ANOTHER_ORDER') {
+            return res.status(409).json({
+                success: false,
+                message: `El cliente ya tiene una participación activa en la orden "${error.ordenActiva?.nombre_orden}". Debe cerrarse su participación en esa orden (POST /api/cierre-ordenes/${error.ordenActiva?.id}/cerrar-cliente/${id_cliente}) antes de comprar en esta.`,
+                error_code: 'CLIENT_ACTIVE_IN_ANOTHER_ORDER',
+                orden_activa: error.ordenActiva
             });
         }
 
